@@ -1,0 +1,13 @@
+<div class="card">
+  <h2>Supprimer le sujet</h2>
+
+  @if (subject()) {
+    <p>Es-tu sûr de vouloir supprimer <b>{{ subject()!.name }}</b> ?</p>
+    <div class="actions">
+      <button class="btn btn-danger" (click)="confirm()">Supprimer</button>
+      <a class="btn" routerLink="/subject">Annuler</a>
+    </div>
+  } @else {
+    <p class="muted">Chargement…</p>
+  }
+</div>

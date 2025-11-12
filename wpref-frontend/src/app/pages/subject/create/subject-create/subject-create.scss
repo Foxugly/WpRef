@@ -1,0 +1,5 @@
+.card { display:grid; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+input, textarea { padding:10px; border:1px solid var(--border); border-radius:10px; }
+.field-error { color:var(--danger); }
+.actions { margin-top:10px; }
+.btn.btn-primary { background:var(--brand); color:var(--brand-contrast); border:0; padding:10px 14px; border-radius:10px; }

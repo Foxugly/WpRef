@@ -1,0 +1,91 @@
+/* ---- barre complète ---- */
+.topmenu {
+  width: 100vw;                  /* prend toute la largeur */
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  background: var(--brand, #0056b3);
+  color: var(--brand-contrast, #fff);
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+/* ---- zone centrée ---- */
+.topmenu__inner {
+  max-width: 1200px;             /* largeur max centrée */
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-6);
+}
+
+/* ---- logo & titre ---- */
+.topmenu__left {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.logo {
+  height: 32px;
+}
+.title {
+  font-weight: 600;
+  font-size: 20px;
+}
+
+/* ---- liens ---- */
+.topmenu__links {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+.topmenu__links a {
+  color: var(--brand-contrast);
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+  padding: var(--s-1) var(--s-2);
+  transition: opacity .2s;
+}
+.topmenu__links a:hover {
+  opacity: 0.85;
+}
+.topmenu__links a.active::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  height: 2px;
+  background: var(--brand-contrast);
+}
+
+/* ---- actions ---- */
+.topmenu__right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.theme-toggle {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.6);
+  color: var(--brand-contrast);
+  border-radius: var(--radius);
+  padding: var(--s-1) var(--s-3);
+  cursor: pointer;
+  transition: background .2s;
+}
+.theme-toggle:hover {
+  background: rgba(255,255,255,.15);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .topmenu__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-3);
+  }
+  .topmenu__links {
+    flex-wrap: wrap;
+  }
+}

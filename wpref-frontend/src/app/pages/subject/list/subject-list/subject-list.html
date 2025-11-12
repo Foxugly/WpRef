@@ -1,0 +1,33 @@
+<div class="toolbar">
+  <h2>Sujets</h2>
+  <div class="actions">
+    <input placeholder="Rechercher…" [ngModel]="q()" (ngModelChange)="q.set($event); load()">
+    <a class="btn btn-primary" routerLink="/subject/add">+ Nouveau</a>
+  </div>
+</div>
+
+<div class="card">
+  @if ((subjects() || []).length === 0) {
+    <p class="muted">Aucun sujet.</p>
+  } @else {
+    <table class="table">
+      <thead>
+        <tr><th>Nom</th><th>Slug</th><th>Description</th><th style="width:160px;"></th></tr>
+      </thead>
+      <tbody>
+        @for (s of subjects(); track s.id) {
+          <tr>
+            <td>{{ s.name }}</td>
+            <td>{{ s.slug }}</td>
+            <td class="muted">{{ s.description }}</td>
+            <td class="row-actions">
+              <a (click)="goEdit(s.id)">Éditer</a> ·
+              <a (click)="goDelete(s.id)">Supprimer</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+

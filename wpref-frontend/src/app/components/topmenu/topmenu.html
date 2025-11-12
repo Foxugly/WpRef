@@ -1,0 +1,46 @@
+<nav class="topmenu">
+  <div class="topmenu__inner">
+    <div class="topmenu__left">
+      <img src="assets/logo.svg" alt="Logo" class="logo">
+      <span class="title">WpRef</span>
+    </div>
+
+    <div class="topmenu__links">
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/subject/list" routerLinkActive="active">Sujets</a>
+        <a routerLink="/questions" routerLinkActive="active">Questions</a>
+      }
+      <a routerLink="/about" routerLinkActive="active">A propos</a>
+    </div>
+
+    <div class="topmenu__right">
+      <mat-button-toggle-group name="fontStyle" aria-label="Font Style">
+        <mat-button-toggle value="FR">FR</mat-button-toggle>
+        <mat-button-toggle value="NL">NL</mat-button-toggle>
+        <mat-button-toggle value="EN">EN</mat-button-toggle>
+      </mat-button-toggle-group>
+      <div class="user-menu">
+        <!-- Le menu est TOUJOURS présent -->
+        <mat-menu #userMenu="matMenu">
+          @if (auth.isLoggedIn()) {
+            <button mat-menu-item (click)="goPreferences()">
+              <span>Préférences</span>
+            </button>
+            <button mat-menu-item (click)="logout()">
+              <span>Déconnexion</span>
+            </button>
+          } @else {
+            <button mat-menu-item routerLink="/login">
+              <span>Se connecter</span>
+            </button>
+          }
+        </mat-menu>
+
+        <!-- Le trigger peut être ton avatar/bouton -->
+        <button mat-button [matMenuTriggerFor]="userMenu" class="user-trigger">
+          <span>👤 {{ auth.getUsername() }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>

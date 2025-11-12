@@ -1,0 +1,10 @@
+.toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.actions { display:flex; gap:8px; align-items:center; }
+input { padding:8px 10px; border:1px solid var(--border); border-radius:8px; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.table { width:100%; border-collapse: collapse; }
+.table th, .table td { padding:10px; border-bottom:1px solid var(--border); }
+.muted { color:var(--muted); }
+.btn { padding:10px 14px; border-radius:10px; text-decoration:none; border:1px solid var(--border); }
+.btn-primary { background: var(--brand); color: var(--brand-contrast); border:0; }
+.row-actions a { cursor:pointer; color: var(--brand); }

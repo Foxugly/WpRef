@@ -1,0 +1,55 @@
+<div class="login">
+  <div class="login__card">
+    <div class="login__brand">
+      <img src="assets/logo.svg" alt="Logo" class="brand__logo">
+      <h1 class="brand__title">WpRef</h1>
+      <p class="brand__subtitle">Connecte-toi pour continuer</p>
+    </div>
+
+    @if (errorMsg()) {
+      <div class="alert alert--error">
+        {{ errorMsg() }}
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login__form" autocomplete="on">
+      <div class="field">
+        <label for="username">Utilisateur</label>
+        <input id="username" type="text" formControlName="username" placeholder="ton identifiant" autofocus>
+        @if (f.username.touched && f.username.invalid) {
+          <small class="field__error">Nom d’utilisateur requis (min. 3 caractères)</small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <div class="password">
+          <input id="password" [type]="hide() ? 'password' : 'text'" formControlName="password" placeholder="••••••••">
+          <button type="button" class="password__toggle" (click)="toggleHide()" aria-label="Afficher/Masquer">
+            {{ hide() ? '👁️' : '🙈' }}
+          </button>
+        </div>
+        @if (f.password.touched && f.password.invalid) {
+          <small class="field__error">Mot de passe requis (min. 4 caractères)</small>
+        }
+      </div>
+
+      <div class="row">
+        <label class="checkbox">
+          <input type="checkbox" formControlName="remember">
+          <span>Se souvenir de moi</span>
+        </label>
+        <a routerLink="/reset-password" class="link">Mot de passe oublié ?</a>
+      </div>
+
+      <button class="btn btn--primary" type="submit" [disabled]="loading() || form.invalid">
+        @if (loading()) { <span class="spinner"></span> } Se connecter
+      </button>
+    </form>
+
+    <div class="login__footer">
+      <span class="muted">Pas de compte ?</span>
+      <a routerLink="/register" class="link">Créer un compte</a>
+    </div>
+  </div>
+</div>

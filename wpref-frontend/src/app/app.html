@@ -1,0 +1,14 @@
+<!-- Bandeau "backend KO" -->
+@if (backendDown()) {
+  <div class="backend-banner">
+    {{ status.lastError() || 'API inaccessible.' }}
+  </div>
+}
+
+<!-- Menu principal -->
+<app-topmenu></app-topmenu>
+
+<!-- Contenu principal -->
+<main class="main-container">
+  <router-outlet></router-outlet>
+</main>

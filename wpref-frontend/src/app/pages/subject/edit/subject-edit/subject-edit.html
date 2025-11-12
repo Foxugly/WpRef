@@ -1,0 +1,15 @@
+<h2>Modifier le sujet</h2>
+<form [formGroup]="form" (ngSubmit)="save()" class="card">
+  <label>Nom</label>
+  <input formControlName="name" />
+  @if (form.controls.name.touched && form.controls.name.invalid) {
+    <small class="field-error">Nom requis (≥ 2 caractères)</small>
+  }
+
+  <label>Description</label>
+  <textarea formControlName="description" rows="4"></textarea>
+
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">Mettre à jour</button>
+  </div>
+</form>
