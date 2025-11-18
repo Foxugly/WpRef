@@ -40,8 +40,10 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "django_filters",
+    "customuser.apps.CustomuserConfig",
+    "subject",
     "question",
-
+    "quiz",
 ]
 
 MIDDLEWARE = [
@@ -56,6 +58,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'wpref.urls'
+AUTH_USER_MODEL = "customuser.CustomUser"
 
 TEMPLATES = [
     {

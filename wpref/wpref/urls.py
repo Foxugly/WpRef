@@ -1,4 +1,4 @@
-# wpref/urls.py
+# wpref/api_urls.py
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -10,7 +10,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # API module question
-    path("api/", include("question.api_urls")),
+    path("api/", include(("wpref.api_urls", "api"),namespace="api")),
 
     # OpenAPI/Swagger
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
