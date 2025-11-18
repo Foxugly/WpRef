@@ -1,18 +1,23 @@
 # question/serializers.py
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+
 from .models import Question, QuestionMedia, AnswerOption, QuestionSubject
 from subject.models import Subject
 from subject.serializers import SubjectSerializer
+
 
 class QuestionMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuestionMedia
         fields = ["id", "kind", "file", "external_url", "caption", "sort_order"]
 
+
 class AnswerOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = AnswerOption
         fields = ["id", "content", "is_correct", "sort_order"]
+
 
 class QuestionSerializer(serializers.ModelSerializer):
     media = QuestionMediaSerializer(many=True, required=False)
@@ -60,7 +65,14 @@ class QuestionSerializer(serializers.ModelSerializer):
             QuestionMedia.objects.create(question=q, **m)
 
         self._assign_subjects(q, subject_ids, subject_slugs)
-        q.full_clean()
+
+        # 🔴 ICI : on convertit la ValidationError Django en ValidationError DRF
+        try:
+            q.full_clean()
+        except DjangoValidationError as e:
+            # e.message_dict si tu veux un dict de champs, e.messages pour une liste
+            raise serializers.ValidationError(e.message_dict or e.messages)
+
         return q
 
     def update(self, instance, validated_data):
@@ -86,5 +98,10 @@ class QuestionSerializer(serializers.ModelSerializer):
         if subject_ids is not None or subject_slugs is not None:
             self._assign_subjects(instance, subject_ids, subject_slugs)
 
-        instance.full_clean()
+        # 🔴 Même correction en update
+        try:
+            instance.full_clean()
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.message_dict or e.messages)
+
         return instance

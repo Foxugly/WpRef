@@ -18,3 +18,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
         "subjects__slug": ["exact", "in"],
         "allow_multiple_correct": ["exact"],
     }
+    def get_permissions(self):
+        """
+        - Non authentifié : rien (401)
+        - Utilisateur authentifié non admin : rien (403)
+        - Admin/staff : tous les droits (CRUD)
+        """
+        return [IsAdminUser()]

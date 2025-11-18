@@ -9,8 +9,20 @@ from datetime import timedelta
 
 
 class Quiz(models.Model):
+    MODE_PRACTICE = "practice"
+    MODE_EXAM = "exam"
+    MODE_CHOICES = [
+        (MODE_PRACTICE, "Practice"),
+        (MODE_EXAM, "Examen"),
+    ]
+
     title = models.CharField("Titre du quiz", max_length=200, unique=True)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
+    mode = models.CharField(
+        max_length=10,
+        choices=MODE_CHOICES,
+        default=MODE_EXAM,  # par défaut : mode examen
+    )
     description = models.TextField("Description", blank=True)
 
     # Nombre de questions à utiliser dans ce quiz (parmi le pool)

@@ -3,26 +3,22 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from rest_framework import status, permissions
+from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from customuser.permissions import IsSelfOrStaffOrSuperuser
+
 from .models import Quiz, QuizQuestion, QuizSession, QuizAttempt
-from .serializers import QuizAttemptSerializer, QuizSessionSerializer, QuizQuestionDetailSerializer, QuizSummarySerializer
+from .serializers import (
+    QuizAttemptSerializer,
+    QuizSessionSerializer,
+    QuizQuestionDetailSerializer,
+    QuizSummarySerializer,
+)
+
 
 class QuizStartView(GenericAPIView):
-    """
-    Démarre un quiz à partir de son slug.
-    Endpoint : POST /api/quiz/<slug>/start/
-
-    - Crée une QuizSession
-    - started_at est rempli automatiquement (timezone.now)
-    - max_duration = 30 minutes par défaut (défini dans le modèle)
-    - is_closed = False par défaut
-    """
-    permission_classes = [IsAuthenticated] # À adapter (IsAuthenticated, etc.)
+    permission_classes = [IsAuthenticated]
     serializer_class = QuizSessionSerializer
     queryset = QuizSession.objects.all()
 
@@ -31,10 +27,9 @@ class QuizStartView(GenericAPIView):
 
         session = QuizSession.objects.create(
             quiz=quiz,
-            user=request.user if request.user.is_authenticated else None,
+            user=request.user,
         )
 
-        # Pour rester simple, on renvoie un JSON "manuel"
         data = {
             "id": str(session.id),
             "quiz": session.quiz.id,
@@ -47,37 +42,32 @@ class QuizStartView(GenericAPIView):
 
 class QuizAttemptView(GenericAPIView):
     """
-    Gère les réponses aux questions d'un quiz pour une session donnée.
-    Endpoints :
-      - POST /api/quiz/<quiz_id>/attempt/<question_order>/
-          -> Enregistrer / modifier une réponse
-      - GET  /api/quiz/<quiz_id>/attempt/<question_order>/
-          -> Récupérer la réponse donnée à cette question
+    POST/GET /api/quiz/<quiz_id>/attempt/<question_order>/
+    → Seuls : user propriétaire de la session OU admin.
     """
-    permission_classes = [IsSelfOrStaffOrSuperuser]  # À adapter
+    permission_classes = [IsAuthenticated]
     serializer_class = QuizAttemptSerializer
 
     def get_session_and_quiz_question(self, quiz_id, question_order):
-        """
-        Helper pour récupérer la session et la question correspondante
-        au question_order *dans ce quiz*.
-        """
         session = get_object_or_404(QuizSession, pk=quiz_id)
         quiz_question = get_object_or_404(
             QuizQuestion,
             quiz=session.quiz,
-            order=question_order,
+            sort_order=question_order,   # <-- IMPORTANT : sort_order
         )
         return session, quiz_question
 
     def post(self, request, quiz_id, question_order):
-        """
-        Enregistre ou met à jour une réponse pour la question n°question_order
-        dans la session de quiz <quiz_id>.
-        """
         session, quiz_question = self.get_session_and_quiz_question(
             quiz_id, question_order
         )
+
+        # Règle d'accès : proprio ou admin
+        if not (request.user.is_staff or session.user == request.user):
+            return Response(
+                {"detail": "Vous n'êtes pas autorisé à répondre à ce quiz."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         # Vérifie si on peut encore répondre (non clôturé et non expiré)
         if not session.can_answer():
@@ -87,23 +77,18 @@ class QuizAttemptView(GenericAPIView):
             )
 
         given_answer = request.data.get("given_answer")
-
         if given_answer is None:
             return Response(
                 {"detail": "Le champ 'given_answer' est requis."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Ici tu peux rajouter ta logique de correction automatique
-        # Exemple : is_correct = (given_answer == quiz_question.question.correct_answer)
-        # Pour l'instant, on laisse is_correct = None
         attempt, created = QuizAttempt.objects.update_or_create(
             session=session,
             question_order=question_order,
             defaults={
                 "question": quiz_question.question,
                 "given_answer": given_answer,
-                # "is_correct": is_correct,
             },
         )
 
@@ -118,11 +103,14 @@ class QuizAttemptView(GenericAPIView):
         return Response(data, status=status.HTTP_200_OK)
 
     def get(self, request, quiz_id, question_order):
-        """
-        Récupère la réponse donnée à la question n°question_order
-        pour la session <quiz_id>.
-        """
         session = get_object_or_404(QuizSession, pk=quiz_id)
+
+        # Règle d'accès : proprio ou admin
+        if not (request.user.is_staff or session.user == request.user):
+            return Response(
+                {"detail": "Vous n'êtes pas autorisé à accéder à ce quiz."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         attempt = get_object_or_404(
             QuizAttempt,
@@ -143,17 +131,21 @@ class QuizAttemptView(GenericAPIView):
 
 class QuizCloseView(GenericAPIView):
     """
-    Clôture une session de quiz.
-    Endpoint : POST /api/quiz/<quiz_id>/close/
-
-    - Met is_closed = True
-    - Ne supprime rien, ne modifie pas les réponses
+    POST /api/quiz/<quiz_id>/close/
+    → Seuls proprio de la session + admin
     """
-    permission_classes = [IsSelfOrStaffOrSuperuser]  # À sécuriser (souvent IsAuthenticated)
+    permission_classes = [IsAuthenticated]
     serializer_class = QuizSessionSerializer
 
     def post(self, request, quiz_id):
         session = get_object_or_404(QuizSession, pk=quiz_id)
+
+        # Règle d'accès : proprio ou admin
+        if not (request.user.is_staff or session.user == request.user):
+            return Response(
+                {"detail": "Vous n'êtes pas autorisé à clôturer ce quiz."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if session.is_closed:
             return Response(
@@ -176,33 +168,49 @@ class QuizCloseView(GenericAPIView):
 
 class QuizQuestionDetailView(GenericAPIView):
     """
-    Renvoie l'énoncé de la question et ses options pour une session de quiz.
+    GET /api/quiz/<quiz_id>/question/<question_order>/
+    → Seuls proprio de la session + admin.
 
-    Endpoint : GET /api/quiz/<quiz_id>/question/<question_order>/
-
-    - Vérifie que la session existe
-    - Récupère la question n°question_order du quiz lié à cette session
-    - Renvoie :
-        - question_id
-        - question_order
-        - title
-        - description
-        - options (à adapter selon ton modèle)
+    Règle is_correct :
+      - mode EXAM + quiz non clôturé → pas de is_correct
+      - sinon (mode PRACTICE ou quiz clôturé) → is_correct présent
     """
-    permission_classes = [IsSelfOrStaffOrSuperuser]
+    permission_classes = [IsAuthenticated]
     serializer_class = QuizQuestionDetailSerializer
 
     def get(self, request, quiz_id, question_order):
         session = get_object_or_404(QuizSession, pk=quiz_id)
+
+        # Règle d'accès : proprio ou admin
+        if not (request.user.is_staff or session.user == request.user):
+            return Response(
+                {"detail": "Vous n'êtes pas autorisé à accéder à ce quiz."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         quiz_question = get_object_or_404(
             QuizQuestion,
             quiz=session.quiz,
-            order=question_order,
+            sort_order=question_order,  # <-- FIX : sort_order
         )
         question = quiz_question.question
 
-        # À adapter selon ton modèle de Question / options (QCM, oui/non, etc.)
-        # Ici on renvoie une structure minimale.
+        # is_correct visible si mode practice OU session clôturée
+        show_correct = (
+            session.quiz.mode == Quiz.MODE_PRACTICE
+            or session.is_closed
+        )
+
+        options = []
+        for opt in question.answer_options.all().order_by("sort_order", "id"):
+            o = {
+                "id": opt.id,
+                "content": opt.content,
+            }
+            if show_correct:
+                o["is_correct"] = opt.is_correct
+            options.append(o)
+
         data = {
             "quiz_id": str(session.id),
             "quiz_title": session.quiz.title,
@@ -210,35 +218,28 @@ class QuizQuestionDetailView(GenericAPIView):
             "question_order": question_order,
             "title": getattr(question, "title", ""),
             "description": getattr(question, "description", ""),
-            # TODO: adapter cette partie à ton modèle d'options si tu as un modèle Choice
-            "options": [],
+            "options": options,
         }
         return Response(data, status=status.HTTP_200_OK)
 
 
 class QuizSummaryView(GenericAPIView):
     """
-    Renvoie un résumé d'une session de quiz.
-
-    Endpoint : GET /api/quiz/<quiz_id>/summary/
-
-    Contenu :
-      - quiz_id
-      - quiz_title
-      - started_at
-      - is_closed
-      - is_expired
-      - max_duration
-      - expires_at
-      - total_questions
-      - answered_questions
-      - correct_answers
+    GET /api/quiz/<quiz_id>/summary/
+    → Seuls proprio de la session + admin.
     """
-    permission_classes = [IsSelfOrStaffOrSuperuser]
+    permission_classes = [IsAuthenticated]
     serializer_class = QuizSummarySerializer
 
     def get(self, request, quiz_id):
         session = get_object_or_404(QuizSession, pk=quiz_id)
+
+        # Règle d'accès : proprio ou admin
+        if not (request.user.is_staff or session.user == request.user):
+            return Response(
+                {"detail": "Vous n'êtes pas autorisé à accéder à ce quiz."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         total_questions = session.quiz.quiz_questions.count()
         attempts = session.attempts.all()
