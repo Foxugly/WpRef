@@ -1,0 +1,3 @@
+**/migrations/00*.py
+**/migrations/__pycache__/
+db.sqlite3
