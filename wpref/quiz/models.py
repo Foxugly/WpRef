@@ -120,7 +120,7 @@ class QuizSession(models.Model):
     max_duration = models.DurationField(default=timedelta(minutes=30))
 
     def __str__(self):
-        return f"Session {self.id} - {self.quiz}"
+        return f"Session {self.user} - {self.quiz}"
 
     @property
     def expires_at(self):
@@ -165,6 +165,10 @@ class QuizAttempt(models.Model):
 
     answered_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def quiz(self):
+        return self.session.quiz
+    
     class Meta:
         unique_together = [("session", "question_order")]
         ordering = ["session", "question_order"]

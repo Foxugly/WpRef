@@ -15,7 +15,6 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -25,7 +24,6 @@ SECRET_KEY = 'django-insecure-t6y&^m%4-jo!7ov3ux2-j53r87^=w4&^u%@o7pnfamcz_nvzi6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
-
 
 # Application definition
 
@@ -40,10 +38,11 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "django_filters",
+    'django_extensions',
     "customuser.apps.CustomuserConfig",
-    "subject",
-    "question",
-    "quiz",
+    "subject.apps.SubjectConfig",
+    "question.apps.QuestionConfig",
+    "quiz.apps.QuizConfig",
 ]
 
 MIDDLEWARE = [
@@ -78,7 +77,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'wpref.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -88,7 +86,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -102,7 +99,7 @@ AUTH_PASSWORD_VALIDATORS = []
 #    },
 #    { 'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
 #    },
-#]
+# ]
 
 
 # Internationalization
