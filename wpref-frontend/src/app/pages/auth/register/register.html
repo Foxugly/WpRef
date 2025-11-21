@@ -1,123 +1,159 @@
-<!-- src/app/pages/auth/register/register.html -->
-<div class="register-container">
-  <h1>Création de compte</h1>
-
-  <form [formGroup]="form" (ngSubmit)="onSubmit()">
-    <!-- Nom d'utilisateur -->
-    <div class="form-group">
-      <label for="username">Nom d'utilisateur</label>
-      <input
-        id="username"
-        type="text"
-        formControlName="username"
-        placeholder="Nom d'utilisateur"
-      />
-      <ng-template class="error" [ngIf]="submitted && f['username'].invalid">
-        <ng-template [ngIf]="f['username'].errors?.['required']">
-          Le nom d'utilisateur est obligatoire.
-        </ng-template>
-      </ng-template>
+<div class="container">
+  <div class="container__card">
+    <div class="card__brand">
+      <img src="assets/logo.svg" alt="Logo" class="brand__logo">
+      <h1 class="brand__title">WpRef</h1>
+      <p class="brand__subtitle">Création de compte</p>
     </div>
 
-    <!-- Email -->
-    <div class="form-group">
-      <label for="email">Adresse e-mail</label>
-      <input
-        id="email"
-        type="email"
-        formControlName="email"
-        placeholder="vous@example.com"
-      />
-      <ng-template class="error" [ngIf]="submitted && f['email'].invalid">
-        <ng-template [ngIf]="f['email'].errors?.['required']">
-          L'adresse e-mail est obligatoire.
-        </ng-template>
-        <ng-template [ngIf]="f['email'].errors?.['email']">
-          L'adresse e-mail n'est pas valide.
-        </ng-template>
-      </ng-template>
-    </div>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="card__form">
+      <!-- Nom d'utilisateur -->
+      <div class="field">
+        <label for="username">Nom d'utilisateur</label>
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          placeholder="Nom d'utilisateur"
+        />
+        @if (submitted && f['username'].invalid) {
+          <div class="error">
+            @if (f['username'].errors?.['required']) {
+              <div>
+                Le nom d'utilisateur est obligatoire.
+              </div>
+            }
+          </div>
+        }
+      </div>
 
-    <!-- Prénom -->
-    <div class="form-group">
-      <label for="first_name">Prénom</label>
-      <input
-        id="first_name"
-        type="text"
-        formControlName="first_name"
-        placeholder="Prénom"
-      />
-      <ng-template class="error" [ngIf]="submitted && f['first_name'].invalid">
-        <ng-template [ngIf]="f['first_name'].errors?.['required']">
-          Le prénom est obligatoire.
-        </ng-template>
-      </ng-template>
-    </div>
+      <!-- Email -->
+      <div class="field">
+        <label for="email">Adresse e-mail</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="vous@example.com"
+        />
+        @if (submitted && f['email'].invalid) {
+          <div class="error">
+            @if (f['email'].errors?.['required']) {
+              <div>
+                L'adresse e-mail est obligatoire.
+              </div>
+            }
+            @if (f['email'].errors?.['email']) {
+              <div>
+                L'adresse e-mail n'est pas valide.
+              </div>
+            }
+          </div>
+        }
+      </div>
 
-    <!-- Nom -->
-    <div class="form-group">
-      <label for="last_name">Nom</label>
-      <input
-        id="last_name"
-        type="text"
-        formControlName="last_name"
-        placeholder="Nom"
-      />
-      @if (submitted && f['last_name'].invalid) {
-        <div class="error">
-          @if (f['last_name'].errors?.['required']) {
-            <div>
-              Le nom est obligatoire.
-            </div>
-          }
+      <!-- Prénom -->
+      <div class="field">
+        <label for="first_name">Prénom</label>
+        <input
+          id="first_name"
+          type="text"
+          formControlName="first_name"
+          placeholder="Prénom"
+        />
+        <ng-template class="error" [ngIf]="submitted && f['first_name'].invalid">
+          <ng-template [ngIf]="f['first_name'].errors?.['required']">
+            Le prénom est obligatoire.
+          </ng-template>
+        </ng-template>
+      </div>
+
+      <!-- Nom -->
+      <div class="field">
+        <label for="last_name">Nom</label>
+        <input
+          id="last_name"
+          type="text"
+          formControlName="last_name"
+          placeholder="Nom"
+        />
+        @if (submitted && f['last_name'].invalid) {
+          <div class="error">
+            @if (f['last_name'].errors?.['required']) {
+              <div>
+                Le nom est obligatoire.
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="field">
+        <label for="language">Langue</label>
+
+        <select id="language" formControlName="language">
+          <option value="fr">Français (FR)</option>
+          <option value="nl">Nederlands (NL)</option>
+          <option value="en">English (EN)</option>
+        </select>
+
+        @if (submitted && f['language'].invalid) {
+          <div class="error">
+            La langue est obligatoire.
+          </div>
+        }
+      </div>
+      <!-- Mot de passe -->
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="Mot de passe"
+        />
+        <div class="error" *ngIf="submitted && f['password'].invalid">
+          <div *ngIf="f['password'].errors?.['required']">
+            Le mot de passe est obligatoire.
+          </div>
+          <div *ngIf="f['password'].errors?.['minlength']">
+            Le mot de passe doit contenir au moins 8 caractères.
+          </div>
         </div>
+      </div>
+
+      <!-- Confirmation -->
+      <div class="field">
+        <label for="confirm_password">Confirmer le mot de passe</label>
+        <input
+          id="confirm_password"
+          type="password"
+          formControlName="confirm_password"
+          placeholder="Confirmez le mot de passe"
+        />
+        <div class="error" *ngIf="submitted && f['confirm_password'].invalid">
+          <div *ngIf="f['confirm_password'].errors?.['required']">
+            La confirmation est obligatoire.
+          </div>
+          <div *ngIf="f['confirm_password'].errors?.['passwordMismatch']">
+            Les mots de passe ne correspondent pas.
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn--primary" type="submit" [disabled]="isSubmitting || form.invalid">
+        {{ isSubmitting ? 'Création en cours…' : "S'inscrire" }}
+      </button>
+    </form>
+
+
+    <div class="container__footer">
+      @if (successMessage) {
+        <p class="success">{{ successMessage }}</p>
+      }
+      @if (errorMessage) {
+        <p class="error">{{ errorMessage }}</p>
       }
     </div>
-
-    <!-- Mot de passe -->
-    <div class="form-group">
-      <label for="password">Mot de passe</label>
-      <input
-        id="password"
-        type="password"
-        formControlName="password"
-        placeholder="Mot de passe"
-      />
-      <div class="error" *ngIf="submitted && f['password'].invalid">
-        <div *ngIf="f['password'].errors?.['required']">
-          Le mot de passe est obligatoire.
-        </div>
-        <div *ngIf="f['password'].errors?.['minlength']">
-          Le mot de passe doit contenir au moins 8 caractères.
-        </div>
-      </div>
-    </div>
-
-    <!-- Confirmation -->
-    <div class="form-group">
-      <label for="confirm_password">Confirmer le mot de passe</label>
-      <input
-        id="confirm_password"
-        type="password"
-        formControlName="confirm_password"
-        placeholder="Confirmez le mot de passe"
-      />
-      <div class="error" *ngIf="submitted && f['confirm_password'].invalid">
-        <div *ngIf="f['confirm_password'].errors?.['required']">
-          La confirmation est obligatoire.
-        </div>
-        <div *ngIf="f['confirm_password'].errors?.['passwordMismatch']">
-          Les mots de passe ne correspondent pas.
-        </div>
-      </div>
-    </div>
-
-    <button type="submit" [disabled]="isSubmitting || form.invalid">
-      {{ isSubmitting ? 'Création en cours…' : "S'inscrire" }}
-    </button>
-  </form>
-
-  <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
-  <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
 </div>
-

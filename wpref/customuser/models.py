@@ -5,7 +5,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 class CustomUser(AbstractUser):
-    language = models.CharField(_("language"), max_length=8, choices=settings.LANGUAGES, default=1)
+    language = models.CharField(_("language"), max_length=8, choices=settings.LANGUAGES, default=settings.LANGUAGES[0][0])
 
     def __str__(self):
         return self.username if not (self.first_name and self.last_name) else self.get_full_name()

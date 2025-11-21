@@ -14,32 +14,33 @@
     </div>
 
     <div class="topmenu__right">
-      <mat-button-toggle-group name="fontStyle" aria-label="Font Style">
-        <mat-button-toggle value="FR">FR</mat-button-toggle>
-        <mat-button-toggle value="NL">NL</mat-button-toggle>
-        <mat-button-toggle value="EN">EN</mat-button-toggle>
+      <mat-button-toggle-group
+        class="mat-menu"
+        [value]="currentLang"
+        (change)="onLangChange($event)">
+        <mat-button-toggle value="fr">FR</mat-button-toggle>
+        <mat-button-toggle value="nl">NL</mat-button-toggle>
+        <mat-button-toggle value="en">EN</mat-button-toggle>
       </mat-button-toggle-group>
       <div class="user-menu">
         <!-- Le menu est TOUJOURS présent -->
-        <mat-menu #userMenu="matMenu">
-          @if (auth.isLoggedIn()) {
+        @if (auth.isLoggedIn()) {
+          <mat-menu #userMenu="matMenu">
             <button mat-menu-item (click)="goPreferences()">
               <span>Préférences</span>
+            </button>
+            <button mat-menu-item (click)="goChangePassword()">
+              <span>Changer de mot de passe</span>
             </button>
             <button mat-menu-item (click)="logout()">
               <span>Déconnexion</span>
             </button>
-          } @else {
-            <button mat-menu-item routerLink="/login">
-              <span>Se connecter</span>
-            </button>
-          }
-        </mat-menu>
-
-        <!-- Le trigger peut être ton avatar/bouton -->
-        <button mat-button [matMenuTriggerFor]="userMenu" class="user-trigger">
-          <span>👤 {{ auth.getUsername() }}</span>
-        </button>
+          </mat-menu>
+          <!-- Le trigger peut être ton avatar/bouton -->
+          <button mat-button [matMenuTriggerFor]="userMenu" class="user-trigger">
+            <span class="topmenu_user">👤 {{ auth.getUsername() }}</span>
+          </button>
+        }
       </div>
     </div>
   </div>

@@ -1,20 +1,15 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-  AbstractControl,
-} from '@angular/forms';
-import { AuthService } from '../../../services/auth';
+import {Component} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
+import {AuthService} from '../../../services/auth';
+import {RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-register',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './register.html',
-  styleUrls: ['./register.css'],
+  styleUrls: ['./register.scss'],
 })
 export class Register {
   form!: FormGroup;
@@ -33,6 +28,7 @@ export class Register {
         email: ['', [Validators.required, Validators.email]],
         first_name: ['', [Validators.required]],
         last_name: ['', [Validators.required]],
+        language: ['en', [Validators.required]],
         password: ['', [Validators.required, Validators.minLength(8)]],
         confirm_password: ['', [Validators.required]],
       },
@@ -50,7 +46,7 @@ export class Register {
     const confirm = group.get('confirm_password')?.value;
 
     if (pwd && confirm && pwd !== confirm) {
-      group.get('confirm_password')?.setErrors({ passwordMismatch: true });
+      group.get('confirm_password')?.setErrors({passwordMismatch: true});
     } else {
       const errors = group.get('confirm_password')?.errors;
       if (errors && errors['passwordMismatch']) {
@@ -86,7 +82,7 @@ export class Register {
 
     this.isSubmitting = true;
 
-    const { username, email, first_name, last_name, password } =
+    const {username, email, first_name, last_name, language, password} =
       this.form.getRawValue();
 
     this.authService
@@ -95,6 +91,7 @@ export class Register {
         email,
         first_name,
         last_name,
+        language,
         password,
       })
       .subscribe({

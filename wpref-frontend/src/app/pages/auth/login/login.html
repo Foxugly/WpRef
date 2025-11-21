@@ -1,6 +1,6 @@
-<div class="login">
-  <div class="login__card">
-    <div class="login__brand">
+<div class="container">
+  <div class="container__card">
+    <div class="card__brand">
       <img src="assets/logo.svg" alt="Logo" class="brand__logo">
       <h1 class="brand__title">WpRef</h1>
       <p class="brand__subtitle">Connecte-toi pour continuer</p>
@@ -12,7 +12,7 @@
       </div>
     }
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="login__form" autocomplete="on">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="container__form" autocomplete="on">
       <div class="field">
         <label for="username">Utilisateur</label>
         <input id="username" type="text" formControlName="username" placeholder="ton identifiant" autofocus>
@@ -47,7 +47,7 @@
       </button>
     </form>
 
-    <div class="login__footer">
+    <div class="card__footer">
       <span class="muted">Pas de compte ?</span>
       <a routerLink="/register" class="link">Créer un compte</a>
     </div>

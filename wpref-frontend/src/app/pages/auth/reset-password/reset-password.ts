@@ -8,7 +8,7 @@ import {AuthService} from '../../../services/auth';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './reset-password.html',
-  styleUrl: './reset-password.css',
+  styleUrl: './reset-password.scss',
 })
 export class ResetPassword {
   form!: FormGroup;

@@ -7,7 +7,9 @@ import { About } from './pages/about/about';
 // AUTH
 
 import { Login } from './pages/auth/login/login';
+import { Home } from './pages/home/home';
 import { ResetPassword } from './pages/auth/reset-password/reset-password';
+import { ChangePassword } from './pages/auth/change-password/change-password';
 import { Register } from './pages/auth/register/register';
 
 // SUBJECT
@@ -24,8 +26,10 @@ import { authGuard } from '../app/guards/auth.guard';
 export const routes: Routes = [
   { path: '', redirectTo: 'subjects', pathMatch: 'full' },
   { path: 'login', component: Login },
+  { path: 'home', component: Home },
   { path: 'about', component: About },
   { path: 'reset-password', component: ResetPassword},
+  { path: 'change-password', component: ChangePassword},
   { path: 'register', component: Register },
   { path: 'subject/list', component: SubjectList , canActivate: [authGuard] },
   { path: 'subject/add', component: SubjectCreate , canActivate: [authGuard] },

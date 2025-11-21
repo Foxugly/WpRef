@@ -100,7 +100,7 @@ class PasswordChangeSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True)
 
     @staticmethod
-    def validate_new_password(self, value):
+    def validate_new_password(value):
         validate_password(value)
         return value
 
@@ -108,5 +108,5 @@ class PasswordChangeSerializer(serializers.Serializer):
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name"]
+        fields = ["id", "username", "email", "first_name", "last_name", "language"]
         read_only_fields = ["id", "username"]

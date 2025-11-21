@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink  } from '@angular/router';
 import { AuthService } from '../../../services/auth';
-import { Api } from '../../../services/api';
 
 @Component({
   standalone: true,
@@ -43,7 +42,7 @@ export class Login {
     this.auth.login(username, password, remember).subscribe({
       next: () => {
         this.loading.set(false);
-        this.router.navigate(['/subjects']);
+        this.router.navigate(['/home']);
       },
       error: (err) => {
         this.loading.set(false);
