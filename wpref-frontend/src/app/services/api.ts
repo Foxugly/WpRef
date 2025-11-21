@@ -43,11 +43,4 @@ export class Api {
   deleteSubject(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/subjects/${id}/`);
   }
-
-  login(username: string, password: string) {
-    return this.http.post<{ access: string, refresh: string }>(`${this.base.replace('/api', '')}/api/token/`, {
-      username,
-      password
-    });
-  }
 }

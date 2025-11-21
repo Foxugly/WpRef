@@ -406,6 +406,9 @@ QUIZZES_DEF: List[Dict[str, Any]] = [
 ]
 
 
+def get_url(base_url, path):
+    return base_url.rstrip("/") + path
+
 # ============================================================
 # UTILITAIRE : LIRE LES ENDPOINTS DANS LE YAML
 # ============================================================
@@ -465,7 +468,7 @@ def load_openapi_paths(openapi_path: str) -> Dict[str, str]:
 
 def get_access_token(base_url: str, token_path: str) -> str:
     """Récupère un token JWT (SimpleJWT) pour l'admin."""
-    url = base_url.rstrip("/") + token_path
+    url = get_url(base_url, token_path)
     payload = {"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}
     resp = requests.post(url, json=payload)
     if resp.status_code != 200:
@@ -562,7 +565,7 @@ def create_subjects(
             "name": name,
             "description": description,
         }
-        url = base_url.rstrip("/") + subject_path
+        url = get_url(base_url, subject_path)
         resp = requests.post(url, json=payload, headers=headers)
         if resp.status_code not in (200, 201):
             raise RuntimeError(
@@ -593,11 +596,9 @@ def find_question_by_title_and_subjects(
     Compatible pagination (results / next).
     """
     headers = auth_headers(token)
-    url = base_url.rstrip("/") + question_path
+    url = get_url(base_url, question_path)
     params = {}
-
     wanted_subjects = set(subject_ids)
-
     while url:
         resp = requests.get(url, headers=headers, params=params)
         if resp.status_code != 200:
@@ -702,9 +703,8 @@ def find_quiz_by_title_and_mode(
     GET /api/quiz/ puis filtrage côté client.
     """
     headers = auth_headers(token)
-    url = base_url.rstrip("/") + quiz_path
+    url = get_url(base_url, quiz_path)
     params = {}
-
     while url:
         resp = requests.get(url, headers=headers, params=params)
         if resp.status_code != 200:
@@ -763,7 +763,7 @@ def create_quiz(
         "is_active": True,
         "mode": mode,
     }
-    url = base_url.rstrip("/") + quiz_path
+    url = get_url(base_url, quiz_path)
     resp = requests.post(url, json=payload, headers=headers)
     if resp.status_code not in (200, 201):
         raise RuntimeError(

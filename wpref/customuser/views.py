@@ -85,9 +85,7 @@ class PasswordResetRequestView(GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         email = serializer.validated_data["email"]
-        # On utilise le mécanisme standard Django
         form = PasswordResetForm(data={"email": email})
         if form.is_valid():
             # domain_override : ton frontend (SPA, etc.)

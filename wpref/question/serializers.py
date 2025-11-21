@@ -40,7 +40,8 @@ class QuestionSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
-    def _assign_subjects(self, question, subject_ids=None, subject_slugs=None):
+    @staticmethod
+    def _assign_subjects(question, subject_ids=None, subject_slugs=None):
         if subject_ids is None and subject_slugs is None:
             return
         qs = Subject.objects.none()

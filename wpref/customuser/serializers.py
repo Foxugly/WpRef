@@ -79,8 +79,8 @@ User = get_user_model()
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
-    def validate_email(self, value):
-        # Pas obligatoire d'erreur si l'email n'existe pas (pour éviter le leak)
+    @staticmethod
+    def validate_email(value):
         return value
 
 
@@ -89,6 +89,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True)
 
+    @staticmethod
     def validate_new_password(self, value):
         validate_password(value)
         return value
@@ -98,6 +99,7 @@ class PasswordChangeSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
     new_password = serializers.CharField(write_only=True)
 
+    @staticmethod
     def validate_new_password(self, value):
         validate_password(value)
         return value

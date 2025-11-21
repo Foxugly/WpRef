@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Subject, Question, QuestionMedia, AnswerOption, QuestionSubject
+from .models import Question, QuestionMedia, AnswerOption, QuestionSubject
+from subject.models import Subject
+
 
 @admin.register(Subject)
 class SubjectAdmin(admin.ModelAdmin):

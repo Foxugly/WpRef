@@ -6,23 +6,23 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from subject.models import Subject
-from question.models import Question, AnswerOption, QuestionMedia, QuestionSubject
+from .models import Question, AnswerOption, QuestionMedia, QuestionSubject
 
 
 class QuestionAPITestCase(APITestCase):
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
+        user_model = get_user_model()
 
         # Utilisateur simple (non staff)
-        cls.user = User.objects.create_user(
+        cls.user = user_model.objects.create_user(
             username="user",
             email="user@example.com",
             password="password123",
         )
 
         # Utilisateur admin/staff
-        cls.admin = User.objects.create_user(
+        cls.admin = user_model.objects.create_user(
             username="admin",
             email="admin@example.com",
             password="password123",
@@ -129,13 +129,11 @@ class QuestionAPITestCase(APITestCase):
 
         resp = self.client.post(self.list_url, payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-
         self.assertEqual(Question.objects.count(), 1)
         q = Question.objects.first()
         self.assertEqual(q.title, payload["title"])
         self.assertEqual(q.answer_options.count(), 2)
         self.assertEqual(q.media.count(), 1)
-
         # sujets via QuestionSubject
         self.assertEqual(q.subjects.count(), 2)
         self.assertEqual(QuestionSubject.objects.filter(question=q).count(), 2)

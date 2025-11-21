@@ -16,13 +16,16 @@ path_quiz_attempt = "/api/quiz/<QUIZ_ID>/attempt/<QUESTION_ORDER>/"
 path_quiz_close = "/api/quiz/<QUIZ_ID>/close/"
 path_quiz_summary = "/api/quiz/<QUIZ_ID>/summary/"
 
+def get_json_credential(username, password):
+    return {"username": username, "password": password}
+
+def get_url(base_url, path):
+    return base_url.rstrip("/") + path
 
 def get_access_token(base_url: str, token_path: str) -> str:
     """Récupère un token JWT (SimpleJWT) du user2."""
-    url = base_url.rstrip("/") + token_path
-    print(url)
-    payload = {"username": U2_USERNAME, "password": U2_PASSWORD}
-    resp = requests.post(url, json=payload)
+    url = get_url(base_url, token_path)
+    resp = requests.post(url, json=get_json_credential(U2_USERNAME, U2_PASSWORD))
     if resp.status_code != 200:
         raise RuntimeError(
             f"Échec de l'authentification ({resp.status_code}): {resp.text}"

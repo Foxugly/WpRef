@@ -11,17 +11,17 @@ from .models import Subject
 class SubjectAPITestCase(APITestCase):
     @classmethod
     def setUpTestData(cls):
-        User = get_user_model()
+        user_model = get_user_model()
 
         # utilisateur "simple"
-        cls.user = User.objects.create_user(
+        cls.user = user_model.objects.create_user(
             username="user",
             email="user@example.com",
             password="password123",
         )
 
         # utilisateur staff/admin
-        cls.admin = User.objects.create_user(
+        cls.admin = user_model.objects.create_user(
             username="admin",
             email="admin@example.com",
             password="password123",
