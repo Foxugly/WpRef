@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { UserService } from '../../../services/user';
+import { UserService } from '../../../services/user/user';
 
 import {
   FormBuilder,

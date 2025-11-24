@@ -1,7 +1,7 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError, timeout } from 'rxjs';
-import { BackendStatusService } from './services/status';
+import { BackendStatusService } from './services/status/status';
 
 // délai max avant de considérer "pas de réponse" (adapter selon besoin)
 const REQ_TIMEOUT_MS = 8000;

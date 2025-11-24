@@ -1,7 +1,7 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {Router, RouterLink} from '@angular/router';
-import {Api, Subject} from '../../../../services/api';
+import { SubjectService, Subject } from '../../../services/subject/subject';
 import {FormControl, FormsModule} from '@angular/forms';
 
 @Component({
@@ -12,8 +12,9 @@ import {FormControl, FormsModule} from '@angular/forms';
   styleUrl: './subject-list.scss'
 })
 export class SubjectList implements OnInit {
-  private api = inject(Api);
+  private subjectService = inject(SubjectService);
   private router = inject(Router);
+
   subjects = signal<Subject[]>([]);
   q = signal('');
 
@@ -22,11 +23,24 @@ export class SubjectList implements OnInit {
   }
 
   load() {
-    this.api.listSubject({search: this.q() || undefined}).subscribe(subs => this.subjects.set(subs));
+    this.subjectService
+      .listSubject({ search: this.q() || undefined })
+      .subscribe({
+        next: (subs) => this.subjects.set(subs),
+        error: (err) => {
+          console.error('Erreur lors du chargement des sujets', err);
+          this.subjects.set([]);
+        }
+      });
+  }
+
+  onSearchChange(term: string) {
+    this.q.set(term);
+    this.load();
   }
 
   goNew() {
-    this.router.navigate(['/subject/add']);
+    this.router.navigate(['/subject']);
   }
 
   goEdit(id: number) {

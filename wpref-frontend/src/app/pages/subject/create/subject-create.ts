@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Api } from '../../../../services/api';
+import { SubjectService, Subject } from '../../../services/subject/subject';
 
 @Component({
   standalone: true,
@@ -13,8 +13,8 @@ import { Api } from '../../../../services/api';
 })
 export class SubjectCreate {
   private fb = inject(FormBuilder);
-  private api = inject(Api);
   private router = inject(Router);
+  private subjectService = inject(SubjectService);
 
   form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -23,7 +23,7 @@ export class SubjectCreate {
 
   save() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    this.api.createSubject(this.form.value).subscribe({
+    this.subjectService.createSubject(this.form.value).subscribe({
       next: () => this.router.navigate(['/subject'])
     });
   }

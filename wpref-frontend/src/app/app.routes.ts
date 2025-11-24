@@ -13,10 +13,10 @@ import { ChangePassword } from './pages/auth/change-password/change-password';
 import { Register } from './pages/auth/register/register';
 
 // SUBJECT
-import { SubjectList } from './pages/subject/list/subject-list/subject-list';
-import { SubjectCreate } from './pages/subject/create/subject-create/subject-create';
-import { SubjectEdit } from './pages/subject/edit/subject-edit/subject-edit';
-import { SubjectDelete } from './pages/subject/delete/subject-delete/subject-delete';
+import { SubjectList } from './pages/subject/list/subject-list';
+import { SubjectCreate } from './pages/subject/create/subject-create';
+import { SubjectEdit } from './pages/subject/edit/subject-edit';
+import { SubjectDelete } from './pages/subject/delete/subject-delete';
 
 // QUESTION
 import { Questions } from './pages/questions/questions';

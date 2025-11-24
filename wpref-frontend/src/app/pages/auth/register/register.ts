@@ -1,7 +1,7 @@
 import {Component} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
-import {AuthService} from '../../../services/auth';
+import {AuthService} from '../../../services/auth/auth';
 import {RouterLink} from '@angular/router';
 
 @Component({
@@ -17,6 +17,7 @@ export class Register {
   isSubmitting = false;
   successMessage = '';
   errorMessage = '';
+  hide = true; // 👈 booléen simple
 
   constructor(
     private fb: FormBuilder,
@@ -66,6 +67,10 @@ export class Register {
 
   get f() {
     return this.form.controls;
+  }
+
+  toggleHide() {
+    this.hide = !this.hide;
   }
 
   // ----- Soumission -----

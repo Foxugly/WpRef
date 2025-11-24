@@ -1,7 +1,7 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TopmenuComponent } from './components/topmenu/topmenu';
-import { BackendStatusService } from './services/status';
+import { BackendStatusService } from './services/status/status';
 
 @Component({
   selector: 'app-root',

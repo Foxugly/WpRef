@@ -15,6 +15,7 @@
           type="text"
           formControlName="username"
           placeholder="Nom d'utilisateur"
+          autofocus
         />
         @if (submitted && f['username'].invalid) {
           <div class="error">
@@ -61,11 +62,15 @@
           formControlName="first_name"
           placeholder="Prénom"
         />
-        <ng-template class="error" [ngIf]="submitted && f['first_name'].invalid">
-          <ng-template [ngIf]="f['first_name'].errors?.['required']">
+        @if (submitted && f['first_name'].invalid){
+        <div class="error" >
+          @if (f['first_name'].errors?.['required']) {
+          <div>
             Le prénom est obligatoire.
-          </ng-template>
-        </ng-template>
+          </div>
+          }
+        </div>
+        }
       </div>
 
       <!-- Nom -->
@@ -103,22 +108,25 @@
           </div>
         }
       </div>
+
       <!-- Mot de passe -->
       <div class="field">
         <label for="password">Mot de passe</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          placeholder="Mot de passe"
-        />
+        <input id="password" [type]="hide ? 'password' : 'text'" formControlName="password" placeholder="••••••••">
+          <button type="button" class="password__toggle" (click)="toggleHide()" aria-label="Afficher/Masquer">
+            {{ hide ? '👁️' : '🙈' }}
+          </button>
         <div class="error" *ngIf="submitted && f['password'].invalid">
-          <div *ngIf="f['password'].errors?.['required']">
+          @if (f['password'].errors?.['required']) {
+          <div>
             Le mot de passe est obligatoire.
           </div>
-          <div *ngIf="f['password'].errors?.['minlength']">
+          }
+          @if (f['password'].errors?.['minlength']) {
+          <div>
             Le mot de passe doit contenir au moins 8 caractères.
           </div>
+          }
         </div>
       </div>
 
@@ -126,19 +134,28 @@
       <div class="field">
         <label for="confirm_password">Confirmer le mot de passe</label>
         <input
-          id="confirm_password"
+          id="confirm_password" [type]="hide ? 'password' : 'text'"
           type="password"
           formControlName="confirm_password"
           placeholder="Confirmez le mot de passe"
         />
-        <div class="error" *ngIf="submitted && f['confirm_password'].invalid">
-          <div *ngIf="f['confirm_password'].errors?.['required']">
+        <button type="button" class="password__toggle" (click)="toggleHide()" aria-label="Afficher/Masquer">
+            {{ hide ? '👁️' : '🙈' }}
+          </button>
+        @if (submitted && f['confirm_password'].invalid) {
+        <div class="error">
+          @if (f['confirm_password'].errors?.['required']) {
+          <div>
             La confirmation est obligatoire.
           </div>
-          <div *ngIf="f['confirm_password'].errors?.['passwordMismatch']">
+          }
+          @if (f['confirm_password'].errors?.['passwordMismatch']) {
+          <div>
             Les mots de passe ne correspondent pas.
           </div>
+          }
         </div>
+        }
       </div>
 
       <button class="btn btn--primary" type="submit" [disabled]="isSubmitting || form.invalid">

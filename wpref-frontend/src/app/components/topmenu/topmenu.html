@@ -40,6 +40,8 @@
           <button mat-button [matMenuTriggerFor]="userMenu" class="user-trigger">
             <span class="topmenu_user">👤 {{ auth.getUsername() }}</span>
           </button>
+        }@else{
+         <a routerLink="/login" routerLinkActive="active">Login</a>
         }
       </div>
     </div>

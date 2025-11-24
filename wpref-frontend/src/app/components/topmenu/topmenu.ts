@@ -4,9 +4,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink, Router } from '@angular/router';
-import { AuthService } from '../../services/auth';
+import { AuthService } from '../../services/auth/auth';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
-import { UserService } from '../../services/user';
+import { UserService } from '../../services/user/user';
 import { LangCode } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 

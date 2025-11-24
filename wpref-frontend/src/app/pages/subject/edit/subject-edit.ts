@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Api, Subject } from '../../../../services/api';
+import { SubjectService, Subject } from '../../../services/subject/subject';
 
 @Component({
   standalone: true,
@@ -13,9 +13,9 @@ import { Api, Subject } from '../../../../services/api';
 })
 export class SubjectEdit implements OnInit {
   private fb = inject(FormBuilder);
-  private api = inject(Api);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private subjectService = inject(SubjectService);
 
   id!: number;
   form = this.fb.nonNullable.group({
@@ -25,14 +25,14 @@ export class SubjectEdit implements OnInit {
 
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
-    this.api.getSubject(this.id).subscribe((s: Subject) => {
+    this.subjectService.getSubject(this.id).subscribe((s: Subject) => {
       this.form.patchValue({ name: s.name, description: s.description || '' });
     });
   }
 
   save() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    this.api.updateSubject(this.id, this.form.value).subscribe({
+    this.subjectService.updateSubject(this.id, this.form.value).subscribe({
       next: () => this.router.navigate(['/subject'])
     });
   }

@@ -1,8 +1,8 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {environment, LangCode} from '../../environments/environment';
+import {environment, LangCode} from '../../../environments/environment';
 import {Observable, switchMap, tap} from 'rxjs';
-import {UserService, Me} from './user';
+import {UserService, Me} from '../user/user';
 
 interface TokenPair {
   access: string;
