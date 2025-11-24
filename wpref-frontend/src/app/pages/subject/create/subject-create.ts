@@ -1,13 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
 
 @Component({
   standalone: true,
   selector: 'app-subject-create',
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule],
   templateUrl: './subject-create.html',
   styleUrl: './subject-create.scss'
 })
@@ -23,8 +23,8 @@ export class SubjectCreate {
 
   save() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    this.subjectService.createSubject(this.form.value).subscribe({
-      next: () => this.router.navigate(['/subject'])
+    this.subjectService.create(this.form.value).subscribe({
+      next: () => this.router.navigate(['/subject/list'])
     });
   }
 }

@@ -1,8 +1,9 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {FormControl, FormsModule} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
-import {FormControl, FormsModule} from '@angular/forms';
+
 
 @Component({
   standalone: true,
@@ -24,10 +25,10 @@ export class SubjectList implements OnInit {
 
   load() {
     this.subjectService
-      .listSubject({ search: this.q() || undefined })
+      .list({ search: this.q() || undefined })
       .subscribe({
-        next: (subs) => this.subjects.set(subs),
-        error: (err) => {
+        next: (subs: Subject[]) => this.subjects.set(subs),
+        error: (err: unknown) => {
           console.error('Erreur lors du chargement des sujets', err);
           this.subjects.set([]);
         }

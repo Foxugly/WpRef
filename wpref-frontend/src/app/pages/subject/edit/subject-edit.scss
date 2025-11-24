@@ -1,5 +1,88 @@
-.card { display:grid; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
-input, textarea { padding:10px; border:1px solid var(--border); border-radius:10px; }
-.field-error { color:var(--danger); }
-.actions { margin-top:10px; }
-.btn.btn-primary { background:var(--brand); color:var(--brand-contrast); border:0; padding:10px 14px; border-radius:10px; }
+// Variables cohérentes avec le style précédent
+$color-border: #e5e7eb;
+$color-muted: #6b7280;
+$color-bg: #ffffff;
+$color-primary: #2563eb;
+$color-secondary: #dddddd;
+$color-primary-hover: #2563eb;
+$radius: 8px;
+$shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+h2 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+// ---- CARD FORM ----
+form.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  padding: 1.5rem;
+  box-shadow: $shadow;
+
+  label {
+    font-weight: 500;
+    font-size: 0.95rem;
+    margin-bottom: -0.5rem; // rapproche label et input
+  }
+
+  input,
+  textarea {
+    //width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid $color-border;
+    border-radius: $radius;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .field-error {
+    color: #d14343;
+    font-size: 0.85rem;
+    margin-top: -0.5rem;
+  }
+
+  // --- Actions ---
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+
+    .btn {
+      padding: 0.5rem 1.1rem;
+      border-radius: $radius;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      color: white;
+      background: $color-primary;
+
+      &:hover {
+        background: $color-primary-hover;
+      }
+    }
+  .btn-secondary {
+      color: black;
+      background: $color-secondary;
+    }
+  }
+}

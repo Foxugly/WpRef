@@ -20,12 +20,12 @@ export class SubjectDelete implements OnInit {
 
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
-    this.subjectService.getSubject(this.id).subscribe(s => this.subject.set(s));
+    this.subjectService.get(this.id).subscribe(s => this.subject.set(s));
   }
 
   confirm() {
-    this.subjectService.deleteSubject(this.id).subscribe({
-      next: () => this.router.navigate(['/subject'])
+    this.subjectService.delete(this.id).subscribe({
+      next: () => this.router.navigate(['/subject/list'])
     });
   }
 }

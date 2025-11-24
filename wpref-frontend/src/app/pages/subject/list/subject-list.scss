@@ -1,10 +1,120 @@
-.toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.actions { display:flex; gap:8px; align-items:center; }
-input { padding:8px 10px; border:1px solid var(--border); border-radius:8px; }
-.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
-.table { width:100%; border-collapse: collapse; }
-.table th, .table td { padding:10px; border-bottom:1px solid var(--border); }
-.muted { color:var(--muted); }
-.btn { padding:10px 14px; border-radius:10px; text-decoration:none; border:1px solid var(--border); }
-.btn-primary { background: var(--brand); color: var(--brand-contrast); border:0; }
-.row-actions a { cursor:pointer; color: var(--brand); }
+// Palette et variables
+$color-border: #e5e7eb;
+$color-muted: #6b7280;
+$color-bg: #ffffff;
+$color-primary: #2563eb;
+$color-primary-hover: #2563eb; //darken($color-primary, 6%);
+$radius: 8px;
+$shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    input {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid $color-border;
+      border-radius: $radius;
+      font-size: 0.95rem;
+      width: 200px;
+      transition: border-color 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: $color-primary;
+      }
+    }
+
+    .btn {
+      padding: 0.45rem 0.9rem;
+      border-radius: $radius;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+      background: $color-primary;
+      transition: background 0.2s;
+
+      &:hover {
+        background: $color-primary-hover;
+      }
+    }
+  }
+}
+
+// ---- CARD ----
+.card {
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  padding: 1.25rem;
+  box-shadow: $shadow;
+
+  .muted {
+    color: $color-muted;
+  }
+}
+
+// ---- TABLE ----
+.table {
+  width: 100%;
+  border-collapse: collapse;
+
+  thead {
+    background: #f9fafb;
+
+    th {
+      text-align: left;
+      padding: 0.75rem;
+      font-size: 0.85rem;
+      color: $color-muted;
+      border-bottom: 1px solid $color-border;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid $color-border;
+
+    &:hover {
+      background: #f3f4f6;
+    }
+
+    td {
+      padding: 0.75rem;
+      font-size: 0.95rem;
+      vertical-align: top;
+
+      &.muted {
+        color: $color-muted;
+      }
+    }
+
+    .row-actions {
+      white-space: nowrap;
+      color: $color-primary;
+      font-size: 0.9rem;
+
+      a {
+        cursor: pointer;
+        color: $color-primary;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+}

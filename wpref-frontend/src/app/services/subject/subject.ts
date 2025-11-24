@@ -21,23 +21,28 @@ export class SubjectService {
 
   constructor(private http: HttpClient, private router: Router) {}
 
-  listSubject(params?: { search?: string }): Observable<Subject[]> {
-    return this.http.get<Subject[]>(`${this.base}${this.subjectPath}`);
-  }
+  list(params?: { search?: string }): Observable<Subject[]> {
+  return this.http.get<Subject[]>(
+    `${this.base}${this.subjectPath}`,
+    {
+      params: params?.search ? { search: params.search } : {}
+    }
+  );
+}
 
-  getSubject(id: number): Observable<Subject> {
+  get(id: number): Observable<Subject> {
     return this.http.get<Subject>(`${this.base}${this.subjectPath}${id}/`);
   }
 
-  createSubject(data: Partial<Subject>): Observable<Subject> {
+  create(data: Partial<Subject>): Observable<Subject> {
     return this.http.post<Subject>(`${this.base}${this.subjectPath}`, data);
   }
 
-  updateSubject(id: number, data: Partial<Subject>): Observable<Subject> {
+  update(id: number, data: Partial<Subject>): Observable<Subject> {
   return this.http.put<Subject>(`${this.base}${this.subjectPath}${id}/`, data);
 }
 
-  deleteSubject(id: number): Observable<void> {
+  delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}${this.subjectPath}${id}/`);
   }
 }
