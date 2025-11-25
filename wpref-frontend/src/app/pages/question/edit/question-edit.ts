@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 //import { RouterLink } from '@angular/router';
 import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
-import * as ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import {
   FormArray,
   FormBuilder,
@@ -52,12 +52,13 @@ export interface AnswerOption {
   imports: [CommonModule, ReactiveFormsModule, CKEditorModule],
 })
 export class QuestionEdit implements OnInit {
+  public Editor: any = ClassicEditor;
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
-  public Editor: any = ClassicEditor;
+
 
   questionId!: number;
 
