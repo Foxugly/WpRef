@@ -25,3 +25,4 @@ class QuestionViewSet(viewsets.ModelViewSet):
         - Admin/staff : tous les droits (CRUD)
         """
         return [IsAdminUser()]
+

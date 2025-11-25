@@ -19,7 +19,10 @@ import { SubjectEdit } from './pages/subject/edit/subject-edit';
 import { SubjectDelete } from './pages/subject/delete/subject-delete';
 
 // QUESTION
-import { Questions } from './pages/questions/questions';
+import { QuestionList } from './pages/question/list/question-list';
+import { QuestionCreate } from './pages/question/create/question-create';
+import { QuestionEdit } from './pages/question/edit/question-edit';
+import { QuestionDelete } from './pages/question/delete/question-delete';
 
 import { authGuard } from '../app/guards/auth.guard';
 
@@ -35,6 +38,8 @@ export const routes: Routes = [
   { path: 'subject/add', component: SubjectCreate , canActivate: [authGuard] },
   { path: 'subject/:id/edit', component: SubjectEdit , canActivate: [authGuard] },
   { path: 'subject/:id/delete', component: SubjectDelete , canActivate: [authGuard] },
-
-  { path: 'questions/:slug', component: Questions, canActivate: [authGuard] },
+  { path: 'question/list', component: QuestionList , canActivate: [authGuard] },
+  { path: 'question/add', component: QuestionCreate , canActivate: [authGuard] },
+  { path: 'question/:id/edit', component: QuestionEdit , canActivate: [authGuard] },
+  { path: 'question/:id/delete', component: QuestionDelete , canActivate: [authGuard] },
 ];

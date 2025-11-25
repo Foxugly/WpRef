@@ -14,3 +14,15 @@
     <a routerLink="/subject/list" class="btn btn-secondary" style="margin-left: 10px;">Annuler</a>
   </div>
 </form>
+<div class="card questions-card">
+  @if ((questions || []).length === 0) {
+    <p class="muted">Aucune question liée à ce sujet.</p>
+  } @else {
+    <h3>Questions liées</h3>
+    <ul>
+      @for (q of questions; track q.id) {
+        <li>{{ q.title }}</li>
+      }
+    </ul>
+  }
+</div>

@@ -4,7 +4,18 @@ from rest_framework import serializers
 
 from .models import Question, QuestionMedia, AnswerOption, QuestionSubject
 from subject.models import Subject
-from subject.serializers import SubjectSerializer
+
+
+class SubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subject
+        fields = ["id", "name", "slug", "description"]
+
+
+class QuestionLiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ["id", "title"]  # tu peux ajouter d'autres champs si tu veux
 
 
 class QuestionMediaSerializer(serializers.ModelSerializer):

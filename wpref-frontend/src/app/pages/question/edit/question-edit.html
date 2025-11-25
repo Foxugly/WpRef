@@ -1,0 +1,121 @@
+<div class="page">
+  <h1>Modifier une question</h1>
+
+  <div *ngIf="loading()">Chargement…</div>
+
+  <div *ngIf="error()" class="error">
+    {{ error() }}
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" *ngIf="!loading()">
+    <!-- Titre -->
+    <div class="field">
+      <label for="title">Titre</label>
+      <input id="title" type="text" formControlName="title"/>
+      <div class="error" *ngIf="form.get('title')?.invalid && form.get('title')?.touched">
+        Le titre est obligatoire.
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="field">
+      <label for="description">Description</label>
+      <ckeditor
+        [editor]="Editor"
+        formControlName="description"
+      ></ckeditor>
+    </div>
+
+    <!-- Explication -->
+    <div class="field">
+      <label for="explanation">Explication</label>
+      <ckeditor
+        [editor]="Editor"
+        formControlName="explanation"
+      ></ckeditor>
+    </div>
+
+    <!-- Autorise plusieurs bonnes réponses -->
+    <div class="field field--inline">
+      <label>
+        <input type="checkbox" formControlName="allow_multiple_correct"/>
+        Autoriser plusieurs réponses correctes
+      </label>
+    </div>
+
+    <!-- Sujets -->
+    <div class="field">
+      <label for="subjects">Sujets</label>
+      <select
+        id="subjects"
+        multiple
+        formControlName="subject_ids"
+        size="5"
+      >
+        <option *ngFor="let s of subjects()" [value]="s.id">
+          {{ s.name }} ({{ s.slug }})
+        </option>
+      </select>
+      <small>Maintiens Ctrl (Windows) ou Cmd (Mac) pour en sélectionner plusieurs.</small>
+    </div>
+
+    <!-- Réponses -->
+    <fieldset class="answers" formArrayName="answer_options">
+      <legend>Réponses possibles</legend>
+
+      <div
+        class="answer"
+        *ngFor="let opt of answerOptions.controls; let i = index"
+        [formGroupName]="i"
+      >
+        <div class="field">
+          <label>Réponse {{ i + 1 }}</label>
+          <textarea formControlName="content"></textarea>
+        </div>
+
+        <div class="field field--inline">
+          <label>
+            <input type="checkbox" formControlName="is_correct"/>
+            Bonne réponse
+          </label>
+
+          <!-- Si tu veux imposer une seule bonne réponse quand allow_multiple_correct = false -->
+          <button type="button" (click)="setOnlyCorrect(i)">
+            Marquer comme seule correcte
+          </button>
+        </div>
+
+        <div class="field field--inline">
+          <span>Ordre : </span>
+          <input type="number" formControlName="sort_order" style="width: 60px;"/>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn--danger"
+          (click)="removeOption(i)"
+        >
+          Supprimer cette réponse
+        </button>
+
+        <hr/>
+      </div>
+
+      <button type="button" class="btn btn--secondary" (click)="addOption()">
+        Ajouter une réponse
+      </button>
+    </fieldset>
+
+    <div *ngIf="success()" class="success">
+      {{ success() }}
+    </div>
+
+    <button
+      class="btn btn--primary"
+      type="submit"
+      [disabled]="saving() || form.invalid"
+    >
+      {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+    </button>
+  </form>
+</div>

@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from .models import Subject
-from .serializers import SubjectSerializer
+from .serializers import SubjectSerializer, SubjectDetailSerializer
 
 
 class SubjectViewSet(viewsets.ModelViewSet):
@@ -14,6 +14,11 @@ class SubjectViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["slug", "name", "id"]
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return SubjectDetailSerializer  # détail avec questions
+        return SubjectSerializer
 
     def get_permissions(self):
         return [IsAdminUser()]

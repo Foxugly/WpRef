@@ -1,0 +1,249 @@
+// Variables communes
+$color-border: #e5e7eb;
+$color-muted: #6b7280;
+$color-bg: #ffffff;
+$color-primary: #2563eb;
+$color-primary-hover: #2563eb;
+$color-secondary: #f59e0b;
+$color-danger: #dc2626;
+$color-success: #16a34a;
+
+$radius: 8px;
+$shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+
+  h1 {
+    margin: 0 0 1.25rem;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: $color-secondary;
+  }
+}
+
+/* États globaux */
+.error {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: $radius;
+  border: 1px solid rgba($color-danger, 0.25);
+  background: rgba($color-danger, 0.03);
+  color: $color-danger;
+  font-size: 0.9rem;
+}
+
+.success {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: $radius;
+  border: 1px solid rgba($color-success, 0.3);
+  background: rgba($color-success, 0.04);
+  color: $color-success;
+  font-size: 0.9rem;
+}
+
+.page > div {
+  &.error,
+  &.success {
+    /* erreurs/succès en haut de page */
+  }
+}
+
+/* Formulaire principal */
+form[formGroup] {
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  padding: 1.5rem;
+  box-shadow: $shadow;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Champs génériques */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  label {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: $color-secondary;
+  }
+
+  input[type='text'],
+  input[type='number'],
+  textarea,
+  select {
+    padding: 0.55rem 0.75rem;
+    border-radius: $radius;
+    border: 1px solid $color-border;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+      box-shadow: 0 0 0 1px rgba($color-primary, 0.08);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  small,
+  .hint {
+    font-size: 0.8rem;
+    color: $color-muted;
+  }
+}
+
+/* Champs inline (checkbox, ordre, etc.) */
+.field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+
+  label {
+    margin: 0;
+    font-weight: 500;
+    color: inherit;
+  }
+
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    margin-right: 0.35rem;
+  }
+}
+
+/* Select multiple pour les sujets */
+#subjects {
+  min-height: 150px;
+}
+
+/* Bloc réponses possibles */
+.answers {
+  border-radius: $radius;
+  border: 1px solid $color-border;
+  padding: 1rem 1.25rem;
+  background: #f9fafb;
+
+  legend {
+    font-weight: 600;
+    padding: 0 0.25rem;
+    font-size: 0.95rem;
+    color: $color-secondary;
+  }
+
+  .answer {
+    padding: 0.75rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .field {
+      margin: 0;
+    }
+
+    hr {
+      margin: 0.75rem 0 0;
+      border: none;
+      border-bottom: 1px solid $color-border;
+    }
+  }
+
+  .hint {
+    margin-top: 0.5rem;
+  }
+}
+
+/* Boutons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  &.btn--primary {
+    background: $color-primary;
+    border-color: $color-primary;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: $color-primary-hover;
+    }
+  }
+
+  &.btn--secondary {
+    background: #f9fafb;
+    border-color: $color-border;
+    color: $color-primary;
+
+    &:hover {
+      background: #eef2ff;
+      border-color: $color-border;
+    }
+  }
+
+  &.btn--danger {
+    background: rgba($color-danger, 0.05);
+    border-color: rgba($color-danger, 0.4);
+    color: $color-danger;
+
+    &:hover {
+      background: rgba($color-danger, 0.1);
+    }
+  }
+}
+
+/* Bouton d’enregistrement en bas du formulaire */
+button[type='submit'].btn--primary {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+/* Responsive léger */
+@media (max-width: 768px) {
+  .page {
+    padding: 1rem;
+  }
+
+  form[formGroup] {
+    padding: 1rem;
+  }
+
+  .answers {
+    padding: 0.75rem 0.9rem;
+  }
+}
+
+.ck-editor__editable {
+  min-height: 150px;
+}
+
+.ck-editor__editable_inline {
+  padding: 0.75rem;
+  border-radius: $radius;
+  border: 1px solid $color-border !important;
+}

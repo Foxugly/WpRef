@@ -3,12 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import {environment, LangCode} from '../../../environments/environment';
+import {Question} from '../question/question'
 
 export interface Subject {
   id: number;
   name: string;
   slug: string;
   description: string;
+  questions?: Question[];
 }
 
 
@@ -30,7 +32,7 @@ export class SubjectService {
   );
 }
 
-  get(id: number): Observable<Subject> {
+  retrieve(id: number): Observable<Subject> {
     return this.http.get<Subject>(`${this.base}${this.subjectPath}${id}/`);
   }
 

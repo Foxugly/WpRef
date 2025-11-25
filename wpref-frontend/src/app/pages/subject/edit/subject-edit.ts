@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
-
+import { Question } from '../../../services/question/question';
 @Component({
   standalone: true,
   selector: 'app-subject-edit',
@@ -18,6 +18,8 @@ export class SubjectEdit implements OnInit {
   private subjectService = inject(SubjectService);
 
   id!: number;
+  questions: Question[] = [];
+
   form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     description: ['']
@@ -25,8 +27,9 @@ export class SubjectEdit implements OnInit {
 
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
-    this.subjectService.get(this.id).subscribe((s: Subject) => {
+    this.subjectService.retrieve(this.id).subscribe((s: Subject) => {
       this.form.patchValue({ name: s.name, description: s.description || '' });
+      this.questions = s.questions || [];
     });
   }
 
