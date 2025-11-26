@@ -45,7 +45,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = [
             "id", "title", "description", "explanation",
-            "allow_multiple_correct",
+            "allow_multiple_correct", "is_mode_practice", "is_mode_exam",
             "subjects", "subject_ids", "subject_slugs",
             "media", "answer_options",
             "created_at",

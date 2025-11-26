@@ -9,7 +9,7 @@ $color-danger: #dc2626;
 $color-success: #16a34a;
 
 $radius: 8px;
-$shadow: 0 2px 8px rgba(0,0,0,0.05);
+$shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
 .page {
   max-width: 960px;
@@ -71,7 +71,6 @@ form[formGroup] {
   gap: 0.35rem;
   margin-bottom: 15px;
 
-
   label {
     font-weight: 500;
     font-size: 0.95rem;
@@ -79,15 +78,13 @@ form[formGroup] {
   }
 
   input[type='text'],
-  input[type='number'],
-  textarea,
-  select {
+  //input[type='number']
+  {
     padding: 0.55rem 0.75rem;
     border-radius: $radius;
     border: 1px solid $color-border;
     font-size: 0.95rem;
     transition: border-color 0.2s, box-shadow 0.2s;
-    width: 100%;
 
     &:focus {
       outline: none;
@@ -96,15 +93,25 @@ form[formGroup] {
     }
   }
 
-  textarea {
+  input[type='number'],
+  textarea{
+    padding: 0.55rem 0.75rem;
+    border-radius: $radius;
+    border: 1px solid $color-border;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    field-sizing: content;
+  }
+
+/*  textarea {
     resize: vertical;
     min-height: 80px;
-    padding-top: 0.55rem ;
-    padding-left : 0.75rem;
+    padding-top: 0.55rem;
+    padding-left: 0.75rem;
     padding-bottom: 0.75rem;
     padding-right: 0.00rem;
   }
-
+*/
   small,
   .hint {
     font-size: 0.8rem;
@@ -131,16 +138,12 @@ form[formGroup] {
   }
 }
 
-/* Select multiple pour les sujets */
-#subjects {
-  min-height: 150px;
-}
-
 /* Bloc réponses possibles */
 .answers {
   border-radius: $radius;
   border: 1px solid $color-border;
   padding: 1rem 1.25rem;
+  margin-bottom: 10px;
   background: #f9fafb;
 
   legend {
@@ -221,6 +224,13 @@ form[formGroup] {
       background: rgba($color-danger, 0.1);
     }
   }
+}
+
+.small-blue{
+  font-size: 0.8rem;
+  background: #0dcaf0;
+  padding: 4px 4px;
+  border: 1px solid blue !important;
 }
 
 /* Bouton d’enregistrement en bas du formulaire */

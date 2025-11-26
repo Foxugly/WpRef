@@ -1,34 +1,64 @@
-// auth-interceptor.ts
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+// src/app/auth-interceptor.ts
+import {
+  HttpInterceptorFn,
+  HttpErrorResponse,
+  HttpRequest,
+} from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from './services/auth/auth';
 import { catchError, switchMap, throwError } from 'rxjs';
 
+const API_PREFIX = '/api/';
+
+function isApiRequest(req: HttpRequest<unknown>): boolean {
+  // Assez simple : on regarde si l'URL contient "/api/"
+  return req.url.includes(API_PREFIX);
+}
+
+function isAuthEndpoint(req: HttpRequest<unknown>): boolean {
+  const url = req.url;
+  return (
+    url.includes('/api/token/') ||              // login
+    url.includes('/api/token/refresh/') ||      // refresh
+    url.includes('/api/user/password/reset')    // reset password
+  );
+}
+
 export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
 
-  const accessToken = auth.getAccessToken();
   let authReq = req;
 
-  if (accessToken) {
-    authReq = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+  // 1) Ajouter le Bearer UNIQUEMENT pour les vraies requêtes API,
+  //    et pas pour les endpoints d'auth / reset
+  if (isApiRequest(req) && !isAuthEndpoint(req)) {
+    const accessToken = auth.getAccessToken();
+    if (accessToken) {
+      authReq = req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    }
   }
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Pas de 401 → on remonte l'erreur telle quelle
+      // Si ce n'est pas un 401 → on remonte l'erreur telle quelle
       if (error.status !== 401) {
         return throwError(() => error);
       }
 
-      // 401 → on tente un refresh
+      // On ne tente PAS de refresh si :
+      //  - ce n'est pas une requête API
+      //  - OU c'est déjà un endpoint d'auth
+      if (!isApiRequest(authReq) || isAuthEndpoint(authReq)) {
+        return throwError(() => error);
+      }
+
+      // 2) Tenter un refresh
       const refresh$ = auth.refreshTokens();
       if (!refresh$) {
-        // pas de refresh token → on se déconnecte
         auth.logout();
         return throwError(() => error);
       }
@@ -47,7 +77,6 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
           return next(retryReq);
         }),
         catchError((refreshError: HttpErrorResponse) => {
-          // échec du refresh → logout + propagation de l'erreur
           auth.logout();
           return throwError(() => refreshError);
         }),

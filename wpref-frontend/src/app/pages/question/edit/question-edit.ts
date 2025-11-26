@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 //import { RouterLink } from '@angular/router';
 import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { MultiSelectComponent, MultiSelectOption } from '../../../components/multi-select/multi-select';
+
 import {
   FormArray,
   FormBuilder,
@@ -22,6 +24,8 @@ export interface Question {
   description: string;
   explanation: string;
   allow_multiple_correct: boolean;
+  is_mode_practice: boolean;
+  is_mode_exam: boolean;
   subjects: Subject[];
   media: QuestionMedia[];
   answer_options: AnswerOption[];
@@ -49,7 +53,7 @@ export interface AnswerOption {
   selector: 'app-question-edit',
   templateUrl: './question-edit.html',
   styleUrl: './question-edit.scss',
-  imports: [CommonModule, ReactiveFormsModule, CKEditorModule],
+  imports: [CommonModule, ReactiveFormsModule, CKEditorModule, MultiSelectComponent, ],
 })
 export class QuestionEdit implements OnInit {
   public Editor: any = ClassicEditor;
@@ -75,10 +79,19 @@ export class QuestionEdit implements OnInit {
     description: [''],
     explanation: [''],
     allow_multiple_correct: [false],
+    is_mode_practice: [true],
+    is_mode_exam: [false],
     // on envoie subject_ids au backend (write_only dans ton serializer)
     subject_ids: [[] as number[]],
     answer_options: this.fb.array([]),
   });
+
+  get subjectOptions(): MultiSelectOption[] {
+    return this.subjects().map((s) => ({
+      value: s.id,
+      label: `${s.name} (${s.slug})`,
+    }));
+  }
 
   get answerOptions(): FormArray {
     return this.form.get('answer_options') as FormArray;
@@ -113,6 +126,8 @@ export class QuestionEdit implements OnInit {
           description: q.description,
           explanation: q.explanation,
           allow_multiple_correct: q.allow_multiple_correct,
+          is_mode_practice: q.is_mode_practice,
+          is_mode_exam: q.is_mode_exam,
           subject_ids: subjectIds,
         });
 
@@ -150,7 +165,7 @@ export class QuestionEdit implements OnInit {
       this.fb.group({
         content: ['', Validators.required],
         is_correct: [false],
-        sort_order: [index],
+        sort_order: [index+1],
       })
     );
   }
@@ -204,6 +219,8 @@ export class QuestionEdit implements OnInit {
       description: raw.description,
       explanation: raw.explanation,
       allow_multiple_correct: raw.allow_multiple_correct,
+      is_mode_practice: raw.is_mode_practice,
+      is_mode_exam: raw.is_mode_exam,
       subject_ids: subjectIds,
       answer_options: raw.answer_options,
       // tu peux ajouter media plus tard si tu gères l’upload

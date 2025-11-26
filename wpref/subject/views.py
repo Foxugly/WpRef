@@ -25,7 +25,6 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset()
-        print("list", request.query_params)
         search = request.query_params.get("search")
         if search:
             qs = qs.filter(name__icontains=search)

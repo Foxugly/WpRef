@@ -39,4 +39,12 @@ export class SubjectEdit implements OnInit {
       next: () => this.router.navigate(['/subject/list'])
     });
   }
+
+ goEdit(id: number) {
+    this.router.navigate(['/question', id, 'edit']);
+  }
+
+  goDelete(id: number) {
+    this.router.navigate(['/question', id, 'delete']);
+  }
 }

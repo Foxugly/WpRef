@@ -14,15 +14,33 @@
     <a routerLink="/subject/list" class="btn btn-secondary" style="margin-left: 10px;">Annuler</a>
   </div>
 </form>
-<div class="card questions-card">
+
+<div class="card" style="margin-top: 5px;">
+  <div class="header-line">
+  <span class="title">Questions associées</span>
+  <div class="actions">
+    <!--<input placeholder="Rechercher…" [ngModel]="q()" (ngModelChange)="q.set($event); load()">-->
+    <a class="btn btn-primary" routerLink="/question/add">+ Nouveau</a>
+  </div>
+</div>
   @if ((questions || []).length === 0) {
-    <p class="muted">Aucune question liée à ce sujet.</p>
+    <p class="muted">Aucune question.</p>
   } @else {
-    <h3>Questions liées</h3>
-    <ul>
-      @for (q of questions; track q.id) {
-        <li>{{ q.title }}</li>
-      }
-    </ul>
+    <table class="table">
+      <thead>
+        <tr><th>Titre</th><th style="width:160px;"></th></tr>
+      </thead>
+      <tbody>
+        @for (q of questions; track q.id) {
+          <tr>
+            <td>{{ q.title }}</td>
+            <td class="row-actions">
+              <a (click)="goEdit(q.id)">Éditer</a> ·
+              <a (click)="goDelete(q.id)">Supprimer</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
   }
 </div>

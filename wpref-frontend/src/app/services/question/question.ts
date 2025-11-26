@@ -11,6 +11,8 @@ export interface Question {
   description: string;
   explanation: string;
   allow_multiple_correct: boolean;
+  is_mode_practice: boolean;
+  is_mode_exam: boolean;
   subjects: Subject[];
   media: QuestionMedia[];
   answer_options: AnswerOption[];
