@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { LangCode } from '../../../environments/environment'; // adapte le chemin si besoin
@@ -7,7 +7,7 @@ import { LangCode } from '../../../environments/environment'; // adapte le chemi
 @Component({
   selector: 'app-lang-select',
   standalone: true,
-  imports: [CommonModule, FormsModule, SelectButtonModule],
+  imports: [FormsModule, SelectButtonModule],
   templateUrl: './lang-select.html',
   styleUrl: './lang-select.scss',
 })

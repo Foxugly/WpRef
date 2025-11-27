@@ -1,5 +1,5 @@
 import { Component, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Subscription } from 'rxjs';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MenubarModule } from 'primeng/menubar';
@@ -15,14 +15,13 @@ import { UserMenuComponent } from '../user-menu/user-menu';
   selector: 'app-topmenu',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     RouterLink,
     RouterLinkActive,
     MenubarModule,
     LangSelectComponent,
-    UserMenuComponent,
-  ],
+    UserMenuComponent
+],
   templateUrl: './topmenu.html',
   styleUrl: './topmenu.scss'
 })

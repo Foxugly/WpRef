@@ -1,5 +1,5 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
+
 import {MultiSelectOption} from '../../../components/multi-select/multi-select';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
@@ -50,7 +50,6 @@ export interface AnswerOption {
   templateUrl: './question-edit.html',
   styleUrl: './question-edit.scss',
   imports: [
-    CommonModule,
     RouterLink,
     ReactiveFormsModule,
     Editor,
@@ -58,8 +57,8 @@ export interface AnswerOption {
     InputTextModule,
     InputNumberModule,
     ButtonModule,
-    MultiSelectModule,
-  ],
+    MultiSelectModule
+],
 })
 export class QuestionEdit implements OnInit {
   questionId!: number;

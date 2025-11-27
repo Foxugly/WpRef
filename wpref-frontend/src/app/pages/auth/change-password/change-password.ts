@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { UserService } from '../../../services/user/user';
 import {InputTextModule} from 'primeng/inputtext';
 import {PasswordModule} from 'primeng/password';
@@ -9,7 +9,7 @@ import {  FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractContr
 @Component({
   selector: 'app-change-password',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, InputTextModule, PasswordModule],
+  imports: [ReactiveFormsModule, InputTextModule, PasswordModule],
   templateUrl: './change-password.html',
   styleUrl: './change-password.scss',
 })

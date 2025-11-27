@@ -1,5 +1,5 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
+
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {Question, QuestionService} from '../../../services/question/question';
 import {Button} from 'primeng/button';
@@ -7,7 +7,7 @@ import {Button} from 'primeng/button';
 @Component({
   standalone: true,
   selector: 'question-delete',
-  imports: [CommonModule, Button, RouterLink],
+  imports: [Button, RouterLink],
   templateUrl: './question-delete.html',
   styleUrl: './question-delete.scss'
 })

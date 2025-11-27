@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormArray,
   FormBuilder,
@@ -57,7 +57,6 @@ export interface AnswerOption {
   templateUrl: './question-create.html',
   styleUrl: './question-create.scss',
   imports: [
-    CommonModule,
     RouterLink,
     ReactiveFormsModule,
     Editor,
@@ -65,8 +64,8 @@ export interface AnswerOption {
     InputTextModule,
     InputNumberModule,
     ButtonModule,
-    MultiSelectModule,
-  ],
+    MultiSelectModule
+],
 })
 export class QuestionCreate implements OnInit {
   // Injections

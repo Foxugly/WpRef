@@ -8,7 +8,7 @@ import {
   ControlValueAccessor,
   NG_VALUE_ACCESSOR,
 } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 
 export interface MultiSelectOption {
   value: number | string;
@@ -20,7 +20,7 @@ export interface MultiSelectOption {
   selector: 'app-multi-select',
   templateUrl: './multi-select.html',
   styleUrls: ['./multi-select.scss'],
-  imports: [CommonModule],
+  imports: [],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,

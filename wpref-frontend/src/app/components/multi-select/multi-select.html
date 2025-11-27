@@ -1,13 +1,17 @@
 <div class="multi-select" [class.disabled]="disabled">
   <!-- Zone cliquable (affichage sélection + caret) -->
   <div class="multi-select__control" (click)="toggleDropdown()">
-    <span class="multi-select__placeholder" *ngIf="selectedValues().length === 0">
-      {{ placeholder }}
-    </span>
+    @if (selectedValues().length === 0) {
+      <span class="multi-select__placeholder">
+        {{ placeholder }}
+      </span>
+    }
 
-    <span class="multi-select__value" *ngIf="selectedValues().length > 0">
-      {{ getSelectedLabelSummary() }}
-    </span>
+    @if (selectedValues().length > 0) {
+      <span class="multi-select__value">
+        {{ getSelectedLabelSummary() }}
+      </span>
+    }
 
     <span class="multi-select__arrow" [class.open]="isOpen()">
       ▾
@@ -15,18 +19,21 @@
   </div>
 
   <!-- Dropdown -->
-  <div class="multi-select__dropdown" *ngIf="isOpen()">
-    <div
-      class="multi-select__option"
-      *ngFor="let opt of options"
-      (click)="onOptionToggle(opt.value); $event.stopPropagation()"
-    >
-      <input
-        type="checkbox"
-        [checked]="isSelected(opt.value)"
-        (click)="$event.stopPropagation()"
-      />
-      <span class="multi-select__label">{{ opt.label }}</span>
-    </div>
+  @if (isOpen()) {
+    <div class="multi-select__dropdown">
+      @for (opt of options; track opt) {
+        <div
+          class="multi-select__option"
+          (click)="onOptionToggle(opt.value); $event.stopPropagation()"
+          >
+          <input
+            type="checkbox"
+            [checked]="isSelected(opt.value)"
+            (click)="$event.stopPropagation()"
+            />
+            <span class="multi-select__label">{{ opt.label }}</span>
+          </div>
+        }
+      </div>
+    }
   </div>
-</div>

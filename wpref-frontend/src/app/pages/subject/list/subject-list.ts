@@ -1,5 +1,5 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
+
 import {FormControl, FormsModule} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
@@ -8,7 +8,7 @@ import { SubjectService, Subject } from '../../../services/subject/subject';
 @Component({
   standalone: true,
   selector: 'app-subject-list',
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule],
   templateUrl: './subject-list.html',
   styleUrl: './subject-list.scss'
 })

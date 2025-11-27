@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
@@ -7,7 +7,7 @@ import {Button} from 'primeng/button';
 @Component({
   standalone: true,
   selector: 'app-subject-delete',
-  imports: [CommonModule, RouterLink, Button],
+  imports: [RouterLink, Button],
   templateUrl: './subject-delete.html',
   styleUrl: './subject-delete.scss'
 })

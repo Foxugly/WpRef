@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { MenuModule } from 'primeng/menu';
@@ -12,12 +12,11 @@ import { AuthService } from '../../services/auth/auth';
   selector: 'app-user-menu',
   standalone: true,
   imports: [
-    CommonModule,
     RouterLink,
     RouterLinkActive,
     MenuModule,
-    ButtonModule,
-  ],
+    ButtonModule
+],
   templateUrl: './user-menu.html',
   styleUrl: './user-menu.scss',
 })

@@ -1,6 +1,6 @@
 // src/app/pages/login/login.component.ts
 import {Component, inject, signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
+
 import {FormBuilder, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import {AuthService} from '../../../services/auth/auth';
@@ -13,9 +13,7 @@ import {MessageModule} from 'primeng/message';
 @Component({
   standalone: true,
   selector: 'app-login',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, FormsModule, InputTextModule, PasswordModule, ButtonModule,
-    CheckboxModule,
-    MessageModule,],
+  imports: [ReactiveFormsModule, RouterLink, FormsModule, InputTextModule, PasswordModule, ButtonModule, CheckboxModule, MessageModule],
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })

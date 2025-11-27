@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {CommonModule} from '@angular/common';
+
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {AuthService} from '../../../services/auth/auth';
 import {RouterLink} from '@angular/router';
@@ -9,7 +9,7 @@ import {PasswordModule} from 'primeng/password';
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, InputTextModule, PasswordModule],
+  imports: [ReactiveFormsModule, InputTextModule, PasswordModule],
   templateUrl: './register.html',
   styleUrls: ['./register.scss'],
 })
