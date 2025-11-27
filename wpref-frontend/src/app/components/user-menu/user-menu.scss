@@ -1,23 +1,6 @@
-.user-menu {
-  display: flex;
-  align-items: center;
-}
-
-.user-menu a {
-  color: var(--brand-contrast, #fff);
-  text-decoration: none;
-  font-weight: 500;
-  padding: var(--s-1) var(--s-2);
-}
-
-.user-trigger {
+:host ::ng-deep .btn-ghost.p-button,
+:host ::ng-deep .btn-ghost.p-button:hover{
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, .6);
-  color: var(--brand-contrast, #fff);
-  border-radius: var(--radius);
-  padding: var(--s-1) var(--s-3);
-}
-
-.user-trigger:hover {
-  background: rgba(255, 255, 255, .15);
+  border: none;
+  box-shadow: none;
 }

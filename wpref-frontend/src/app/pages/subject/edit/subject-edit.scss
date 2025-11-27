@@ -101,28 +101,22 @@ form.card {
     }
 
     td {
-      padding: 0.75rem;
-      font-size: 0.95rem;
-      vertical-align: top;
+      padding: 0.25rem;
+      font-size: 0.9rem;
 
       &.muted {
         color: $color-muted;
       }
     }
+  }
+}
 
-    .row-actions {
-      white-space: nowrap;
-      color: $color-primary;
-      font-size: 0.9rem;
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 
-      a {
-        cursor: pointer;
-        color: $color-primary;
-
-        &:hover {
-          text-decoration: underline;
-        }
-      }
-    }
+  p-button {
+    margin-left: 0.25rem;
   }
 }

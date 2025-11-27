@@ -5,7 +5,7 @@ $color-bg: #ffffff;
 $color-primary: #2563eb;
 $color-primary-hover: #2563eb; //darken($color-primary, 6%);
 $radius: 8px;
-$shadow: 0 2px 8px rgba(0,0,0,0.05);
+$shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
 .toolbar {
   display: flex;
@@ -20,38 +20,11 @@ $shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
 
   .actions {
+    margin-right : 20px;
     display: flex;
     align-items: center;
     gap: 1rem;
 
-    input {
-      padding: 0.45rem 0.75rem;
-      border: 1px solid $color-border;
-      border-radius: $radius;
-      font-size: 0.95rem;
-      width: 200px;
-      transition: border-color 0.2s;
-
-      &:focus {
-        outline: none;
-        border-color: $color-primary;
-      }
-    }
-
-    .btn {
-      padding: 0.45rem 0.9rem;
-      border-radius: $radius;
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: white;
-      background: $color-primary;
-      transition: background 0.2s;
-
-      &:hover {
-        background: $color-primary-hover;
-      }
-    }
   }
 }
 
@@ -93,28 +66,22 @@ $shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     td {
-      padding: 0.75rem;
-      font-size: 0.95rem;
-      vertical-align: top;
+      padding: 0.25rem;
+      font-size: 0.9rem;
 
       &.muted {
         color: $color-muted;
       }
     }
+  }
+}
 
-    .row-actions {
-      white-space: nowrap;
-      color: $color-primary;
-      font-size: 0.9rem;
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 
-      a {
-        cursor: pointer;
-        color: $color-primary;
-
-        &:hover {
-          text-decoration: underline;
-        }
-      }
-    }
+  p-button {
+    margin-left: 0.25rem;
   }
 }

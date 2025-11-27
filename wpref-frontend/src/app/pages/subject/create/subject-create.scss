@@ -6,7 +6,7 @@ $color-primary: #2563eb;
 $color-secondary: #000000;
 $color-primary-hover: #2563eb;
 $radius: 8px;
-$shadow: 0 2px 8px rgba(0,0,0,0.05);
+$shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
 .page {
   max-width: 960px;
@@ -53,6 +53,7 @@ form.card {
   align-items: center;
   margin-bottom: 5px;
 }
+
 // ---- CARD ----
 .card {
   background: $color-bg;
@@ -75,4 +76,3 @@ form.card {
     margin-left: 0.25rem;
   }
 }
-

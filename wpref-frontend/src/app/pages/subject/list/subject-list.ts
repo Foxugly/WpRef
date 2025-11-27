@@ -1,14 +1,14 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
-
-import {FormControl, FormsModule} from '@angular/forms';
+import {FormsModule} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
-
+import {Button} from 'primeng/button';
+import {InputTextModule} from 'primeng/inputtext';
 
 @Component({
   standalone: true,
   selector: 'app-subject-list',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, Button, InputTextModule],
   templateUrl: './subject-list.html',
   styleUrl: './subject-list.scss'
 })

@@ -96,31 +96,17 @@ form[formGroup] {
 .answers {
   border-radius: $radius;
   border: 1px solid $color-border;
-  padding: 1rem 1.25rem;
   margin-bottom: 10px;
   background: #f9fafb;
 
-  legend {
-    font-weight: 600;
-    padding: 0 0.25rem;
-    font-size: 0.95rem;
-    color: $color-secondary;
-  }
-
   .answer {
-    padding: 0.75rem 0;
+    //padding: 0.75rem 0;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 
     .field {
-      margin: 0;
-    }
-
-    hr {
-      margin: 0.75rem 0 0;
-      border: none;
-      border-bottom: 1px solid $color-border;
+      margin: 0.5rem;
     }
   }
 

@@ -1,14 +1,14 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
-
-import {FormControl, FormsModule} from '@angular/forms';
+import {FormsModule} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import { QuestionService, Question } from '../../../services/question/question';
+import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 
 @Component({
   standalone: true,
   selector: 'app-question-list',
-  imports: [RouterLink, FormsModule, InputTextModule],
+  imports: [RouterLink, FormsModule, Button, InputTextModule],
   templateUrl: './question-list.html',
   styleUrl: './question-list.scss'
 })

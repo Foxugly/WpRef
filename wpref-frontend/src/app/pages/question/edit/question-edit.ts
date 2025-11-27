@@ -1,6 +1,5 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 
-import {MultiSelectOption} from '../../../components/multi-select/multi-select';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 
@@ -12,6 +11,7 @@ import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {ButtonModule} from 'primeng/button';
 import {MultiSelectModule} from 'primeng/multiselect';
+import {PanelModule} from 'primeng/panel';
 
 // Interfaces alignées sur ton serializer DRF
 export interface Question {
@@ -57,8 +57,9 @@ export interface AnswerOption {
     InputTextModule,
     InputNumberModule,
     ButtonModule,
-    MultiSelectModule
-],
+    MultiSelectModule,
+    PanelModule,
+  ],
 })
 export class QuestionEdit implements OnInit {
   questionId!: number;
@@ -85,10 +86,10 @@ export class QuestionEdit implements OnInit {
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
 
-  get subjectOptions(): MultiSelectOption[] {
+  get subjectOptions(): { name: string; code: number }[] {
     return this.subjects().map((s) => ({
-      value: s.id,
-      label: `${s.name} (${s.slug})`,
+      name: s.name,
+      code: s.id,
     }));
   }
 

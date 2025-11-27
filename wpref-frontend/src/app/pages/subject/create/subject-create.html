@@ -10,7 +10,7 @@
     <label>Description</label>
     <p-editor [style]="{ height: '100px' }" formControlName="description" placeholder="Description…"/>
     <div class="actions">
-      <p-button (onClick)="save()" id="btn_save" label="Enregistrer" severity="primary"/>
+      <p-button icon="pi pi-save" (onClick)="save()" id="btn_save" label="Enregistrer" severity="primary"/>
       <p-button id="btn_back" label="Annuler" routerLink="/subject/list" severity="secondary"/>
     </div>
   </form>

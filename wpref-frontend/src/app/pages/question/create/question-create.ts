@@ -1,23 +1,18 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 
-import {
-  FormArray,
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { QuestionService } from '../../../services/question/question';
-import { Subject, SubjectService } from '../../../services/subject/subject';
+import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
+import {Router, RouterLink} from '@angular/router';
+import {QuestionService} from '../../../services/question/question';
+import {Subject, SubjectService} from '../../../services/subject/subject';
 
-import { Editor } from 'primeng/editor';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputTextModule } from 'primeng/inputtext';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { ButtonModule } from 'primeng/button';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { SelectItem } from 'primeng/api';
+import {Editor} from 'primeng/editor';
+import {CheckboxModule} from 'primeng/checkbox';
+import {InputTextModule} from 'primeng/inputtext';
+import {InputNumberModule} from 'primeng/inputnumber';
+import {ButtonModule} from 'primeng/button';
+import {MultiSelectModule} from 'primeng/multiselect';
+import {SelectItem} from 'primeng/api';
+import {PanelModule} from 'primeng/panel';
 
 // Interfaces alignées sur ton serializer DRF
 export interface Question {
@@ -64,24 +59,19 @@ export interface AnswerOption {
     InputTextModule,
     InputNumberModule,
     ButtonModule,
-    MultiSelectModule
-],
+    MultiSelectModule,
+    PanelModule,
+  ],
 })
 export class QuestionCreate implements OnInit {
-  // Injections
-  private fb = inject(FormBuilder);
-  private router = inject(Router);
-  private questionService = inject(QuestionService);
-  private subjectService = inject(SubjectService);
-
   // États
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
-
   subjects = signal<Subject[]>([]);
-
+  // Injections
+  private fb = inject(FormBuilder);
   // Formulaire principal
   form: FormGroup = this.fb.group({
     title: ['', Validators.required],
@@ -101,13 +91,16 @@ export class QuestionCreate implements OnInit {
       caption: [''],
     }),
   });
+  private router = inject(Router);
+  private questionService = inject(QuestionService);
+  private subjectService = inject(SubjectService);
 
   // ------------- Getters pratiques -------------
 
-  get subjectOptions(): SelectItem[] {
+  get subjectOptions(): { name: string; code: number }[] {
   return this.subjects().map((s) => ({
-    label: `${s.name} (${s.slug})`,
-    value: s.id,
+    name: s.name,
+    code: s.id,
   }));
 }
 
@@ -138,17 +131,6 @@ export class QuestionCreate implements OnInit {
 
   // ------------- Data loading -------------
 
-  private loadSubjects(): void {
-    this.subjectService.list().subscribe({
-      next: (subs: Subject[]) => this.subjects.set(subs),
-      error: (err) => {
-        console.error('Erreur chargement sujets', err);
-      },
-    });
-  }
-
-  // ------------- Gestion des réponses -------------
-
   addOption(): void {
     const index = this.answerOptions.length;
     this.answerOptions.push(
@@ -159,6 +141,8 @@ export class QuestionCreate implements OnInit {
       }),
     );
   }
+
+  // ------------- Gestion des réponses -------------
 
   removeOption(index: number): void {
     if (this.answerOptions.length <= 2) {
@@ -186,8 +170,6 @@ export class QuestionCreate implements OnInit {
     }
   }
 
-  // ------------- Fichier media -------------
-
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
@@ -195,7 +177,7 @@ export class QuestionCreate implements OnInit {
     }
   }
 
-  // ------------- Submit -------------
+  // ------------- Fichier media -------------
 
   save(): void {
     this.error.set(null);
@@ -246,6 +228,17 @@ export class QuestionCreate implements OnInit {
           this.error.set("Erreur lors de l'enregistrement de la question.");
         }
         this.saving.set(false);
+      },
+    });
+  }
+
+  // ------------- Submit -------------
+
+  private loadSubjects(): void {
+    this.subjectService.list().subscribe({
+      next: (subs: Subject[]) => this.subjects.set(subs),
+      error: (err) => {
+        console.error('Erreur chargement sujets', err);
       },
     });
   }

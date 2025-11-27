@@ -67,8 +67,7 @@
       </div>
 
       <!-- Réponses --> <!--legend="Réponses possibles"-->
-      <fieldset class="answers" formArrayName="answer_options">
-        <legend>Réponses possibles</legend>
+      <p-panel legend="Réponses possibles" class="answers" formArrayName="answer_options">
         @for (group of answerOptions.controls; track $index; let i = $index) {
           <div [formGroupName]="i" class="answer">
             <div class="field field--inline">
@@ -87,20 +86,20 @@
                 <p-checkbox [binary]="true" formControlName="is_correct"/>
                 Bonne réponse
               </label>
-              <p-button (click)="setOnlyCorrect(i)" icon="pi pi-check" label="Marquer comme seule correcte"
+              <p-button id="btn_only_answer_{{i}}" (click)="setOnlyCorrect(i)" icon="pi pi-star" label="Marquer comme seule correcte"
                         severity="info" size="small" variant="outlined"/>
 
             </div>
-            <p-button (click)="removeOption(i)" [style]="{'width':'100%'}" icon="pi pi-check"
+            <p-button id="btn_delete_answer_{{i}}" (click)="removeOption(i)" [style]="{'width':'100%'}" icon="pi pi-trash"
                       label="Supprimer cette réponse"
                       severity="danger" size="small" variant="outlined"/>
           </div>
         }
 
-        <p-button (click)="addOption()" icon="pi pi-check" label="Ajouter une réponse" severity="primary"
-                  size="small" variant="outlined"/>
+        <p-button (click)="addOption()" id="btn_add_response" icon="pi pi-plus" label="Ajouter une réponse" severity="primary"
+                  size="small" variant="outlined" [style]="{'margin-top':'20px'}"/>
 
-      </fieldset>
+      </p-panel>
 
 
       <!-- Explication -->
@@ -114,7 +113,7 @@
       </div>
 
       <div class="actions">
-        <p-button id="btn_save" (onClick)="save()" label="Enregistrer" severity="primary"/>
+        <p-button id="btn_save" icon="pi pi-save" (onClick)="save()" label="Enregistrer" severity="primary"/>
         <p-button id="btn_back" label="Annuler" routerLink="/question/list" severity="secondary"/>
       </div>
     </form>

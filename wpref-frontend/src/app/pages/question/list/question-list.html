@@ -2,7 +2,7 @@
   <h2>Questions</h2>
   <div class="actions">
     <input pInputText placeholder="Rechercher…" [ngModel]="q()" (ngModelChange)="q.set($event); load()">
-    <a class="btn btn-primary" routerLink="/question/add">+ Nouveau</a>
+    <p-button id="btn_add_subject" icon="pi pi-plus" routerLink="/question/add" label="Nouveau" severity="primary"/>
   </div>
 </div>
 
@@ -12,15 +12,15 @@
   } @else {
     <table class="table">
       <thead>
-        <tr><th>Titre</th><th style="width:160px;"></th></tr>
+        <tr><th>Titre</th><th style="width:60px;">Actions</th></tr>
       </thead>
       <tbody>
         @for (q of questions(); track q.id) {
           <tr>
             <td>{{ q.title }}</td>
             <td class="row-actions">
-              <a (click)="goEdit(q.id)">Éditer</a> ·
-              <a (click)="goDelete(q.id)">Supprimer</a>
+              <p-button id="btn_add_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"/>
+              <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger" size="small"/>
             </td>
           </tr>
         }

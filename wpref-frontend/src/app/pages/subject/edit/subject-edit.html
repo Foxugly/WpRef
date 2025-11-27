@@ -10,7 +10,7 @@
     <label>Description</label>
     <p-editor [style]="{ height: '100px' }" formControlName="description" placeholder="Description…"/>
     <div class="actions">
-      <p-button (onClick)="save()" id="btn_save" label="Enregistrer" severity="primary"/>
+      <p-button icon="pi pi-save" (onClick)="save()" id="btn_save" label="Enregistrer" severity="primary" />
       <p-button id="btn_back" label="Annuler" routerLink="/subject/list" severity="secondary"/>
     </div>
   </form>
@@ -19,7 +19,7 @@
     <div class="header-line">
       <span class="title">Questions associées</span>
       <div class="actions">
-        <p-button routerLink="/question/add" id="btn_add_question" label="Ajouter une question" size="small" severity="primary"/>
+        <p-button icon="pi pi-plus" routerLink="/question/add" id="btn_add_question" label="Ajouter une question" size="small" severity="primary"/>
       </div>
     </div>
     @if ((questions || []).length === 0) {
@@ -29,7 +29,7 @@
         <thead>
         <tr>
           <th>Titre</th>
-          <th style="width:160px;"></th>
+          <th style="width:60px;">Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -37,9 +37,9 @@
             <tr>
               <td>{{ q.title }}</td>
               <td class="row-actions">
-                <a (click)="goEdit(q.id)">Éditer</a> ·
-                <a (click)="goDelete(q.id)">Supprimer</a>
-              </td>
+              <p-button id="btn_edit_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"/>
+              <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger" size="small"/>
+            </td>
             </tr>
           }
         </tbody>
