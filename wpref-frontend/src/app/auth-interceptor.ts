@@ -1,71 +1,77 @@
 // src/app/auth-interceptor.ts
-import {
-  HttpInterceptorFn,
-  HttpErrorResponse,
-  HttpRequest,
-} from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from './services/auth/auth';
 import { catchError, switchMap, throwError } from 'rxjs';
 
-const API_PREFIX = '/api/';
+import { AuthService } from './services/auth/auth';
+import { environment } from '../environments/environment';
 
-function isApiRequest(req: HttpRequest<unknown>): boolean {
-  // Assez simple : on regarde si l'URL contient "/api/"
-  return req.url.includes(API_PREFIX);
+// Petit helper pour savoir si l’URL vise notre backend API
+function isApiUrl(url: string): boolean {
+  const base = environment.apiBaseUrl.replace(/\/+$/, ''); // enlever les / de fin
+  const cleaned = url.replace(/\/+$/, '');
+
+  // 1) URL absolue vers notre backend
+  if (cleaned.startsWith(base)) {
+    return true;
+  }
+
+  // 2) URL relative /api/...
+  if (cleaned.startsWith('/api/')) {
+    return true;
+  }
+
+  return false;
 }
 
-function isAuthEndpoint(req: HttpRequest<unknown>): boolean {
-  const url = req.url;
+// Pour éviter de boucler sur /api/token et /api/token/refresh
+function isAuthEndpoint(url: string): boolean {
   return (
-    url.includes('/api/token/') ||              // login
-    url.includes('/api/token/refresh/') ||      // refresh
-    url.includes('/api/user/password/reset')    // reset password
+    url.includes('/api/token') ||
+    url.includes('/api/user/password/reset') // éventuellement d’autres endpoints d’auth
   );
 }
 
 export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
 
+  const accessToken = auth.getAccessToken();
   let authReq = req;
 
-  // 1) Ajouter le Bearer UNIQUEMENT pour les vraies requêtes API,
-  //    et pas pour les endpoints d'auth / reset
-  if (isApiRequest(req) && !isAuthEndpoint(req)) {
-    const accessToken = auth.getAccessToken();
-    if (accessToken) {
-      authReq = req.clone({
-        setHeaders: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-    }
+  const apiRequest = isApiUrl(req.url);
+
+  // On n’ajoute Authorization QUE pour les appels API
+  if (accessToken && apiRequest) {
+    authReq = req.clone({
+      setHeaders: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
   }
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Si ce n'est pas un 401 → on remonte l'erreur telle quelle
-      if (error.status !== 401) {
+      // Si ce n’est pas un 401 ou pas une requête API → on laisse passer
+      if (error.status !== 401 || !apiRequest) {
         return throwError(() => error);
       }
 
-      // On ne tente PAS de refresh si :
-      //  - ce n'est pas une requête API
-      //  - OU c'est déjà un endpoint d'auth
-      if (!isApiRequest(authReq) || isAuthEndpoint(authReq)) {
+      // Si le 401 vient déjà d’un endpoint d’auth (login/refresh/etc.) → pas de refresh
+      if (isAuthEndpoint(authReq.url)) {
         return throwError(() => error);
       }
 
-      // 2) Tenter un refresh
+      // 401 sur l’API → on tente un refresh
       const refresh$ = auth.refreshTokens();
       if (!refresh$) {
-        auth.logout();
+        auth.logout(); // on nettoie les tokens
         return throwError(() => error);
       }
 
       return refresh$.pipe(
         switchMap(() => {
           const newAccessToken = auth.getAccessToken();
+
           const retryReq = newAccessToken
             ? authReq.clone({
                 setHeaders: {
@@ -77,6 +83,7 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
           return next(retryReq);
         }),
         catchError((refreshError: HttpErrorResponse) => {
+          // échec du refresh → logout + propagation de l’erreur
           auth.logout();
           return throwError(() => refreshError);
         }),

@@ -3,11 +3,12 @@ import {CommonModule} from '@angular/common';
 import {FormControl, FormsModule} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import { QuestionService, Question } from '../../../services/question/question';
+import {InputTextModule} from 'primeng/inputtext';
 
 @Component({
   standalone: true,
   selector: 'app-question-list',
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, InputTextModule],
   templateUrl: './question-list.html',
   styleUrl: './question-list.scss'
 })

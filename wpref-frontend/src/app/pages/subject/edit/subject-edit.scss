@@ -3,15 +3,23 @@ $color-border: #e5e7eb;
 $color-muted: #6b7280;
 $color-bg: #ffffff;
 $color-primary: #2563eb;
-$color-secondary: #dddddd;
+$color-secondary: #000000;
 $color-primary-hover: #2563eb;
 $radius: 8px;
 $shadow: 0 2px 8px rgba(0,0,0,0.05);
 
-h2 {
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  font-weight: 600;
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+
+  .title {
+    text-align: center;
+    margin: 0 0 1.25rem;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: $color-secondary;
+  }
 }
 
 // ---- CARD FORM ----
@@ -31,25 +39,6 @@ form.card {
     margin-bottom: -0.5rem; // rapproche label et input
   }
 
-  input,
-  textarea {
-    //width: 100%;
-    padding: 0.55rem 0.75rem;
-    border: 1px solid $color-border;
-    border-radius: $radius;
-    font-size: 0.95rem;
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: $color-primary;
-    }
-  }
-
-  textarea {
-    resize: vertical;
-  }
-
   .field-error {
     color: #d14343;
     font-size: 0.85rem;
@@ -57,35 +46,6 @@ form.card {
   }
 }
 
-// --- Actions ---
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 1rem;
-
-    .btn {
-      padding: 0.5rem 1.1rem;
-      border-radius: $radius;
-      text-decoration: none;
-      font-size: 0.95rem;
-      font-weight: 500;
-      border: none;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-primary {
-      color: white;
-      background: $color-primary;
-
-      &:hover {
-        background: $color-primary-hover;
-      }
-    }
-  .btn-secondary {
-      color: black;
-      background: $color-secondary;
-    }
-  }
 
 .header-line {
   display: flex;
@@ -103,6 +63,16 @@ form.card {
 
   .muted {
     color: $color-muted;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  p-button {
+    margin-left: 0.25rem;
   }
 }
 

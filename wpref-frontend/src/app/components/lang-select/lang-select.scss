@@ -1,34 +1,6 @@
-.topmenu .p-menubar {
-  background: var(--brand, #0056b3);
-  color: var(--brand-contrast, #fff);
-  border: none;
-  border-radius: 0;
-  padding: var(--s-3) var(--s-6);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.p-selectbutton{
+    margin-right: 10px;
 }
-.topmenu a{
-  margin-right: 20px;
-  color: var(--brand-contrast);
-  text-decoration: none;
-  font-weight: 500;
-  position: relative;
-  padding: var(--s-1) var(--s-2);
-  transition: opacity .2s;
-}
-
-.topmenu__left {
-  display: flex;
-  align-items: center;
-  gap: var(--s-4);
-}
-
-.topmenu__right {
-  display: flex;
-  align-items: center;
-}
-
 
 /* wrapper */
 .lang-select {

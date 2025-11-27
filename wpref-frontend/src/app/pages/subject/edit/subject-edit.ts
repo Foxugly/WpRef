@@ -4,10 +4,15 @@ import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
 import { Question } from '../../../services/question/question';
+import {Editor} from 'primeng/editor';
+import {InputTextModule} from 'primeng/inputtext';
+import {Button} from 'primeng/button';
+
+
 @Component({
   standalone: true,
   selector: 'app-subject-edit',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, Editor, InputTextModule, Button],
   templateUrl: './subject-edit.html',
   styleUrl: './subject-edit.scss'
 })

@@ -1,14 +1,23 @@
-import {Component, inject, OnInit, signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-//import { RouterLink } from '@angular/router';
-import {CKEditorModule} from '@ckeditor/ckeditor5-angular';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
-import {MultiSelectComponent, MultiSelectOption} from '../../../components/multi-select/multi-select';
-import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
-import {ActivatedRoute, Router} from '@angular/router';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { QuestionService } from '../../../services/question/question';
+import { Subject, SubjectService } from '../../../services/subject/subject';
 
-import {QuestionService} from '../../../services/question/question';
-import {Subject, SubjectService} from '../../../services/subject/subject';
+import { Editor } from 'primeng/editor';
+import { CheckboxModule } from 'primeng/checkbox';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { ButtonModule } from 'primeng/button';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { SelectItem } from 'primeng/api';
 
 // Interfaces alignées sur ton serializer DRF
 export interface Question {
@@ -27,7 +36,8 @@ export interface Question {
 
 export interface QuestionMedia {
   id?: number;
-  kind: 'image' | 'video';
+  // ✅ on aligne avec tes kindOptions: image, video, audio, external
+  kind: 'image' | 'video' | 'audio' | 'external';
   file?: string | null;
   external_url?: string | null;
   caption: string;
@@ -43,22 +53,29 @@ export interface AnswerOption {
 
 @Component({
   standalone: true,
-  selector: 'app-question-edit',
+  selector: 'app-question-create',
   templateUrl: './question-create.html',
   styleUrl: './question-create.scss',
-  imports: [CommonModule, ReactiveFormsModule, CKEditorModule, MultiSelectComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    Editor,
+    CheckboxModule,
+    InputTextModule,
+    InputNumberModule,
+    ButtonModule,
+    MultiSelectModule,
+  ],
 })
 export class QuestionCreate implements OnInit {
-  public Editor: any = ClassicEditor;
+  // Injections
   private fb = inject(FormBuilder);
-  private route = inject(ActivatedRoute);
   private router = inject(Router);
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
 
-
-  questionId!: number;
-
+  // États
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -83,33 +100,44 @@ export class QuestionCreate implements OnInit {
       file: [null],
       external_url: [''],
       caption: [''],
-    })
+    }),
   });
 
-  get subjectOptions(): MultiSelectOption[] {
-    return this.subjects().map((s) => ({
-      value: s.id,
-      label: `${s.name} (${s.slug})`,
-    }));
-  }
+  // ------------- Getters pratiques -------------
 
-  get kindOptions(): MultiSelectOption[] {
+  get subjectOptions(): SelectItem[] {
+  return this.subjects().map((s) => ({
+    label: `${s.name} (${s.slug})`,
+    value: s.id,
+  }));
+}
+
+  /*get kindOptions(): MultiSelectOption[] {
     return [
-      {value: 'image', label: 'Image'},
-      {value: 'video', label: 'Vidéo'},
-      {value: 'audio', label: 'Audio'},
-      {value: 'external', label: 'Lien externe'},
+      { value: 'image', label: 'Image' },
+      { value: 'video', label: 'Vidéo' },
+      { value: 'audio', label: 'Audio' },
+      { value: 'external', label: 'Lien externe' },
     ];
-  }
+  }*/
 
   get answerOptions(): FormArray {
     return this.form.get('answer_options') as FormArray;
   }
 
+  // ------------- Lifecycle -------------
+
   ngOnInit(): void {
-    this.questionId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadSubjects();
+
+    // on ajoute au moins 2 réponses par défaut
+    if (this.answerOptions.length === 0) {
+      this.addOption();
+      this.addOption();
+    }
   }
+
+  // ------------- Data loading -------------
 
   private loadSubjects(): void {
     this.subjectService.list().subscribe({
@@ -120,14 +148,16 @@ export class QuestionCreate implements OnInit {
     });
   }
 
+  // ------------- Gestion des réponses -------------
+
   addOption(): void {
     const index = this.answerOptions.length;
     this.answerOptions.push(
       this.fb.group({
         content: ['', Validators.required],
         is_correct: [false],
-        sort_order: [index+1],
-      })
+        sort_order: [index + 1], // 1-based
+      }),
     );
   }
 
@@ -139,7 +169,7 @@ export class QuestionCreate implements OnInit {
     this.answerOptions.removeAt(index);
     // re-numérotation des sort_order
     this.answerOptions.controls.forEach((ctrl, i) =>
-      ctrl.get('sort_order')?.setValue(i)
+      ctrl.get('sort_order')?.setValue(i + 1),
     );
   }
 
@@ -157,6 +187,8 @@ export class QuestionCreate implements OnInit {
     }
   }
 
+  // ------------- Fichier media -------------
+
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
@@ -164,7 +196,9 @@ export class QuestionCreate implements OnInit {
     }
   }
 
-  onSubmit(): void {
+  // ------------- Submit -------------
+
+  save(): void {
     this.error.set(null);
     this.success.set(null);
 
@@ -175,14 +209,14 @@ export class QuestionCreate implements OnInit {
 
     this.saving.set(true);
 
-    const raw = this.form.value;
+    const raw = this.form.value as any;
 
     // subject_ids venant du multi-select seront des strings → on force en nombres
     const subjectIds = (raw.subject_ids || []).map((id: any) =>
-      Number(id)
+      Number(id),
     ) as number[];
 
-    const media = raw.media;
+    const media = raw.media || {};
 
     const payload = {
       title: raw.title,
@@ -193,22 +227,20 @@ export class QuestionCreate implements OnInit {
       is_mode_exam: raw.is_mode_exam,
       subject_ids: subjectIds,
       answer_options: raw.answer_options,
-      kind: media.kind,
-      caption: media.caption ?? '',
-      external_url: media.external_url ?? '',
-      file: media.file ?? ''
+      kind: media['kind'],
+      caption: media['caption'] ?? '',
+      external_url: media['external_url'] ?? '',
+      file: media['file'] ?? '',
     };
 
     this.questionService.create(payload).subscribe({
       next: () => {
         this.saving.set(false);
         this.success.set('Question créée avec succès.');
-        // par ex. retour à la liste :
         this.router.navigate(['/questions']);
       },
       error: (err) => {
         console.error('Erreur création question', err);
-        // le serializer DRF peut renvoyer message_dict → on simplifie pour l’afficher
         if (err.error && typeof err.error === 'object') {
           this.error.set(JSON.stringify(err.error));
         } else {
@@ -219,4 +251,3 @@ export class QuestionCreate implements OnInit {
     });
   }
 }
-

@@ -1,3 +1,12 @@
+//@import '../node_modules/primeicons/primeicons.css';
+
+.logo {
+  background-image: url('/assets/logo.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  height: 40px;
+}
+
 /* Light Theme */
 :root, :host {
   --mat-sys-primary: #006780;

@@ -1,13 +1,14 @@
-<div class="card">
-  <h2>Supprimer le sujet</h2>
-
-  @if (subject()) {
-    <p>Es-tu sûr de vouloir supprimer <b>{{ subject()!.name }}</b> ?</p>
-    <div class="actions">
-      <button class="btn btn-danger" (click)="confirm()">Supprimer</button>
-    <a routerLink="/subject/list" class="btn btn-secondary" style="margin-left: 10px;">Annuler</a>
-    </div>
-  } @else {
-    <p class="muted">Chargement…</p>
-  }
+<div class="page">
+  <div class="title">Supprimer un subject</div>
+  <div class="card">
+    @if (subject()) {
+      <p>Es-tu sûr de vouloir supprimer <b>{{ subject()!.name }}</b> ?</p>
+      <div class="actions">
+        <p-button id="btn_delete" label="Supprimer" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
+        <p-button id="btn_back" label="Annuler" routerLink="/subject/list" severity="secondary"/>
+      </div>
+    } @else {
+      <p class="muted">Chargement…</p>
+    }
+  </div>
 </div>

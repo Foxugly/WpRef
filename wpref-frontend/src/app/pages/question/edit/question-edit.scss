@@ -16,7 +16,8 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin: 0 auto;
   padding: 1.5rem 0;
 
-  h1 {
+  .title {
+    text-align: center;
     margin: 0 0 1.25rem;
     font-size: 1.6rem;
     font-weight: 600;
@@ -77,41 +78,6 @@ form[formGroup] {
     color: $color-secondary;
   }
 
-  input[type='text'],
-  //input[type='number']
-  {
-    padding: 0.55rem 0.75rem;
-    border-radius: $radius;
-    border: 1px solid $color-border;
-    font-size: 0.95rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: $color-primary;
-      box-shadow: 0 0 0 1px rgba($color-primary, 0.08);
-    }
-  }
-
-  input[type='number'],
-  textarea{
-    padding: 0.55rem 0.75rem;
-    border-radius: $radius;
-    border: 1px solid $color-border;
-    font-size: 0.95rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    field-sizing: content;
-  }
-
-/*  textarea {
-    resize: vertical;
-    min-height: 80px;
-    padding-top: 0.55rem;
-    padding-left: 0.75rem;
-    padding-bottom: 0.75rem;
-    padding-right: 0.00rem;
-  }
-*/
   small,
   .hint {
     font-size: 0.8rem;
@@ -124,18 +90,6 @@ form[formGroup] {
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
-
-  label {
-    margin: 0;
-    font-weight: 500;
-    color: inherit;
-  }
-
-  input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
-    margin-right: 0.35rem;
-  }
 }
 
 /* Bloc réponses possibles */
@@ -170,73 +124,15 @@ form[formGroup] {
     }
   }
 
+  .answer + .answer {
+    border-top: 1px solid #ddd;
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
   .hint {
     margin-top: 0.5rem;
   }
-}
-
-/* Boutons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $radius;
-  border: 1px solid transparent;
-  font-size: 0.9rem;
-  font-weight: 500;
-  padding: 0.45rem 0.9rem;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: default;
-  }
-
-  &.btn--primary {
-    background: $color-primary;
-    border-color: $color-primary;
-    color: #ffffff;
-
-    &:hover:not(:disabled) {
-      background: $color-primary-hover;
-    }
-  }
-
-  &.btn--secondary {
-    background: #f9fafb;
-    border-color: $color-border;
-    color: $color-primary;
-
-    &:hover {
-      background: #eef2ff;
-      border-color: $color-border;
-    }
-  }
-
-  &.btn--danger {
-    background: rgba($color-danger, 0.05);
-    border-color: rgba($color-danger, 0.4);
-    color: $color-danger;
-
-    &:hover {
-      background: rgba($color-danger, 0.1);
-    }
-  }
-}
-
-.small-blue{
-  font-size: 0.8rem;
-  background: #0dcaf0;
-  padding: 4px 4px;
-  border: 1px solid blue !important;
-}
-
-/* Bouton d’enregistrement en bas du formulaire */
-button[type='submit'].btn--primary {
-  align-self: flex-start;
-  margin-top: 0.5rem;
 }
 
 /* Responsive léger */
@@ -254,12 +150,14 @@ button[type='submit'].btn--primary {
   }
 }
 
-.ck-editor__editable {
-  min-height: 150px;
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  p-button {
+    margin-left: 0.25rem;
+  }
 }
 
-.ck-editor__editable_inline {
-  padding: 0.75rem;
-  border-radius: $radius;
-  border: 1px solid $color-border !important;
-}
+

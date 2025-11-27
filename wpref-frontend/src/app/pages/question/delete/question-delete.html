@@ -1,1 +1,14 @@
-<p>delete works!</p>
+<div class="page">
+  <div class="title">Supprimer une question</div>
+  <div class="card">
+    @if (question()) {
+      <p>Es-tu sûr de vouloir supprimer <b>{{ question()!.title }}</b> ?</p>
+      <div class="actions">
+        <p-button id="btn_delete" label="Supprimer" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
+        <p-button id="btn_back" label="Annuler" routerLink="/question/list" severity="secondary"/>
+      </div>
+    } @else {
+      <p class="muted">Chargement…</p>
+    }
+  </div>
+</div>

@@ -1,49 +1,31 @@
 <nav class="topmenu">
-  <div class="topmenu__inner">
-    <div class="topmenu__left">
-      <img src="assets/logo.svg" alt="Logo" class="logo">
-      <span class="title">WpRef</span>
-    </div>
+  <p-menubar>
+    <!-- GAUCHE : logo + liens + langues -->
+    <ng-template pTemplate="start">
+      <div class="topmenu__left">
+        <img src="/assets/logo.svg" alt="Logo" class="logo"/>
+        <span class="title">WpRef</span>
 
-    <div class="topmenu__links">
-      @if (auth.isLoggedIn()) {
-        <a routerLink="/subject/list" routerLinkActive="active">Sujets</a>
-        <a routerLink="/question/list" routerLinkActive="active">Questions</a>
-      }
-      <a routerLink="/about" routerLinkActive="active">A propos</a>
-    </div>
-
-    <div class="topmenu__right">
-      <mat-button-toggle-group
-        class="mat-menu"
-        [value]="currentLang"
-        (change)="onLangChange($event)">
-        <mat-button-toggle value="fr">FR</mat-button-toggle>
-        <mat-button-toggle value="nl">NL</mat-button-toggle>
-        <mat-button-toggle value="en">EN</mat-button-toggle>
-      </mat-button-toggle-group>
-      <div class="user-menu">
-        <!-- Le menu est TOUJOURS présent -->
-        @if (auth.isLoggedIn()) {
-          <mat-menu #userMenu="matMenu">
-            <button mat-menu-item (click)="goPreferences()">
-              <span>Préférences</span>
-            </button>
-            <button mat-menu-item (click)="goChangePassword()">
-              <span>Changer de mot de passe</span>
-            </button>
-            <button mat-menu-item (click)="logout()">
-              <span>Déconnexion</span>
-            </button>
-          </mat-menu>
-          <!-- Le trigger peut être ton avatar/bouton -->
-          <button mat-button [matMenuTriggerFor]="userMenu" class="user-trigger">
-            <span class="topmenu_user">👤 {{ auth.getUsername() }}</span>
-          </button>
-        }@else{
-         <a routerLink="/login" routerLinkActive="active">Login</a>
-        }
+        <div class="topmenu__links">
+          @if (auth.isLoggedIn()) {
+            <a routerLink="/subject/list" routerLinkActive="active">Sujets</a>
+            <a routerLink="/question/list" routerLinkActive="active">Questions</a>
+          }
+          <a routerLink="/about" routerLinkActive="active">A propos</a>
+        </div>
       </div>
-    </div>
-  </div>
+    </ng-template>
+
+    <!-- DROITE : menu utilisateur -->
+
+    <ng-template pTemplate="end">
+      <div class="topmenu__right">
+        <app-lang-select
+          [lang]="currentLang"
+          (langChange)="onLangChange($event)">
+        </app-lang-select>
+        <app-user-menu></app-user-menu>
+      </div>
+    </ng-template>
+  </p-menubar>
 </nav>

@@ -1,17 +1,17 @@
-<h2>Nouveau sujet</h2>
-<form [formGroup]="form" (ngSubmit)="save()" class="card">
-  <label>Nom</label>
-  <input formControlName="name" placeholder="Règlement" />
-  @if (form.controls.name.touched && form.controls.name.invalid) {
-    <small class="field-error">Nom requis (≥ 2 caractères)</small>
-  }
+<div class="page">
+  <div class="title">Créer un sujet</div>
+  <form (ngSubmit)="save()" [formGroup]="form" class="card">
+    <label>Nom</label>
+    <input formControlName="name" id="name" pInputText type="text"/>
+    @if (form.controls.name.touched && form.controls.name.invalid) {
+      <small class="field-error">Nom requis (≥ 2 caractères)</small>
+    }
 
-  <label>Description</label>
-  <textarea formControlName="description" rows="4" placeholder="Description…"></textarea>
-
-  <div class="actions">
-    <button type="submit" class="btn btn-primary">Enregistrer</button>
-    <a routerLink="/subject/list" class="btn btn-secondary" style="margin-left: 10px;">Annuler</a>
-  </div>
-</form>
-
+    <label>Description</label>
+    <p-editor [style]="{ height: '100px' }" formControlName="description" placeholder="Description…"/>
+    <div class="actions">
+      <p-button (onClick)="save()" id="btn_save" label="Enregistrer" severity="primary"/>
+      <p-button id="btn_back" label="Annuler" routerLink="/subject/list" severity="secondary"/>
+    </div>
+  </form>
+</div>

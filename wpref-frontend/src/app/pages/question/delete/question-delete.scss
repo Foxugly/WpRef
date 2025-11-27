@@ -1,0 +1,32 @@
+// Variables cohérentes avec le style précédent
+$color-border: #e5e7eb;
+$color-muted: #6b7280;
+$color-bg: #ffffff;
+$color-primary: #2563eb;
+$color-secondary: #000000;
+$color-primary-hover: #2563eb;
+$radius: 8px;
+$shadow: 0 2px 8px rgba(0,0,0,0.05);
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+
+  .title {
+    text-align: center;
+    margin: 0 0 1.25rem;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: $color-secondary;
+  }
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  p-button {
+    margin-left: 0.25rem;
+  }
+}

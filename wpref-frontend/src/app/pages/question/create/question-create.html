@@ -1,21 +1,19 @@
 <div class="page">
-  <h1>Créer une question</h1>
+  <div class="title">Créer une question</div>
 
-  @if (loading()) {
-    <div>Chargement…</div>
-  }
   @if (error()) {
     <div class="error">
       {{ error() }}
     </div>
   }
-
-  @if (!loading()) {
-    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+  @if (loading()) {
+    <div>Chargement…</div>
+  } @else {
+    <form (ngSubmit)="save()" [formGroup]="form">
       <!-- Titre -->
       <div class="field">
         <label for="title">Titre</label>
-        <input id="title" type="text" formControlName="title"/>
+        <input formControlName="title" id="title" pInputText type="text"/>
         @if (form.get('title')?.invalid && form.get('title')?.touched) {
           <div class="error">
             Le titre est obligatoire.
@@ -26,14 +24,12 @@
       <!-- Sujets -->
       <div class="field">
         <label for="subjects">Sujets</label>
-
-        <app-multi-select
+        <p-multiSelect
           id="subjects"
-          formControlName="subject_ids"
-          [options]="subjectOptions"
-          [multiple]="true"
-          placeholder="Sélectionner un ou plusieurs sujets"
-        ></app-multi-select>
+        [options]="subjectOptions"
+        formControlName="subject_ids"
+        optionLabel="name"
+        placeholder="Sélectionner un ou plusieurs sujets" />
 
         <small>
           Tu peux sélectionner plusieurs sujets dans le menu.
@@ -47,110 +43,80 @@
       <!-- Description -->
       <div class="field">
         <label for="description">Description</label>
-        <ckeditor
-          [editor]="Editor"
-          formControlName="description"
-        ></ckeditor>
+        <p-editor [style]="{ height: '100px' }" formControlName="description" placeholder="Description…"></p-editor>
       </div>
 
       <!-- Autorise plusieurs bonnes réponses -->
       <div class="field field--inline">
         <label>
-          <input type="checkbox" formControlName="allow_multiple_correct"/>
+          <p-checkbox [binary]="true" formControlName="allow_multiple_correct"/>
           Autoriser plusieurs réponses correctes
         </label>
       </div>
       <div class="field field--inline">
         <label>
-          <input type="checkbox" formControlName="is_mode_practice"/>
+          <p-checkbox [binary]="true" formControlName="is_mode_practice"/>
           Question pour s'exercer ?
         </label>
       </div>
       <div class="field field--inline">
         <label>
-          <input type="checkbox" formControlName="is_mode_exam"/>
+          <p-checkbox [binary]="true" formControlName="is_mode_exam"/>
           Question pour des examens ?
         </label>
       </div>
 
-      <!-- Réponses -->
+      <!-- Réponses --> <!--legend="Réponses possibles"-->
       <fieldset class="answers" formArrayName="answer_options">
         <legend>Réponses possibles</legend>
-
         @for (group of answerOptions.controls; track $index; let i = $index) {
-          <div class="answer" [formGroupName]="i">
+          <div [formGroupName]="i" class="answer">
+            <div class="field field--inline">
+              <label for="answer-{{ i }}-order">Ordre :</label>
+              <p-inputnumber [showButtons]="true" formControlName="sort_order" id="answer-{{ i }}-order"/>
+            </div>
 
             <div class="field">
               <label for="answer-{{ i }}-content">Réponse {{ i + 1 }}</label>
-              <textarea id="answer-{{ i }}-content" formControlName="content"></textarea>
+              <!-- <textarea class="form-textarea" id="answer-{{ i }}-content" formControlName="content"></textarea> -->
+              <p-editor [style]="{ height: '100px' }" formControlName="content" id="answer-{{ i }}-content"></p-editor>
             </div>
 
             <div class="field field--inline">
               <label>
-                <input type="checkbox" formControlName="is_correct"/>
+                <p-checkbox [binary]="true" formControlName="is_correct"/>
                 Bonne réponse
               </label>
+              <p-button (click)="setOnlyCorrect(i)" icon="pi pi-check" label="Marquer comme seule correcte"
+                        severity="info" size="small" variant="outlined"/>
 
-              <button
-                class="btn small-blue"
-                type="button"
-                (click)="setOnlyCorrect(i)"
-              >
-                Marquer comme seule correcte
-              </button>
             </div>
-
-            <div class="field field--inline">
-              <label for="answer-{{ i }}-order">Ordre :</label>
-              <input
-                id="answer-{{ i }}-order"
-                type="number"
-                formControlName="sort_order"
-                class="answer__order-input"
-              />
-            </div>
-
-            <button
-              type="button"
-              class="btn btn--danger"
-              (click)="removeOption(i)"
-            >
-              Supprimer cette réponse
-            </button>
+            <p-button (click)="removeOption(i)" [style]="{'width':'100%'}" icon="pi pi-check"
+                      label="Supprimer cette réponse"
+                      severity="danger" size="small" variant="outlined"/>
           </div>
         }
 
-        <button
-          type="button"
-          class="btn btn--secondary"
-          (click)="addOption()"
-        >
-          Ajouter une réponse
-        </button>
+        <p-button (click)="addOption()" icon="pi pi-check" label="Ajouter une réponse" severity="primary"
+                  size="small" variant="outlined"/>
+
       </fieldset>
 
 
       <!-- Explication -->
       <div class="field">
         <label for="explanation">Explication</label>
-        <ckeditor
-          [editor]="Editor"
+        <p-editor
+          [style]="{ height: '100px' }"
           formControlName="explanation"
-        ></ckeditor>
+          placeholder="Description…"
+        ></p-editor>
       </div>
 
-      @if (success()) {
-        <div class="success">
-          {{ success() }}
-        </div>
-      }
-      <button
-        class="btn btn--primary"
-        type="submit"
-        [disabled]="saving() || form.invalid"
-      >
-        {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
-      </button>
+      <div class="actions">
+        <p-button id="btn_save" (onClick)="save()" label="Enregistrer" severity="primary"/>
+        <p-button id="btn_back" label="Annuler" routerLink="/question/list" severity="secondary"/>
+      </div>
     </form>
   }
 </div>

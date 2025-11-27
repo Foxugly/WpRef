@@ -151,6 +151,9 @@ export class AuthService {
     return !!this.accessToken;
   }
 
+  get authenticated(): boolean {
+  return this.isLoggedIn();
+}
   getUsername(): string {
     return (
       localStorage.getItem(this.USER_KEY) ??

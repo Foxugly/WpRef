@@ -1,0 +1,15 @@
+<div class="user-menu">
+  @if (auth.isLoggedIn()) {
+    <p-menu #userMenu [model]="items" [popup]="true"></p-menu>
+
+    <button
+      pButton
+      type="button"
+      class="user-trigger"
+      (click)="userMenu.toggle($event)">
+      👤 {{ auth.getUsername() }}
+    </button>
+  } @else {
+    <a routerLink="/login" routerLinkActive="active">Login</a>
+  }
+</div>
