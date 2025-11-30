@@ -24,6 +24,7 @@ import { QuestionList } from './pages/question/list/question-list';
 import { QuestionCreate } from './pages/question/create/question-create';
 import { QuestionEdit } from './pages/question/edit/question-edit';
 import { QuestionDelete } from './pages/question/delete/question-delete';
+import { QuestionView } from './pages/question/view/question-view';
 
 
 
@@ -44,4 +45,5 @@ export const routes: Routes = [
   { path: 'question/add', component: QuestionCreate , canActivate: [authGuard] },
   { path: 'question/:id/edit', component: QuestionEdit , canActivate: [authGuard] },
   { path: 'question/:id/delete', component: QuestionDelete , canActivate: [authGuard] },
+  { path: 'question/:id/view', component: QuestionView , canActivate: [authGuard]  },
 ];

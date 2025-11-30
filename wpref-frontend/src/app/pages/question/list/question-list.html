@@ -19,6 +19,7 @@
           <tr>
             <td>{{ q.title }}</td>
             <td class="row-actions">
+              <p-button id="btn_add_question" icon="pi pi-eye" (click)="goView(q.id)" severity="secondary" size="small"/>
               <p-button id="btn_add_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"/>
               <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger" size="small"/>
             </td>

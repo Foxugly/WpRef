@@ -1,0 +1,35 @@
+<div class="page">
+  <div class="question__header">
+  <div class="header-left">
+    <p-button
+      label="Retour à la liste"
+      icon="pi pi-arrow-left"
+      (onClick)="goBack()"
+      severity="secondary"
+      text
+    ></p-button>
+  </div>
+
+  <h1 class="header-title">Détail de la question</h1>
+
+  <div class="header-right">
+    <p-button
+      label="Modifier"
+      icon="pi pi-pencil"
+      (onClick)="goEdit(id)"
+      severity="secondary"
+    ></p-button>
+  </div>
+</div>
+
+
+  @if (loading()) {
+    <div class="question-detail__status">Chargement…</div>
+  } @else if (error()) {
+    <div class="question-detail__status question-detail__status--error">
+      {{ error() }}
+    </div>
+  } @else if (question()) {
+    <app-quiz-question [question]="question()!"></app-quiz-question>
+  }
+</div>

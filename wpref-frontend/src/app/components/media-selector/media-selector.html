@@ -1,0 +1,131 @@
+<div class="media-selector">
+  <p-tabs>
+    <p-tablist>
+      <p-tab value="media">
+        <span class="pi pi-images tab-icon"></span>
+        <span>Médias (image / vidéo)</span>
+      </p-tab>
+
+      <p-tab value="youtube">
+        <span class="pi pi-youtube tab-icon"></span>
+        <span>Lien YouTube / externe</span>
+      </p-tab>
+    </p-tablist>
+
+    <p-tabpanels>
+      <!-- Onglet 1 : Upload médias -->
+      <p-tabpanel value="media">
+        <div class="tab-panel tab-panel--media">
+          <p class="hint">
+            Tu peux déposer une ou plusieurs images ou vidéos.
+            Seuls les fichiers avec un type MIME
+            <code>image/*</code> ou <code>video/*</code> sont acceptés.
+          </p>
+
+          <!-- Zone d’upload -->
+          <label class="upload-zone" [class.upload-zone--disabled]="disabled">
+            <input
+              type="file"
+              [multiple]="multiple"
+              accept="image/*,video/*"
+              (change)="onFilesSelected($event)"
+              [disabled]="disabled"
+            />
+            <div class="upload-zone__content">
+              <span class="pi pi-upload upload-zone__icon"></span>
+              <div class="upload-zone__text">
+                <strong>Clique pour choisir des fichiers</strong>
+                <span>ou glisse-les ici</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      </p-tabpanel>
+
+      <!-- Onglet 2 : Lien YouTube / externe -->
+      <p-tabpanel value="youtube">
+        <div class="tab-panel tab-panel--youtube">
+          <label for="youtube-url">Lien YouTube ou URL externe</label>
+          <input
+            id="youtube-url"
+            type="url"
+            pInputText
+            [ngModel]="youtubeUrl()"
+            (ngModelChange)="youtubeUrl.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            [placeholder]="placeholderYoutube"
+            [disabled]="disabled"
+          />
+
+          <p class="hint">
+            Colle un lien complet YouTube ou une URL courte.
+            Le composant l’ajoutera comme média de type
+            <code>external</code>.
+          </p>
+
+          <button
+            type="button"
+            pButton
+            label="Ajouter ce lien"
+            icon="pi pi-plus"
+            class="youtube-add-btn"
+            (click)="addYoutubeLink()"
+            [disabled]="disabled || !youtubeUrl().trim()"
+          ></button>
+        </div>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+  @if (items.length) {
+            <div class="media-list">
+              @for (m of items; track trackByIndex($index, m); let i = $index) {
+                <div class="media-list__item">
+                  <div class="media-list__thumb">
+                    @switch (m.kind) {
+                      @case ('image') {
+                        <span class="pi pi-image media-list__icon"></span>
+                      }
+                      @case ('video') {
+                        <span class="pi pi-video media-list__icon"></span>
+                      }
+                      @case ('external') {
+                        <span class="pi pi-link media-list__icon"></span>
+                      }
+                    }
+                  </div>
+
+                  <div class="media-list__info">
+                    <div class="media-list__name">
+                      {{ getMediaLabel(m) }}
+                    </div>
+                    <div class="media-list__meta">
+                      <!-- On donne un peu d’infos si on a un File -->
+                      @if (m.file && isFile(m.file)) {
+                        <span>Fichier local</span>
+                      } @else if (m.external_url) {
+                        <span>URL externe</span>
+                      } @else {
+                        <span>Type inconnu</span>
+                      }
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    pButton
+                    class="media-list__remove"
+                    icon="pi pi-times"
+                    severity="danger"
+                    text
+                    rounded
+                    (click)="removeMedia(i)"
+                  ></button>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="media-list--empty">
+              Aucun média sélectionné pour l’instant.
+            </p>
+          }
+</div>

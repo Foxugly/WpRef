@@ -21,99 +21,92 @@ class QuestionLiteSerializer(serializers.ModelSerializer):
 class QuestionMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuestionMedia
-        fields = ["id", "kind", "file", "external_url", "caption", "sort_order"]
+        fields = ["id", "kind", "file", "external_url", "sort_order"]
+        read_only_fields = ["id", "file", "external_url", "sort_order", "kind"]
 
 
-class AnswerOptionSerializer(serializers.ModelSerializer):
+class QuestionAnswerOptionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AnswerOption
+        model = AnswerOption          # adapte si ton modèle s'appelle autrement
         fields = ["id", "content", "is_correct", "sort_order"]
+        read_only_fields = ["id"]
+
 
 
 class QuestionSerializer(serializers.ModelSerializer):
-    media = QuestionMediaSerializer(many=True, required=False)
-    answer_options = AnswerOptionSerializer(many=True)
+    # sujets en lecture
     subjects = SubjectSerializer(many=True, read_only=True)
+
+    # réponses
+    answer_options = QuestionAnswerOptionSerializer(many=True, required=False)
+
+    # médias : read_only, gérés par la vue
+    media = QuestionMediaSerializer(many=True, read_only=True)
+
     subject_ids = serializers.ListField(
-        child=serializers.IntegerField(), write_only=True, required=False
-    )
-    subject_slugs = serializers.ListField(
-        child=serializers.SlugField(), write_only=True, required=False
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
     )
 
     class Meta:
         model = Question
         fields = [
-            "id", "title", "description", "explanation",
-            "allow_multiple_correct", "is_mode_practice", "is_mode_exam",
-            "subjects", "subject_ids", "subject_slugs",
-            "media", "answer_options",
+            "id",
+            "title",
+            "description",
+            "explanation",
+            "allow_multiple_correct",
+            "is_mode_practice",
+            "is_mode_exam",
+            "subjects",
+            "subject_ids",
+            "answer_options",
+            "media",
             "created_at",
         ]
+        read_only_fields = ["id", "subjects", "media", "created_at"]
 
-    @staticmethod
-    def _assign_subjects(question, subject_ids=None, subject_slugs=None):
-        if subject_ids is None and subject_slugs is None:
-            return
-        qs = Subject.objects.none()
-        if subject_ids:
-            qs = qs.union(Subject.objects.filter(id__in=subject_ids))
-        if subject_slugs:
-            qs = qs.union(Subject.objects.filter(slug__in=subject_slugs))
-        QuestionSubject.objects.filter(question=question).delete()
-        for i, s in enumerate(qs.distinct()):
-            QuestionSubject.objects.create(question=question, subject=s, sort_order=i)
-
+    # ---------------------------
+    # CREATE
+    # ---------------------------
     def create(self, validated_data):
-        media_data = validated_data.pop("media", [])
-        options_data = validated_data.pop("answer_options", [])
-        subject_ids = validated_data.pop("subject_ids", None)
-        subject_slugs = validated_data.pop("subject_slugs", None)
+        subject_ids = validated_data.pop("subject_ids", [])
+        answer_options_data = validated_data.pop("answer_options", [])
+        # 1) Question
+        question = Question.objects.create(**validated_data)
+        # 2) sujets (M2M)
+        if subject_ids:
+            subjects_qs = Subject.objects.filter(id__in=subject_ids)
+            question.subjects.set(subjects_qs)
+        # 3) réponses
+        for opt in answer_options_data:
+            AnswerOption.objects.create(question=question, **opt)
+        return question
 
-        q = Question.objects.create(**validated_data)
-        for opt in options_data:
-            AnswerOption.objects.create(question=q, **opt)
-        for m in media_data:
-            QuestionMedia.objects.create(question=q, **m)
-
-        self._assign_subjects(q, subject_ids, subject_slugs)
-
-        # 🔴 ICI : on convertit la ValidationError Django en ValidationError DRF
-        try:
-            q.full_clean()
-        except DjangoValidationError as e:
-            # e.message_dict si tu veux un dict de champs, e.messages pour une liste
-            raise serializers.ValidationError(e.message_dict or e.messages)
-
-        return q
-
+    # ---------------------------
+    # UPDATE
+    # ---------------------------
     def update(self, instance, validated_data):
-        media_data = validated_data.pop("media", None)
-        options_data = validated_data.pop("answer_options", None)
+        print("SERIALIZER UPDATE")
+        print(validated_data)
         subject_ids = validated_data.pop("subject_ids", None)
-        subject_slugs = validated_data.pop("subject_slugs", None)
-
-        for k, v in validated_data.items():
-            setattr(instance, k, v)
+        answer_options_data = validated_data.pop("answer_options", None)
+        print("ANSWER_OPTIONS_DATA")
+        print(answer_options_data)
+        # 1) champs simples
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
         instance.save()
-
-        if options_data is not None:
+        # 2) sujets (M2M)
+        if subject_ids is not None:
+            subjects_qs = Subject.objects.filter(id__in=subject_ids)
+            print(subjects_qs)
+            instance.subjects.set(subjects_qs)
+        # 3) réponses : stratégie simple = wipe + recreate
+        if answer_options_data is not None:
             instance.answer_options.all().delete()
-            for opt in options_data:
+            for opt in answer_options_data:
                 AnswerOption.objects.create(question=instance, **opt)
-
-        if media_data is not None:
-            instance.media.all().delete()
-            for m in media_data:
-                QuestionMedia.objects.create(question=instance, **m)
-
-        if subject_ids is not None or subject_slugs is not None:
-            self._assign_subjects(instance, subject_ids, subject_slugs)
-
-        # 🔴 Même correction en update
-        try:
-            instance.full_clean()
-        except DjangoValidationError as e:
-            raise serializers.ValidationError(e.message_dict or e.messages)
-
+        # les médias sont gérés dans le ViewSet via _handle_media_upload()
         return instance

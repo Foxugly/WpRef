@@ -3,6 +3,6 @@
     <p-menu id="user_menu" #user_menu [model]="items" [popup]="true"/>
     <p-button icon="pi pi-user" class="user-trigger" styleClass="btn-ghost" (click)="user_menu.toggle($event)" label="{{ auth.getUsername() }}"/>
   } @else {
-    <a routerLink="/login" routerLinkActive="active">Login</a>
+    <p-button styleClass="btn-ghost" routerLink="/login" routerLinkActive="active" label="login" />
   }
 </div>

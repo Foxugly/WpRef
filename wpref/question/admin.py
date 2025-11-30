@@ -2,6 +2,9 @@ from django.contrib import admin
 from .models import Question, QuestionMedia, AnswerOption, QuestionSubject
 from subject.models import Subject
 
+@admin.register(QuestionMedia)
+class QuestionMediaAdmin(admin.ModelAdmin):
+    list_display = ("id", "kind", "file", "external_url", "sort_order")
 
 @admin.register(Subject)
 class SubjectAdmin(admin.ModelAdmin):

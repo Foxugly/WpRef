@@ -44,6 +44,10 @@ private questionService = inject(QuestionService);
     this.router.navigate(['/question']);
   }
 
+  goView(id: number) {
+    this.router.navigate(['/question', id, 'view']);
+  }
+
   goEdit(id: number) {
     this.router.navigate(['/question', id, 'edit']);
   }

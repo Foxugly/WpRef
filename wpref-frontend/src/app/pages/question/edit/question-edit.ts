@@ -1,9 +1,7 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
-
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
-
-import {QuestionService} from '../../../services/question/question';
+import {AnswerOption, Question, QuestionService,} from '../../../services/question/question';
 import {Subject, SubjectService} from '../../../services/subject/subject';
 import {Editor} from 'primeng/editor';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -12,37 +10,7 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {ButtonModule} from 'primeng/button';
 import {MultiSelectModule} from 'primeng/multiselect';
 import {PanelModule} from 'primeng/panel';
-
-// Interfaces alignées sur ton serializer DRF
-export interface Question {
-  id: number;
-  title: string;
-  description: string;
-  explanation: string;
-  allow_multiple_correct: boolean;
-  is_mode_practice: boolean;
-  is_mode_exam: boolean;
-  subjects: Subject[];
-  media: QuestionMedia[];
-  answer_options: AnswerOption[];
-  created_at: string;
-}
-
-export interface QuestionMedia {
-  id?: number;
-  kind: 'image' | 'video';
-  file?: string | null;
-  external_url?: string | null;
-  caption: string;
-  sort_order: number;
-}
-
-export interface AnswerOption {
-  id?: number;
-  content: string;
-  is_correct: boolean;
-  sort_order: number;
-}
+import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/media-selector/media-selector';
 
 @Component({
   standalone: true,
@@ -59,10 +27,11 @@ export interface AnswerOption {
     ButtonModule,
     MultiSelectModule,
     PanelModule,
+    MediaSelectorComponent
   ],
 })
 export class QuestionEdit implements OnInit {
-  questionId!: number;
+  id!: number;
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -80,6 +49,7 @@ export class QuestionEdit implements OnInit {
     // on envoie subject_ids au backend (write_only dans ton serializer)
     subject_ids: [[] as number[]],
     answer_options: this.fb.array([]),
+    media: [[] as MediaSelectorValue[]],
   });
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -98,7 +68,7 @@ export class QuestionEdit implements OnInit {
   }
 
   ngOnInit(): void {
-    this.questionId = Number(this.route.snapshot.paramMap.get('id'));
+    this.id = Number(this.route.snapshot.paramMap.get('id'));
     this.loadSubjects();
     this.loadQuestion();
   }
@@ -153,36 +123,94 @@ export class QuestionEdit implements OnInit {
 
     const raw = this.form.value as any;
 
-    // subject_ids venant du multi-select seront des strings → on force en nombres
-    const subjectIds = (raw.subject_ids || []).map((id: any) =>
-      Number(id),
-    ) as number[];
+    // ---- subject_ids → nombres propres ----
+    const subjectIds: number[] = Array.isArray(raw.subject_ids)
+      ? raw.subject_ids
+        .filter((id: any) => id !== null && id !== undefined && id !== '')
+        .map((id: any) => Number(id))
+        .filter((id: number) => Number.isFinite(id))
+      : [];
 
-    const media = raw.media || {};
+    // ---- réponses ----
+    const answerOptions: AnswerOption[] = raw.answer_options ?? [];
 
-    const payload = {
-      title: raw.title,
-      description: raw.description,
-      explanation: raw.explanation,
-      allow_multiple_correct: raw.allow_multiple_correct,
-      is_mode_practice: raw.is_mode_practice,
-      is_mode_exam: raw.is_mode_exam,
-      subject_ids: subjectIds,
-      answer_options: raw.answer_options,
-      kind: media['kind'],
-      caption: media['caption'] ?? '',
-      external_url: media['external_url'] ?? '',
-      file: media['file'] ?? '',
-    };
+    const answerOptionsPayload = answerOptions.map((opt, index) => ({
+  content: opt.content,
+  is_correct: !!opt.is_correct,              // force booléen
+  sort_order: opt.sort_order ?? index + 1,   // garantit un ordre
+}));
 
-    this.questionService.create(payload).subscribe({
+
+    // ---- médias venant du media-selector ----
+    const mediaItems: MediaSelectorValue[] = Array.isArray(raw.media)
+      ? raw.media
+      : [];
+
+    // On récupère éventuellement un lien externe (YouTube)
+    const external = mediaItems.find(
+      (m) => m.kind === 'external' && m.external_url,
+    );
+
+    // ---- Construction du FormData ----
+    const formData = new FormData();
+
+    // Champs simples
+    formData.append('title', raw.title ?? '');
+    formData.append('description', raw.description ?? '');
+    formData.append('explanation', raw.explanation ?? '');
+    formData.append(
+      'allow_multiple_correct',
+      String(!!raw.allow_multiple_correct),
+    );
+    formData.append(
+      'is_mode_practice',
+      String(!!raw.is_mode_practice),
+    );
+    formData.append('is_mode_exam', String(!!raw.is_mode_exam));
+
+    // Listes encodées en JSON (le serializer les lira avec json.loads côté Django)
+    subjectIds.forEach((id: number) => {
+      formData.append('subject_ids', String(id));
+    });
+
+    console.log(answerOptions)
+    console.log(answerOptionsPayload)
+    formData.append('answer_options', JSON.stringify(answerOptionsPayload));
+
+    // Fichiers à envoyer dans request.FILES.getlist("media_files")
+    for (const m of mediaItems) {
+      if ((m.kind === 'image' || m.kind === 'video') && m.file instanceof File) {
+        formData.append('media_files', m.file, m.file.name);
+      }
+    }
+
+    // Lien YouTube / externe
+    if (external?.external_url) {
+      formData.append('youtube_url', external.external_url);
+    }
+
+    // (Optionnel) Si tu veux aussi envoyer la description des médias existants
+    // pour les garder/corriger côté backend :
+    //
+    // formData.append('media_meta', JSON.stringify(
+    //   mediaItems.map((m, idx) => ({
+    //     id: m.id ?? null,
+    //     kind: m.kind,
+    //     sort_order: m.sort_order ?? idx + 1,
+    //     external_url: m.external_url ?? null,
+    //   })),
+    // ));
+
+    console.log('FormData ready for update (id=', this.id, ')');
+
+    this.questionService.update(this.id, formData).subscribe({
       next: () => {
         this.saving.set(false);
-        this.success.set('Question créée avec succès.');
-        this.router.navigate(['/questions']);
+        this.success.set('Question mise à jour avec succès.');
+        this.router.navigate(['/question/list']);
       },
       error: (err) => {
-        console.error('Erreur création question', err);
+        console.error('Erreur update question', err);
         if (err.error && typeof err.error === 'object') {
           this.error.set(JSON.stringify(err.error));
         } else {
@@ -193,9 +221,19 @@ export class QuestionEdit implements OnInit {
     });
   }
 
+  goBack(): void {
+    this.router.navigate(['/question/list']);
+  }
+
+  goView(id: number) {
+    this.router.navigate(['/question', id, 'view']);
+  }
+
   private loadSubjects(): void {
     this.subjectService.list().subscribe({
-      next: (subs: Subject[]) => this.subjects.set(subs),
+      next: (subs: Subject[]) => {
+        this.subjects.set(subs);
+      },
       error: (err) => {
         console.error('Erreur chargement sujets', err);
       },
@@ -206,10 +244,36 @@ export class QuestionEdit implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    this.questionService.retrieve(this.questionId).subscribe({
+    this.questionService.retrieve(this.id).subscribe({
       next: (q: Question) => {
-        // sujet(s) -> subject_ids
         const subjectIds = q.subjects?.map((s) => s.id) ?? [];
+        // réponses
+        this.answerOptions.clear();
+        q.answer_options.forEach((opt) => {
+          this.answerOptions.push(
+            this.fb.group({
+              content: [opt.content, Validators.required],
+              is_correct: [opt.is_correct],
+              sort_order: [opt.sort_order],
+            }),
+          );
+        });
+
+        if (this.answerOptions.length === 0) {
+          this.addOption();
+          this.addOption();
+        }
+
+        // médias → MediaSelectorValue[] pour le composant
+        const mediaSelectorItems: MediaSelectorValue[] = (q.media || []).map(
+          (m, idx) => ({
+            id: m.id,
+            kind: m.kind,
+            sort_order: m.sort_order ?? idx + 1,
+            file: m.file ?? null,               // string (URL) côté backend
+            external_url: m.external_url ?? null,
+          }),
+        );
 
         this.form.patchValue({
           title: q.title,
@@ -219,25 +283,8 @@ export class QuestionEdit implements OnInit {
           is_mode_practice: q.is_mode_practice,
           is_mode_exam: q.is_mode_exam,
           subject_ids: subjectIds,
+          media: mediaSelectorItems,
         });
-
-        // reset des réponses
-        this.answerOptions.clear();
-        q.answer_options.forEach((opt) => {
-          this.answerOptions.push(
-            this.fb.group({
-              content: [opt.content, Validators.required],
-              is_correct: [opt.is_correct],
-              sort_order: [opt.sort_order],
-            })
-          );
-        });
-
-        // si jamais il n’y en a pas, on en ajoute 2 par défaut
-        if (this.answerOptions.length === 0) {
-          this.addOption();
-          this.addOption();
-        }
 
         this.loading.set(false);
       },

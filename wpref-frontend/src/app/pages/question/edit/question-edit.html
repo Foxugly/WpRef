@@ -1,4 +1,28 @@
 <div class="page">
+  <div class="question__header">
+  <div class="header-left">
+    <p-button
+      label="Retour à la liste"
+      icon="pi pi-arrow-left"
+      (onClick)="goBack()"
+      severity="secondary"
+      text
+    ></p-button>
+  </div>
+
+  <h1 class="header-title">Modifier une question</h1>
+
+  <div class="header-right">
+    <p-button
+      label="Voir"
+      icon="pi pi-eye"
+      (onClick)="goView(id)"
+      severity="secondary"
+    ></p-button>
+  </div>
+</div>
+
+<div class="page">
   <div class="title">Modifier une question</div>
 
   @if (error()) {
@@ -25,19 +49,23 @@
       <div class="field">
         <label for="subjects">Sujets</label>
         <p-multiSelect
+          [options]="subjectOptions"
+          [showClear]="true"
+          formControlName="subject_ids"
           id="subjects"
-        [options]="subjectOptions"
-        formControlName="subject_ids"
-        optionLabel="name"
-        placeholder="Sélectionner un ou plusieurs sujets" />
-
+          optionLabel="name"
+          optionValue="code"
+          display="chip"
+          placeholder="Sélectionner un ou plusieurs sujets"
+        />
         <small>
           Tu peux sélectionner plusieurs sujets dans le menu.
         </small>
       </div>
 
       <div class="field">
-        fichiers - TODO
+        <label>Média</label>
+        <app-media-selector formControlName="media"></app-media-selector>
       </div>
 
       <!-- Description -->
@@ -67,7 +95,7 @@
       </div>
 
       <!-- Réponses --> <!--legend="Réponses possibles"-->
-      <p-panel header="Réponses possibles" class="answers" formArrayName="answer_options">
+      <p-panel class="answers" formArrayName="answer_options" header="Réponses possibles">
         @for (group of answerOptions.controls; track $index; let i = $index) {
           <div [formGroupName]="i" class="answer">
             <div class="field field--inline">
@@ -86,18 +114,21 @@
                 <p-checkbox [binary]="true" formControlName="is_correct"/>
                 Bonne réponse
               </label>
-              <p-button id="btn_only_answer_{{i}}" (click)="setOnlyCorrect(i)" icon="pi pi-star" label="Marquer comme seule correcte"
+              <p-button (click)="setOnlyCorrect(i)" icon="pi pi-star" id="btn_only_answer_{{i}}"
+                        label="Marquer comme seule correcte"
                         severity="info" size="small" variant="outlined"/>
 
             </div>
-            <p-button id="btn_delete_answer_{{i}}" (click)="removeOption(i)" [style]="{'width':'100%'}" icon="pi pi-trash"
+            <p-button (click)="removeOption(i)" [style]="{'width':'100%'}" icon="pi pi-trash"
+                      id="btn_delete_answer_{{i}}"
                       label="Supprimer cette réponse"
                       severity="danger" size="small" variant="outlined"/>
           </div>
         }
 
-        <p-button (click)="addOption()" id="btn_add_response" icon="pi pi-plus" label="Ajouter une réponse" severity="primary"
-                  size="small" variant="outlined" [style]="{'margin-top':'20px'}"/>
+        <p-button (click)="addOption()" [style]="{'margin-top':'20px'}" icon="pi pi-plus" id="btn_add_response"
+                  label="Ajouter une réponse"
+                  severity="primary" size="small" variant="outlined"/>
 
       </p-panel>
 
@@ -113,7 +144,7 @@
       </div>
 
       <div class="actions">
-        <p-button id="btn_save" (onClick)="save()" label="Enregistrer" severity="primary"/>
+        <p-button (onClick)="save()" id="btn_save" label="Enregistrer" severity="primary"/>
         <p-button id="btn_back" label="Annuler" routerLink="/question/list" severity="secondary"/>
       </div>
     </form>

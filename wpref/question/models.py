@@ -49,20 +49,20 @@ class QuestionSubject(models.Model):
 class QuestionMedia(models.Model):
     IMAGE = "image"
     VIDEO = "video"
-    KIND_CHOICES = [(IMAGE, "Image"), (VIDEO, "Vidéo")]
+    EXTERNAL = "external"
+    KIND_CHOICES = [(IMAGE, "Image"), (VIDEO, "Vidéo"), (EXTERNAL, "Externe")]
 
     question = models.ForeignKey(Question, related_name="media", on_delete=models.CASCADE)
     kind = models.CharField(max_length=10, choices=KIND_CHOICES)
     file = models.FileField(upload_to="question_media/", blank=True, null=True)
     external_url = models.URLField(blank=True, null=True)
-    caption = models.CharField("Légende", max_length=255, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["sort_order", "id"]
 
     def __str__(self):
-        return f"{self.kind} - {self.caption or self.file or self.external_url}"
+        return f"{self.kind} - {self.file or self.external_url}"
 
     def clean(self):
         if not self.file and not self.external_url:

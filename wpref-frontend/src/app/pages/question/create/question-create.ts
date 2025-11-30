@@ -2,7 +2,7 @@ import {Component, inject, OnInit, signal} from '@angular/core';
 
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
-import {QuestionService} from '../../../services/question/question';
+import {QuestionService, AnswerOption, QuestionCreatePayload} from '../../../services/question/question';
 import {Subject, SubjectService} from '../../../services/subject/subject';
 
 import {Editor} from 'primeng/editor';
@@ -11,40 +11,8 @@ import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {ButtonModule} from 'primeng/button';
 import {MultiSelectModule} from 'primeng/multiselect';
-import {SelectItem} from 'primeng/api';
 import {PanelModule} from 'primeng/panel';
-
-// Interfaces alignées sur ton serializer DRF
-export interface Question {
-  id: number;
-  title: string;
-  description: string;
-  explanation: string;
-  allow_multiple_correct: boolean;
-  is_mode_practice: boolean;
-  is_mode_exam: boolean;
-  subjects: Subject[];
-  media: QuestionMedia[];
-  answer_options: AnswerOption[];
-  created_at: string;
-}
-
-export interface QuestionMedia {
-  id?: number;
-  // ✅ on aligne avec tes kindOptions: image, video, audio, external
-  kind: 'image' | 'video' | 'audio' | 'external';
-  file?: string | null;
-  external_url?: string | null;
-  caption: string;
-  sort_order: number;
-}
-
-export interface AnswerOption {
-  id?: number;
-  content: string;
-  is_correct: boolean;
-  sort_order: number;
-}
+import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/media-selector/media-selector';
 
 @Component({
   standalone: true,
@@ -61,6 +29,8 @@ export interface AnswerOption {
     ButtonModule,
     MultiSelectModule,
     PanelModule,
+    MediaSelectorComponent,
+
   ],
 })
 export class QuestionCreate implements OnInit {
@@ -83,13 +53,7 @@ export class QuestionCreate implements OnInit {
     // on envoie subject_ids au backend (write_only dans ton serializer)
     subject_ids: [[] as number[]],
     answer_options: this.fb.array([]),
-
-    media: this.fb.group({
-      kind: ['image'],
-      file: [null],
-      external_url: [''],
-      caption: [''],
-    }),
+    media: [[] as MediaSelectorValue[]],
   });
   private router = inject(Router);
   private questionService = inject(QuestionService);
@@ -98,20 +62,12 @@ export class QuestionCreate implements OnInit {
   // ------------- Getters pratiques -------------
 
   get subjectOptions(): { name: string; code: number }[] {
-  return this.subjects().map((s) => ({
-    name: s.name,
-    code: s.id,
-  }));
-}
+    return this.subjects().map((s) => ({
+      name: s.name,
+      code: s.id,
+    }));
+  }
 
-  /*get kindOptions(): MultiSelectOption[] {
-    return [
-      { value: 'image', label: 'Image' },
-      { value: 'video', label: 'Vidéo' },
-      { value: 'audio', label: 'Audio' },
-      { value: 'external', label: 'Lien externe' },
-    ];
-  }*/
 
   get answerOptions(): FormArray {
     return this.form.get('answer_options') as FormArray;
@@ -170,67 +126,80 @@ export class QuestionCreate implements OnInit {
     }
   }
 
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      this.form.get('media.file')?.setValue(file);
-    }
-  }
-
-  // ------------- Fichier media -------------
-
   save(): void {
-    this.error.set(null);
-    this.success.set(null);
+  this.error.set(null);
+  this.success.set(null);
 
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
-    this.saving.set(true);
-
-    const raw = this.form.value as any;
-
-    // subject_ids venant du multi-select seront des strings → on force en nombres
-    const subjectIds = (raw.subject_ids || []).map((id: any) =>
-      Number(id),
-    ) as number[];
-
-    const media = raw.media || {};
-
-    const payload = {
-      title: raw.title,
-      description: raw.description,
-      explanation: raw.explanation,
-      allow_multiple_correct: raw.allow_multiple_correct,
-      is_mode_practice: raw.is_mode_practice,
-      is_mode_exam: raw.is_mode_exam,
-      subject_ids: subjectIds,
-      answer_options: raw.answer_options,
-      kind: media['kind'],
-      caption: media['caption'] ?? '',
-      external_url: media['external_url'] ?? '',
-      file: media['file'] ?? '',
-    };
-
-    this.questionService.create(payload).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.success.set('Question créée avec succès.');
-        this.router.navigate(['/questions']);
-      },
-      error: (err) => {
-        console.error('Erreur création question', err);
-        if (err.error && typeof err.error === 'object') {
-          this.error.set(JSON.stringify(err.error));
-        } else {
-          this.error.set("Erreur lors de l'enregistrement de la question.");
-        }
-        this.saving.set(false);
-      },
-    });
+  if (this.form.invalid) {
+    this.form.markAllAsTouched();
+    return;
   }
+
+  this.saving.set(true);
+
+  const raw = this.form.value as any;
+
+  // subject_ids
+  const subjectIds: number[] = Array.isArray(raw.subject_ids)
+    ? raw.subject_ids
+        .filter((id: any) => id !== null && id !== undefined && id !== '')
+        .map((id: any) => Number(id))
+        .filter((id: number) => Number.isFinite(id))
+    : [];
+
+  // réponses
+  const answerOptions: AnswerOption[] = raw.answer_options ?? [];
+
+  // médias depuis le media-selector
+  const mediaSelectorItems: MediaSelectorValue[] = Array.isArray(raw.media)
+    ? raw.media
+    : [];
+
+  const media: MediaSelectorValue[] = mediaSelectorItems.map((m, idx) => {
+    const sortOrder = m.sort_order ?? idx + 1;
+
+    const externalUrl =
+      m.kind === 'external'
+        ? (m.external_url || (typeof m.file === 'string' ? m.file : null))
+        : null;
+
+    return {
+      kind: m.kind,
+      sort_order: sortOrder,
+      file: null,              // on ne gère pas encore l’upload binaire
+      external_url: externalUrl,
+    };
+  });
+
+  const payload: QuestionCreatePayload = {
+    title: raw.title,
+    description: raw.description,
+    explanation: raw.explanation,
+    allow_multiple_correct: raw.allow_multiple_correct,
+    is_mode_practice: raw.is_mode_practice,
+    is_mode_exam: raw.is_mode_exam,
+    subject_ids: subjectIds,
+    answer_options: answerOptions,
+    media,
+  };
+
+  this.questionService.create(payload).subscribe({
+    next: () => {
+      this.saving.set(false);
+      this.success.set('Question créée avec succès.');
+      this.router.navigate(['/question/list']);
+    },
+    error: (err) => {
+      console.error('Erreur création question', err);
+      if (err.error && typeof err.error === 'object') {
+        this.error.set(JSON.stringify(err.error));
+      } else {
+        this.error.set("Erreur lors de l'enregistrement de la question.");
+      }
+      this.saving.set(false);
+    },
+  });
+}
 
   // ------------- Submit -------------
 

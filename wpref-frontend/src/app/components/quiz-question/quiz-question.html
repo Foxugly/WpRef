@@ -1,0 +1,90 @@
+<div class="quiz-question">
+  <!-- Titre -->
+  <h2 class="quiz-question__title">
+    {{ question.title }}
+  </h2>
+
+  <!-- Sujets -->
+  @if (question.subjects?.length) {
+    <div class="quiz-question__subjects">
+      @for (s of question.subjects; track s.id) {
+        <span class="subject-badge">{{ s.name }}</span>
+      }
+    </div>
+  }
+<p-panel [showHeader]=false class="quiz-question--panel">
+  <!-- Médias -->
+  @if (question.media?.length) {
+    <div class="quiz-question__media">
+      @for (m of question.media; track m.id ?? m.sort_order; let i = $index) {
+        @switch (m.kind) {
+          @case ('image') {
+            <img
+              [alt]="question.title"
+              [src]="mediaSrc(m)"
+              class="quiz-question__media-image"
+            />
+          }
+          @case ('video') {
+            <video
+              [src]="mediaSrc(m)"
+              class="quiz-question__media-video"
+              controls
+            >
+              Votre navigateur ne supporte pas la vidéo.
+            </video>
+          }
+          @case ('external') {
+            @if (externalSafeUrl(m)) {
+              <div class="youtube-wrapper">
+                <iframe
+                  [src]="externalSafeUrl(m)"
+                  allowfullscreen
+                  frameborder="0"
+                ></iframe>
+              </div>
+            }
+          }
+        }
+      }
+    </div>
+  }
+
+  <!-- Description -->
+  @if (question.description) {
+    <div
+      [innerHTML]="question.description"
+      class="quiz-question__description"
+    ></div>
+  }
+</p-panel>
+  <!-- Réponses -->
+  <section class="quiz-question__answers" >
+    @for (opt of question.answer_options; track opt.id ?? $index; let i = $index) {
+      <div class="answer-line">
+        @if (question.allow_multiple_correct) {
+          <!-- MULTI → checkbox -->
+          <p-checkbox
+            (ngModelChange)="onToggleMulti(i, $event)"
+            [binary]="true"
+            [ngModel]="multiSelected[i] ?? false"
+            inputId="answer-{{ i }}"
+          ></p-checkbox>
+        } @else {
+          <!-- SINGLE → radio -->
+          <p-radiobutton
+            (ngModelChange)="onSelectSingle(opt)"
+            [ngModel]="singleSelected"
+            [value]="opt"
+            inputId="answer-{{ i }}"
+            name="question-{{ question.id }}"
+          ></p-radiobutton>
+        }
+
+        <label [for]="'answer-' + i" class="answer-label">
+          <div [innerHTML]="opt.content"></div>
+        </label>
+      </div>
+    }
+  </section>
+</div>

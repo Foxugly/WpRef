@@ -1,0 +1,33 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+.question__header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+
+  .header-left {
+    justify-self: start;
+  }
+
+  .header-title {
+    text-align: center;
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+
+  .header-right {
+    justify-self: end;
+  }
+}
+
+:host ::ng-deep .p-panel {
+    background: #F2F6FF !important;
+    color: black !important;
+}

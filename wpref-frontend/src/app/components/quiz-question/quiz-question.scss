@@ -1,0 +1,147 @@
+:host {
+  display: block;
+}
+
+/* -------- Layout général -------- */
+.quiz-question {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+}
+
+/* -------- Titre -------- */
+.quiz-question__title {
+  font-size: 1.4rem;
+  margin: 0 0 0.5rem;
+}
+
+/* -------- Sujets -------- */
+.quiz-question__subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+
+  .subject-badge {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* -------- Médias -------- */
+.quiz-question__media {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  &-image,
+  &-video,
+  &-iframe {
+    max-width: 100%;
+    border-radius: 0.4rem;
+    display: block;
+  }
+
+  &-video,
+  &-iframe {
+    max-height: 360px;
+  }
+}
+
+/* -------- Description -------- */
+.quiz-question__description {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* -------- Réponses -------- */
+.quiz-question__answers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-left: 50px;
+}
+
+/* Une ligne de réponse */
+.answer-line {
+  display: flex;
+  align-items: center;   /* ✅ centrage vertical */
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+/* Label de la réponse */
+.answer-label {
+  font-size: 0.95rem;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+/* ================================
+   Corriger l’alignement PrimeNG
+   ================================ */
+
+/* On cible les composants PrimeNG DANS ce composant */
+:host ::ng-deep .answer-line .p-checkbox,
+:host ::ng-deep .answer-line .p-radiobutton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* On enlève les marges bizarres éventuelles */
+:host ::ng-deep .answer-line .p-checkbox .p-checkbox-box,
+:host ::ng-deep .answer-line .p-radiobutton .p-radiobutton-box {
+  margin: 0;
+}
+
+::ng-deep .p-panel .p-panel-content {
+  padding-bottom: 0 !important;
+}
+
+
+/* Optionnel : réduire un peu la taille des icônes */
+/*
+:host ::ng-deep .p-checkbox .p-checkbox-box,
+:host ::ng-deep .p-radiobutton .p-radiobutton-box {
+  width: 1rem;
+  height: 1rem;
+}
+*/
+
+@media (max-width: 600px) {
+  .quiz-question {
+    gap: 1rem;
+  }
+
+  .answer-line {
+    gap: 0.4rem;
+  }
+}
+
+.youtube-wrapper {
+  width: 60%;
+  //max-width: 900px;         /* limite optionnelle */
+  margin: 1rem auto;        /* centre horizontalement */
+  position: relative;
+
+  /* Conserve le ratio 16:9 */
+  padding-bottom: 56.25%;   /* 9 / 16 * 100 */
+  height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #000;
+}
+
+.youtube-wrapper iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
