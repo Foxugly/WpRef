@@ -2,7 +2,7 @@ import {Component, inject, OnInit, signal} from '@angular/core';
 
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
-import {QuestionService, AnswerOption, QuestionCreatePayload} from '../../../services/question/question';
+import {QuestionCreatePayload, QuestionService} from '../../../services/question/question';
 import {Subject, SubjectService} from '../../../services/subject/subject';
 
 import {Editor} from 'primeng/editor';
@@ -127,79 +127,32 @@ export class QuestionCreate implements OnInit {
   }
 
   save(): void {
-  this.error.set(null);
-  this.success.set(null);
+    this.error.set(null);
+    this.success.set(null);
 
-  if (this.form.invalid) {
-    this.form.markAllAsTouched();
-    return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    this.saving.set(true);
+    const raw = this.form.value as QuestionCreatePayload;
+    this.questionService.create(raw).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.success.set('Question créée avec succès.');
+        this.router.navigate(['/question/list']);
+      },
+      error: (err) => {
+        console.error('Erreur création question', err);
+        if (err.error && typeof err.error === 'object') {
+          this.error.set(JSON.stringify(err.error));
+        } else {
+          this.error.set("Erreur lors de l'enregistrement de la question.");
+        }
+        this.saving.set(false);
+      },
+    });
   }
-
-  this.saving.set(true);
-
-  const raw = this.form.value as any;
-
-  // subject_ids
-  const subjectIds: number[] = Array.isArray(raw.subject_ids)
-    ? raw.subject_ids
-        .filter((id: any) => id !== null && id !== undefined && id !== '')
-        .map((id: any) => Number(id))
-        .filter((id: number) => Number.isFinite(id))
-    : [];
-
-  // réponses
-  const answerOptions: AnswerOption[] = raw.answer_options ?? [];
-
-  // médias depuis le media-selector
-  const mediaSelectorItems: MediaSelectorValue[] = Array.isArray(raw.media)
-    ? raw.media
-    : [];
-
-  const media: MediaSelectorValue[] = mediaSelectorItems.map((m, idx) => {
-    const sortOrder = m.sort_order ?? idx + 1;
-
-    const externalUrl =
-      m.kind === 'external'
-        ? (m.external_url || (typeof m.file === 'string' ? m.file : null))
-        : null;
-
-    return {
-      kind: m.kind,
-      sort_order: sortOrder,
-      file: null,              // on ne gère pas encore l’upload binaire
-      external_url: externalUrl,
-    };
-  });
-
-  const payload: QuestionCreatePayload = {
-    title: raw.title,
-    description: raw.description,
-    explanation: raw.explanation,
-    allow_multiple_correct: raw.allow_multiple_correct,
-    is_mode_practice: raw.is_mode_practice,
-    is_mode_exam: raw.is_mode_exam,
-    subject_ids: subjectIds,
-    answer_options: answerOptions,
-    media,
-  };
-
-  this.questionService.create(payload).subscribe({
-    next: () => {
-      this.saving.set(false);
-      this.success.set('Question créée avec succès.');
-      this.router.navigate(['/question/list']);
-    },
-    error: (err) => {
-      console.error('Erreur création question', err);
-      if (err.error && typeof err.error === 'object') {
-        this.error.set(JSON.stringify(err.error));
-      } else {
-        this.error.set("Erreur lors de l'enregistrement de la question.");
-      }
-      this.saving.set(false);
-    },
-  });
-}
 
   // ------------- Submit -------------
 

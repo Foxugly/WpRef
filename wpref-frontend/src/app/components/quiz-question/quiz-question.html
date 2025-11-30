@@ -5,61 +5,64 @@
   </h2>
 
   <!-- Sujets -->
-  @if (question.subjects?.length) {
-    <div class="quiz-question__subjects">
-      @for (s of question.subjects; track s.id) {
-        <span class="subject-badge">{{ s.name }}</span>
-      }
-    </div>
+  @if (question.subjects) {
+    @if (question.subjects.length) {
+      <div class="quiz-question__subjects">
+        @for (s of question.subjects; track s.id) {
+          <span class="subject-badge">{{ s.name }}</span>
+        }
+      </div>
+    }
   }
-<p-panel [showHeader]=false class="quiz-question--panel">
-  <!-- Médias -->
-  @if (question.media?.length) {
-    <div class="quiz-question__media">
-      @for (m of question.media; track m.id ?? m.sort_order; let i = $index) {
-        @switch (m.kind) {
-          @case ('image') {
-            <img
-              [alt]="question.title"
-              [src]="mediaSrc(m)"
-              class="quiz-question__media-image"
-            />
-          }
-          @case ('video') {
-            <video
-              [src]="mediaSrc(m)"
-              class="quiz-question__media-video"
-              controls
-            >
-              Votre navigateur ne supporte pas la vidéo.
-            </video>
-          }
-          @case ('external') {
-            @if (externalSafeUrl(m)) {
-              <div class="youtube-wrapper">
-                <iframe
-                  [src]="externalSafeUrl(m)"
-                  allowfullscreen
-                  frameborder="0"
-                ></iframe>
-              </div>
+  <p-panel [showHeader]=false class="quiz-question--panel">
+    <!-- Médias -->
+    @if (question.media) {
+      @if (question.media.length) {
+        <div class="quiz-question__media">
+          @for (m of question.media; track m.id ?? m.sort_order; let i = $index) {
+            @switch (m.kind) {
+              @case ('image') {
+                <img
+                  [alt]="question.title"
+                  [src]="mediaSrc(m)"
+                  class="quiz-question__media-image"
+                />
+              }
+              @case ('video') {
+                <video
+                  [src]="mediaSrc(m)"
+                  class="quiz-question__media-video"
+                  controls
+                >
+                  Votre navigateur ne supporte pas la vidéo.
+                </video>
+              }
+              @case ('external') {
+                @if (externalSafeUrl(m)) {
+                  <div class="youtube-wrapper">
+                    <iframe
+                      [src]="externalSafeUrl(m)"
+                      allowfullscreen
+                      frameborder="0"
+                    ></iframe>
+                  </div>
+                }
+              }
             }
           }
-        }
+        </div>
       }
-    </div>
-  }
-
-  <!-- Description -->
-  @if (question.description) {
-    <div
-      [innerHTML]="question.description"
-      class="quiz-question__description"
-    ></div>
-  }
-</p-panel>
+    }
+    <!-- Description -->
+    @if (question.description) {
+      <div
+        [innerHTML]="question.description"
+        class="quiz-question__description"
+      ></div>
+    }
+  </p-panel>
   <!-- Réponses -->
-  <section class="quiz-question__answers" >
+  <section class="quiz-question__answers">
     @for (opt of question.answer_options; track opt.id ?? $index; let i = $index) {
       <div class="answer-line">
         @if (question.allow_multiple_correct) {

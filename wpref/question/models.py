@@ -4,11 +4,10 @@ from django.db import models
 from subject.models import Subject
 
 
-
 class Question(models.Model):
     title = models.CharField("Titre", max_length=255)
-    description = models.TextField("Description", blank=True)   # rich text
-    explanation = models.TextField("Explication", blank=True)   # rich text
+    description = models.TextField("Description", blank=True)  # rich text
+    explanation = models.TextField("Explication", blank=True)  # rich text
     allow_multiple_correct = models.BooleanField(
         "Plusieurs bonnes réponses ?", default=False
     )
@@ -20,7 +19,8 @@ class Question(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
-    def __str__(self): return self.title
+    def __str__(self):
+        return self.title
 
     def clean(self):
         # Règles métier sur les réponses
@@ -33,11 +33,12 @@ class Question(models.Model):
         if not self.allow_multiple_correct and correct_count != 1:
             raise ValidationError("Cette question n'autorise qu'une seule bonne réponse.")
 
+
 class QuestionSubject(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    subject  = models.ForeignKey(Subject,  on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     sort_order = models.PositiveIntegerField(default=0)
-    weight     = models.PositiveIntegerField(default=1)
+    weight = models.PositiveIntegerField(default=1)
 
     class Meta:
         unique_together = [("question", "subject")]
@@ -45,6 +46,7 @@ class QuestionSubject(models.Model):
 
     def __str__(self):
         return f"Q{self.question_id}↔{self.subject.name}(ord:{self.sort_order},w:{self.weight})"
+
 
 class QuestionMedia(models.Model):
     IMAGE = "image"
@@ -67,6 +69,7 @@ class QuestionMedia(models.Model):
     def clean(self):
         if not self.file and not self.external_url:
             raise ValidationError("Fournis un fichier ou une URL externe.")
+
 
 class AnswerOption(models.Model):
     question = models.ForeignKey(Question, related_name="answer_options", on_delete=models.CASCADE)

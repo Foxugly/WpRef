@@ -1,9 +1,8 @@
 # question/serializers.py
-from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
-
-from .models import Question, QuestionMedia, AnswerOption, QuestionSubject
 from subject.models import Subject
+
+from .models import Question, QuestionMedia, AnswerOption
 
 
 class SubjectSerializer(serializers.ModelSerializer):
@@ -27,10 +26,9 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
 
 class QuestionAnswerOptionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AnswerOption          # adapte si ton modèle s'appelle autrement
+        model = AnswerOption  # adapte si ton modèle s'appelle autrement
         fields = ["id", "content", "is_correct", "sort_order"]
         read_only_fields = ["id"]
-
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -88,12 +86,8 @@ class QuestionSerializer(serializers.ModelSerializer):
     # UPDATE
     # ---------------------------
     def update(self, instance, validated_data):
-        print("SERIALIZER UPDATE")
-        print(validated_data)
         subject_ids = validated_data.pop("subject_ids", None)
         answer_options_data = validated_data.pop("answer_options", None)
-        print("ANSWER_OPTIONS_DATA")
-        print(answer_options_data)
         # 1) champs simples
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -101,7 +95,6 @@ class QuestionSerializer(serializers.ModelSerializer):
         # 2) sujets (M2M)
         if subject_ids is not None:
             subjects_qs = Subject.objects.filter(id__in=subject_ids)
-            print(subjects_qs)
             instance.subjects.set(subjects_qs)
         # 3) réponses : stratégie simple = wipe + recreate
         if answer_options_data is not None:

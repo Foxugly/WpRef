@@ -1,7 +1,7 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
-import {AnswerOption, Question, QuestionService,} from '../../../services/question/question';
+import {Question, QuestionCreatePayload, QuestionService,} from '../../../services/question/question';
 import {Subject, SubjectService} from '../../../services/subject/subject';
 import {Editor} from 'primeng/editor';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -113,97 +113,14 @@ export class QuestionEdit implements OnInit {
   save(): void {
     this.error.set(null);
     this.success.set(null);
-
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-
     this.saving.set(true);
-
-    const raw = this.form.value as any;
-
-    // ---- subject_ids → nombres propres ----
-    const subjectIds: number[] = Array.isArray(raw.subject_ids)
-      ? raw.subject_ids
-        .filter((id: any) => id !== null && id !== undefined && id !== '')
-        .map((id: any) => Number(id))
-        .filter((id: number) => Number.isFinite(id))
-      : [];
-
-    // ---- réponses ----
-    const answerOptions: AnswerOption[] = raw.answer_options ?? [];
-
-    const answerOptionsPayload = answerOptions.map((opt, index) => ({
-  content: opt.content,
-  is_correct: !!opt.is_correct,              // force booléen
-  sort_order: opt.sort_order ?? index + 1,   // garantit un ordre
-}));
-
-
-    // ---- médias venant du media-selector ----
-    const mediaItems: MediaSelectorValue[] = Array.isArray(raw.media)
-      ? raw.media
-      : [];
-
-    // On récupère éventuellement un lien externe (YouTube)
-    const external = mediaItems.find(
-      (m) => m.kind === 'external' && m.external_url,
-    );
-
-    // ---- Construction du FormData ----
-    const formData = new FormData();
-
-    // Champs simples
-    formData.append('title', raw.title ?? '');
-    formData.append('description', raw.description ?? '');
-    formData.append('explanation', raw.explanation ?? '');
-    formData.append(
-      'allow_multiple_correct',
-      String(!!raw.allow_multiple_correct),
-    );
-    formData.append(
-      'is_mode_practice',
-      String(!!raw.is_mode_practice),
-    );
-    formData.append('is_mode_exam', String(!!raw.is_mode_exam));
-
-    // Listes encodées en JSON (le serializer les lira avec json.loads côté Django)
-    subjectIds.forEach((id: number) => {
-      formData.append('subject_ids', String(id));
-    });
-
-    console.log(answerOptions)
-    console.log(answerOptionsPayload)
-    formData.append('answer_options', JSON.stringify(answerOptionsPayload));
-
-    // Fichiers à envoyer dans request.FILES.getlist("media_files")
-    for (const m of mediaItems) {
-      if ((m.kind === 'image' || m.kind === 'video') && m.file instanceof File) {
-        formData.append('media_files', m.file, m.file.name);
-      }
-    }
-
-    // Lien YouTube / externe
-    if (external?.external_url) {
-      formData.append('youtube_url', external.external_url);
-    }
-
-    // (Optionnel) Si tu veux aussi envoyer la description des médias existants
-    // pour les garder/corriger côté backend :
-    //
-    // formData.append('media_meta', JSON.stringify(
-    //   mediaItems.map((m, idx) => ({
-    //     id: m.id ?? null,
-    //     kind: m.kind,
-    //     sort_order: m.sort_order ?? idx + 1,
-    //     external_url: m.external_url ?? null,
-    //   })),
-    // ));
-
-    console.log('FormData ready for update (id=', this.id, ')');
-
-    this.questionService.update(this.id, formData).subscribe({
+    // Le form a la même shape que QuestionCreatePayload
+    const raw = this.form.value as QuestionCreatePayload;
+    this.questionService.update(this.id, raw).subscribe({
       next: () => {
         this.saving.set(false);
         this.success.set('Question mise à jour avec succès.');

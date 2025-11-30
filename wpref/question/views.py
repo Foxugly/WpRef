@@ -1,6 +1,7 @@
 # question/views.py
 import json
 
+from django.http import QueryDict  # ⬅️ AJOUT
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
@@ -11,6 +12,7 @@ from .models import Question, QuestionMedia
 from .serializers import QuestionSerializer
 
 TEST = True
+
 
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.prefetch_related("media", "answer_options", "subjects")
@@ -25,20 +27,51 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def _coerce_json_fields(self, data):
         """
-        Quand la requête vient de FormData, certaines valeurs arrivent
-        comme des strings JSON. On les convertit en vrais objets Python.
+        Transforme request.data (QueryDict) en dict normal pour le serializer,
+        en gérant correctement :
+        - subject_ids  -> liste d'int
+        - answer_options -> liste de dicts (parse JSON)
         """
-        mutable = data.copy()
 
-        for field in ("subject_ids", "answer_options", "media"):
-            if field in mutable:
-                value = mutable.get(field)
-                if isinstance(value, str):
-                    try:
-                        mutable[field] = json.loads(value)
-                    except json.JSONDecodeError:
-                        # on laisse tel quel si ce n'est pas du JSON
-                        pass
+        # 1) On sort de la QueryDict -> dict Python classique
+        if isinstance(data, QueryDict):
+            mutable = {}
+
+            for key in data.keys():
+                if key == "subject_ids":
+                    # subject_ids peut apparaître plusieurs fois : getlist()
+                    # ex: ['3', '1', '2\n'] -> [3, 1, 2]
+                    mutable["subject_ids"] = [
+                        int(v) for v in data.getlist("subject_ids") if v.strip()
+                    ]
+                else:
+                    # pour les autres champs (title, description, answer_options, …)
+                    # on prend la première valeur
+                    mutable[key] = data.get(key)
+        else:
+            mutable = dict(data)
+
+        # 2) answer_options : string JSON -> liste de dicts
+        raw_answer_options = mutable.get("answer_options")
+        if isinstance(raw_answer_options, str):
+            try:
+                parsed = json.loads(raw_answer_options)
+                if isinstance(parsed, list):
+                    # Là on a bien [{...}, {...}], pas [[{...}]]
+                    mutable["answer_options"] = parsed
+            except json.JSONDecodeError:
+                # si ce n'est pas du JSON valide, on laisse tomber
+                pass
+
+        # (optionnel) même traitement pour media si tu l'envoies en JSON
+        raw_media = mutable.get("media")
+        if isinstance(raw_media, str):
+            try:
+                parsed_media = json.loads(raw_media)
+                if isinstance(parsed_media, list):
+                    mutable["media"] = parsed_media
+            except json.JSONDecodeError:
+                pass
 
         return mutable
 
@@ -55,42 +88,33 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        print("QuestionViewSet CREATE:", request.data)
-
-        data = self._coerce_json_fields(request.data) if TEST else request.data
+        data = self._coerce_json_fields(request.data)
+        media_data = data.get("media", [])
         serializer = self.get_serializer(data=data)
         if not serializer.is_valid():
             print("CREATE errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         question = serializer.save()
-        self._handle_media_upload(request, question)
-        return Response(self.get_serializer(request, question).data, status=status.HTTP_201_CREATED)
+        self._handle_media_upload(request, question, media_data=media_data)
+        return Response(self.get_serializer(question).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        print("QuestionViewSet Update")
         partial = kwargs.get("partial", False)
         instance = self.get_object()
-        print("AVANT")
-
-        print(request.data)
-        data = self._coerce_json_fields(request.data) if TEST else request.data
-        print("APRES")
-        print(data)
-        print("APPEL SERIALIZER")
+        data = self._coerce_json_fields(request.data)
+        media_data = data.get("media", [])
         serializer = self.get_serializer(instance, data=data, partial=partial)
-        print("RESULTAT SERIALIZER")
-        print(serializer)
         if not serializer.is_valid():
             print("UPDATE errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         question = serializer.save()
-        self._handle_media_upload(request, question)
+        self._handle_media_upload(request, question, media_data=media_data)
         return Response(self.get_serializer(question).data, status=status.HTTP_200_OK)
 
     # ---------------------------
     # Gestion des médias
     # ---------------------------
-    def _handle_media_upload(self, request, question: Question) -> None:
+    def _handle_media_upload(self, request, question: Question, media_data=None) -> None:
         """
         Reconstruit entièrement les médias d'une question à partir de :
         - request.FILES (images / vidéos)
@@ -105,12 +129,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
         """
 
         # 1) On nettoie les anciens médias
-        print("_HANDLE_MEDIA_UPLOAD - DATA:", request.data)
-        print("_HANDLE_MEDIA_UPLOAD - FILES:", request.FILES)
         question.media.all().delete()
 
         sort_index = 1
-
+        media_data = media_data or []
         # 2) Fichiers uploadés (image / vidéo)
         #    On parcourt toutes les clés de FILES (peu importe leur nom exact)
         for key in request.FILES:
@@ -132,14 +154,17 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 )
                 sort_index += 1
 
-        # 3) Liens externes `media[x][external_url]`
-        if 'media' in request.data:
-            for value in request.data['media']:
-                if value["kind"] == QuestionMedia.EXTERNAL:
-                    QuestionMedia.objects.create(
-                        question=question,
-                        kind=QuestionMedia.EXTERNAL,
-                        external_url=value['external_url'],
-                        sort_order=sort_index,
-                    )
-                    sort_index += 1
+        # 3) Liens externes : on utilise media_data PARSÉ, pas request.data['media']
+        for item in media_data:
+            # sécurité : on ignore les trucs qui ne sont pas des dicts
+            if not isinstance(item, dict):
+                continue
+
+            if item.get("kind") == QuestionMedia.EXTERNAL and item.get("external_url"):
+                QuestionMedia.objects.create(
+                    question=question,
+                    kind=QuestionMedia.EXTERNAL,
+                    external_url=item["external_url"],
+                    sort_order=item.get("sort_order", sort_index),
+                )
+                sort_index += 1
