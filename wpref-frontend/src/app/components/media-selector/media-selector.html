@@ -23,13 +23,13 @@
           </p>
 
           <!-- Zone d’upload -->
-          <label class="upload-zone" [class.upload-zone--disabled]="disabled">
+          <label [class.upload-zone--disabled]="disabled" class="upload-zone">
             <input
-              type="file"
-              [multiple]="multiple"
-              accept="image/*,video/*"
               (change)="onFilesSelected($event)"
               [disabled]="disabled"
+              [multiple]="multiple"
+              accept="image/*,video/*"
+              type="file"
             />
             <div class="upload-zone__content">
               <span class="pi pi-upload upload-zone__icon"></span>
@@ -47,14 +47,14 @@
         <div class="tab-panel tab-panel--youtube">
           <label for="youtube-url">Lien YouTube ou URL externe</label>
           <input
-            id="youtube-url"
-            type="url"
-            pInputText
-            [ngModel]="youtubeUrl()"
             (ngModelChange)="youtubeUrl.set($event)"
-            [ngModelOptions]="{ standalone: true }"
-            [placeholder]="placeholderYoutube"
             [disabled]="disabled"
+            [ngModelOptions]="{ standalone: true }"
+            [ngModel]="youtubeUrl()"
+            [placeholder]="placeholderYoutube"
+            id="youtube-url"
+            pInputText
+            type="url"
           />
 
           <p class="hint">
@@ -63,69 +63,117 @@
             <code>external</code>.
           </p>
 
-          <button
-            type="button"
-            pButton
-            label="Ajouter ce lien"
-            icon="pi pi-plus"
-            class="youtube-add-btn"
+          <p-button
             (click)="addYoutubeLink()"
             [disabled]="disabled || !youtubeUrl().trim()"
-          ></button>
+            class="youtube-add-btn"
+            icon="pi pi-plus"
+            label="Ajouter ce lien"
+            type="button"
+          ></p-button>
         </div>
       </p-tabpanel>
     </p-tabpanels>
   </p-tabs>
   @if (items.length) {
-            <div class="media-list">
-              @for (m of items; track trackByIndex($index, m); let i = $index) {
-                <div class="media-list__item">
-                  <div class="media-list__thumb">
-                    @switch (m.kind) {
-                      @case ('image') {
-                        <span class="pi pi-image media-list__icon"></span>
-                      }
-                      @case ('video') {
-                        <span class="pi pi-video media-list__icon"></span>
-                      }
-                      @case ('external') {
-                        <span class="pi pi-link media-list__icon"></span>
-                      }
-                    }
-                  </div>
+    <div class="media-list">
+      @for (m of items; track m; let i = $index) {
+        <div class="media-list__item">
+          <div class="media-list__thumb">
+            @switch (m.kind) {
 
-                  <div class="media-list__info">
-                    <div class="media-list__name">
-                      {{ getMediaLabel(m) }}
-                    </div>
-                    <div class="media-list__meta">
-                      <!-- On donne un peu d’infos si on a un File -->
-                      @if (m.file && isFile(m.file)) {
-                        <span>Fichier local</span>
-                      } @else if (m.external_url) {
-                        <span>URL externe</span>
-                      } @else {
-                        <span>Type inconnu</span>
-                      }
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    pButton
-                    class="media-list__remove"
-                    icon="pi pi-times"
-                    severity="danger"
-                    text
-                    rounded
-                    (click)="removeMedia(i)"
-                  ></button>
-                </div>
+              @case ('image') {
+                @if (mediaSrc(m); as src) {
+                  <a
+                    [href]="src"
+                    target="_blank"
+                    rel="noopener"
+                    class="media-thumb-link">
+                    <!-- href="{{ getMediaLabel(m) }}">-->
+                    <img
+                      [src]="src"
+                      alt="Aperçu image"
+                      class="media-thumb-image"
+                    />
+                  </a>
+                } @else {
+                  <span class="pi pi-image media-list__icon"></span>
+                }
               }
+              @case ('video') {
+
+                @if (mediaSrc(m); as src) {
+                  <a
+                    [href]="src"
+                    target="_blank"
+                    rel="noopener"
+                    class="media-thumb-link"
+                  >
+                    <video
+                      [src]="src"
+                      class="media-thumb-video"
+                      muted
+                    ></video>
+                  </a>
+                } @else {
+                  <span class="pi pi-video media-list__icon"></span>
+                }
+
+              }
+              @case ('external') {
+
+                @if (mediaSrc(m); as src) {
+                  <a
+                    [href]="src"
+                    target="_blank"
+                    rel="noopener"
+                    class="media-thumb-link"
+                  >
+                    <span class="pi pi-youtube media-list__icon"></span>
+                  </a>
+                } @else {
+                  <span class="pi pi-link media-list__icon"></span>
+                }
+
+              }
+
+            }
+          </div>
+
+          <div class="media-list__info">
+            <div class="media-list__name">
+               @if (mediaSrc(m); as src) {
+                  <a
+                    [href]="src"
+                    target="_blank"
+                    rel="noopener"
+                    class="media-thumb-link"
+                  >
+                    {{ getMediaLabel(m) }}
+                  </a>
+                }
             </div>
-          } @else {
-            <p class="media-list--empty">
-              Aucun média sélectionné pour l’instant.
-            </p>
-          }
+            <div class="media-list__meta" *ngIf="getMediaTag(m) as tag">
+              <i class="pi {{ tag.icon }} media-type-icon"></i>
+              <p-tag [value]="tag.label" [severity]="tag.severity"></p-tag>
+            </div>
+          </div>
+
+          <p-button
+            type="button"
+            class="media-list__remove"
+            icon="pi pi-times"
+            severity="danger"
+            text
+            rounded
+            (click)="removeMedia(i)"
+          ></p-button>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="media-list--empty">
+      Aucun média sélectionné pour l’instant.
+    </p>
+  }
 </div>

@@ -89,6 +89,8 @@
 .quiz-question__description {
   //font-size: 0.8rem;
   //line-height: 1.5;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 /* -------- Réponses -------- */
@@ -96,7 +98,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  //padding-left: 20px;
+  padding-top : 1rem;
+
 }
 
 /* Une ligne de réponse */
@@ -107,7 +110,7 @@
   //padding: 0.25rem 0;
   padding-top:0.6rem;
   padding-bottom: 0.6rem;
-  padding-left: 1.4rem;
+  padding-left: 0.6rem;
   background: #ffffff;
   border: 1px solid #c7d2fe;
   border-radius: 0.4rem;

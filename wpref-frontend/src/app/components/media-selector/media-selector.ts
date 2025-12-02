@@ -1,5 +1,5 @@
 // src/app/components/media-selector/media-selector.ts
-import {Component, forwardRef, Input, signal,} from '@angular/core';
+import {Component, forwardRef, Input, OnDestroy, signal} from '@angular/core';
 import {ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR,} from '@angular/forms';
 import {CommonModule} from '@angular/common';
 import {ButtonModule} from 'primeng/button';
@@ -10,6 +10,14 @@ import {DividerModule} from 'primeng/divider';
 import {TagModule} from 'primeng/tag';
 import {TooltipModule} from 'primeng/tooltip'; // pour [tooltip], optionnel
 
+type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' | null;
+
+
+interface MediaTag {
+  icon: string;
+  label: string;
+  severity: TagSeverity;
+}
 
 export interface MediaSelectorValue {
   id?: number;
@@ -34,13 +42,13 @@ export interface MediaSelectorValue {
     },
   ],
 })
-export class MediaSelectorComponent implements ControlValueAccessor {
+export class MediaSelectorComponent implements ControlValueAccessor, OnDestroy {
   /** URL saisie pour YouTube / externe dans l’onglet 2 */
   youtubeUrl = signal<string>('');
   @Input() multiple = true;
   @Input() placeholderYoutube = 'https://www.youtube.com/watch?v=...';
   disabled = false;
-
+  private objectUrlCache = new Map<File, string>();
   /** Valeur interne = liste de médias */
   private _items = signal<MediaSelectorValue[]>([]);
 
@@ -125,6 +133,16 @@ export class MediaSelectorComponent implements ControlValueAccessor {
   removeMedia(index: number): void {
     if (this.disabled) return;
     const current = [...this._items()];
+
+    const removed = current[index];
+    if (removed?.file instanceof File) {
+      const url = this.objectUrlCache.get(removed.file);
+      if (url) {
+        URL.revokeObjectURL(url);
+        this.objectUrlCache.delete(removed.file);
+      }
+    }
+
     current.splice(index, 1);
     this._items.set(current);
     this.propagate();
@@ -155,11 +173,69 @@ export class MediaSelectorComponent implements ControlValueAccessor {
     return _index;
   }
 
+  mediaSrc(m: MediaSelectorValue): string | null {
+    // 1) URL externe (YouTube, etc.)
+    if (m.kind === 'external') {
+      return m.external_url ?? null;
+    }
+
+    // 2) file est déjà une URL (string)
+    if (typeof m.file === 'string') {
+      return m.file;
+    }
+
+    // 3) file est un File → on crée un object URL
+    if (m.file instanceof File) {
+      let url = this.objectUrlCache.get(m.file);
+      if (!url) {
+        url = URL.createObjectURL(m.file);
+        this.objectUrlCache.set(m.file, url);
+      }
+      return url;
+    }
+
+    return null;
+  }
+
+  // ----- Lien YouTube / externe (onglet Lien) -----
+
+  // ---------- OnDestroy : nettoyage des object URLs ----------
+  ngOnDestroy(): void {
+    for (const url of this.objectUrlCache.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.objectUrlCache.clear();
+  }
+
+  getMediaTag(m: MediaSelectorValue): MediaTag {
+    if (m.file instanceof File && m.kind === 'image') {
+      return {icon: 'pi-image', label: 'Image locale', severity: 'info'};
+    }
+
+    if (m.file instanceof File && m.kind === 'video') {
+      return {icon: 'pi-video', label: 'Vidéo locale', severity: 'info'};
+    }
+
+    if (typeof m.file === 'string' && m.kind === 'image') {
+      return {icon: 'pi-image', label: 'Image existante', severity: 'success'};
+    }
+
+    if (typeof m.file === 'string' && m.kind === 'video') {
+      return {icon: 'pi-video', label: 'Vidéo existante', severity: 'success'};
+    }
+
+    if (m.external_url) {
+      return {icon: 'pi-link', label: 'Lien externe', severity: 'warn'};
+    }
+
+    return {icon: 'pi-question-circle', label: 'Inconnu', severity: null};
+  }
+
+  // ---------- Génération d'URL pour miniature / lien ----------
+
   // ----- ControlValueAccessor -----
   private onChange: (value: MediaSelectorValue[]) => void = () => {
   };
-
-  // ----- Lien YouTube / externe (onglet Lien) -----
 
   private onTouched: () => void = () => {
   };
@@ -174,4 +250,6 @@ export class MediaSelectorComponent implements ControlValueAccessor {
     this.onChange(normalized);
     this.onTouched();
   }
+
+
 }

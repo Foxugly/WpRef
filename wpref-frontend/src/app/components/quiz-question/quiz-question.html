@@ -51,10 +51,10 @@
                 </video>
               }
               @case ('external') {
-                @if (externalSafeUrl(m)) {
+                @if (externalSafeUrl(m) as url) {
                   <div class="youtube-wrapper">
                     <iframe
-                      [src]="externalSafeUrl(m)"
+                      [src]="url"
                       allowfullscreen
                       frameborder="0"
                     ></iframe>
@@ -69,14 +69,14 @@
     <!-- Description -->
     @if (question.description) {
       <div
-        [innerHTML]="question.description"
+        [innerHTML]="stripOuterP(question.description)"
         class="quiz-question__description"
       ></div>
     }
     <div class="quiz-question__answers">
-      @for (opt of question.answer_options; track opt.id ?? $index; let i = $index) {
+      @for (opt of question.answer_options; track opt; let i = $index) {
         <div class="answer-line" [ngClass]="{ 'answer-line--correct': showCorrectAnswers && opt.is_correct}">
-          @if (question.allow_multiple_correct) {
+          @if (allowMultiple) {
             <!-- MULTI → checkbox -->
             <p-checkbox
               (ngModelChange)="onToggleMulti(i, $event)"
@@ -96,14 +96,14 @@
           }
 
           <label [for]="'answer-' + i" class="answer-label">
-            <div [innerHTML]="opt.content"></div>
+            <div [innerHTML]="stripOuterP(opt.content)"></div>
           </label>
         </div>
       }
       <!-- Description -->
       @if (showCorrectAnswers && question.explanation) {
         <div
-          [innerHTML]="question.explanation"
+          [innerHTML]="stripOuterP(question.explanation)"
           class="quiz-question__description"
         ></div>
       }

@@ -1,7 +1,16 @@
 .media-selector {
+  // ---- palette locale (optionnelle) ----
+  $gray-soft: #f9fafb;
+  $gray-border: #e5e7eb;
+  $gray-muted: #6b7280;
+  $gray-icon: #4b5563;
+  $gray-empty: #9ca3af;
+  $blue-border: #3b82f6;
+  $blue-soft: #eff6ff;
+
   display: block;
 
-  // PrimeNG Tabs
+  // ---------- PrimeNG Tabs ----------
   .p-tabs {
     width: 100%;
   }
@@ -33,20 +42,20 @@
   }
 
   .hint {
-    font-size: 0.8rem;
-    color: #6b7280; // gris doux
     margin: 0;
+    font-size: 0.8rem;
+    color: $gray-muted;
   }
 
   // ---------- Zone d'upload ----------
   .upload-zone {
     position: relative;
     display: block;
-    border: 1px dashed #cbd5e1;
-    border-radius: 0.75rem;
     padding: 1.25rem;
     text-align: center;
     cursor: pointer;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.75rem;
     transition:
       border-color 0.15s ease,
       background-color 0.15s ease;
@@ -63,8 +72,8 @@
     }
 
     &__icon {
-      font-size: 1.8rem;
       margin-bottom: 0.25rem;
+      font-size: 1.8rem;
     }
 
     &__text {
@@ -76,13 +85,13 @@
       }
 
       span {
-        color: #6b7280;
+        color: $gray-muted;
       }
     }
 
     &:hover {
-      border-color: #3b82f6;
-      background-color: #eff6ff;
+      border-color: $blue-border;
+      background-color: $blue-soft;
     }
 
     &--disabled {
@@ -99,9 +108,9 @@
   // ---------- Liste des médias ----------
   .media-list {
     margin-top: 0.25rem;
+    border: 1px solid $gray-border;
     border-radius: 0.75rem;
-    border: 1px solid #e5e7eb;
-    background: #f9fafb;
+    background: $gray-soft;
 
     &__item {
       display: flex;
@@ -110,23 +119,24 @@
       padding: 0.5rem 0.75rem;
 
       &:not(:last-child) {
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid $gray-border;
       }
     }
 
     &__thumb {
-      width: 2rem;
-      height: 2rem;
-      border-radius: 999px;
-      background: #e5e7eb;
+      width: 50px;
+      height: 50px;
+      border-radius: 4px;
+      background: #f3f4f6;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
 
     &__icon {
       font-size: 1.1rem;
-      color: #4b5563;
+      color: $gray-icon;
     }
 
     &__info {
@@ -148,11 +158,10 @@
 
     &__meta {
       font-size: 0.75rem;
-      color: #6b7280;
+      color: $gray-muted;
     }
 
     &__remove {
-      // p-button déjà stylé, on ajuste juste un peu
       padding: 0.15rem 0.35rem;
 
       .pi {
@@ -161,18 +170,27 @@
     }
 
     &--empty {
-      font-size: 0.8rem;
-      color: #9ca3af;
       margin-top: 0.25rem;
+      font-size: 0.8rem;
+      color: $gray-empty;
     }
+  }
+
+  // Miniatures image / vidéo (dans media-list__thumb)
+  .media-thumb-image,
+  .media-thumb-video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
   // ---------- YouTube ----------
   .tab-panel--youtube {
     label {
+      margin-bottom: 0.25rem;
       font-size: 0.85rem;
       font-weight: 500;
-      margin-bottom: 0.25rem;
     }
 
     input[type='url'] {
@@ -183,5 +201,30 @@
       margin-top: 0.5rem;
       align-self: flex-start;
     }
+  }
+}
+
+
+.media-thumb-link {
+  text-decoration: none;
+  color: inherit;
+  font-weight: inherit;
+
+  &:hover,
+  &:focus,
+  &:visited {
+    text-decoration: none;
+    color: inherit;
+  }
+}
+
+.media-list__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  .media-type-icon {
+    font-size: 1rem;
+    color: #4b5563; // gris icon
   }
 }

@@ -115,6 +115,26 @@ export class QuizQuestionComponent implements OnChanges {
     this.singleSelectionIndex = index;
   }
 
+  stripOuterP(html: string): string {
+    if (!html) return html;
+
+    const trimmed = html.trim();
+
+    // Vérifie si ENTIEREMENT entouré par <p>...</p>
+    if (trimmed.startsWith('<p') && trimmed.endsWith('</p>')) {
+
+      // Trouver la fin du tag <p ...>
+      const startTagEnd = trimmed.indexOf('>') + 1;
+
+      // Supprimer </p> final
+      const endTagStart = trimmed.lastIndexOf('</p>');
+
+      return trimmed.substring(startTagEnd, endTagStart).trim();
+    }
+
+    return html;
+  }
+
   private isYoutubeUrl(url: string): boolean {
     return /youtu\.be|youtube\.com/.test(url);
   }
