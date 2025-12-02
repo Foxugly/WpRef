@@ -45,6 +45,7 @@ export interface MediaSelectorValue {
 export class MediaSelectorComponent implements ControlValueAccessor, OnDestroy {
   /** URL saisie pour YouTube / externe dans l’onglet 2 */
   youtubeUrl = signal<string>('');
+  selectedTab: 'media' | 'youtube' = 'media';
   @Input() multiple = true;
   @Input() placeholderYoutube = 'https://www.youtube.com/watch?v=...';
   disabled = false;

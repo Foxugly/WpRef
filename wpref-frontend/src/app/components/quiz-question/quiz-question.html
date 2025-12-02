@@ -51,7 +51,7 @@
                 </video>
               }
               @case ('external') {
-                @if (externalSafeUrl(m) as url) {
+                @if (externalSafeUrl(m); as url) {
                   <div class="youtube-wrapper">
                     <iframe
                       [src]="url"

@@ -1,5 +1,5 @@
 <div class="media-selector">
-  <p-tabs>
+  <p-tabs [(value)]="selectedTab">
     <p-tablist>
       <p-tab value="media">
         <span class="pi pi-images tab-icon"></span>
@@ -142,21 +142,23 @@
 
           <div class="media-list__info">
             <div class="media-list__name">
-               @if (mediaSrc(m); as src) {
-                  <a
-                    [href]="src"
-                    target="_blank"
-                    rel="noopener"
-                    class="media-thumb-link"
-                  >
-                    {{ getMediaLabel(m) }}
-                  </a>
-                }
+              @if (mediaSrc(m); as src) {
+                <a
+                  [href]="src"
+                  target="_blank"
+                  rel="noopener"
+                  class="media-thumb-link"
+                >
+                  {{ getMediaLabel(m) }}
+                </a>
+              }
             </div>
-            <div class="media-list__meta" *ngIf="getMediaTag(m) as tag">
+            @if (getMediaTag(m); as tag){
+            <div class="media-list__meta">
               <i class="pi {{ tag.icon }} media-type-icon"></i>
               <p-tag [value]="tag.label" [severity]="tag.severity"></p-tag>
             </div>
+            }
           </div>
 
           <p-button
