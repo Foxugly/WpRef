@@ -1,27 +1,18 @@
 // src/app/components/quiz-question/quiz-question.ts
-import {
-  Component,
-  Input,
-  OnChanges,
-  SimpleChanges,
-  inject,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import {
-  DomSanitizer,
-  SafeResourceUrl,
-} from '@angular/platform-browser';
+import {Component, inject, Input, OnChanges, SimpleChanges,} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {DomSanitizer, SafeResourceUrl,} from '@angular/platform-browser';
 
 import {Question} from '../../services/question/question';
 import {MediaSelectorValue} from '../media-selector/media-selector';
-import { CardModule } from 'primeng/card';
-import { ChipModule } from 'primeng/chip';
-import { CheckboxModule } from 'primeng/checkbox';
-import { RadioButtonModule } from 'primeng/radiobutton';
-import { ImageModule } from 'primeng/image';
-import { ButtonModule } from 'primeng/button';
-import { FormsModule } from '@angular/forms';
-import {Panel} from 'primeng/panel';
+import {CardModule} from 'primeng/card';
+import {ChipModule} from 'primeng/chip';
+import {CheckboxModule} from 'primeng/checkbox';
+import {RadioButtonModule} from 'primeng/radiobutton';
+import {ImageModule} from 'primeng/image';
+import {ButtonModule} from 'primeng/button';
+import {FormsModule} from '@angular/forms';
+
 
 @Component({
   standalone: true,
@@ -37,22 +28,26 @@ import {Panel} from 'primeng/panel';
     RadioButtonModule,
     ImageModule,
     ButtonModule,
-    Panel,
   ],
 })
 export class QuizQuestionComponent implements OnChanges {
-  @Input({ required: true }) question!: Question;
+  @Input({required: true}) question!: Question;
+  @Input() showCorrectAnswers = false;
+  @Input() displayMode: 'preview' | 'exam' = 'preview';
+
   singleSelected: any = null;
   multiSelected: Record<number, boolean> = {};
-
-  private sanitizer = inject(DomSanitizer);
-
   /** Sélection locale, juste pour l’affichage (aucun call backend ici) */
   multipleSelection: boolean[] = [];
   singleSelectionIndex: number | null = null;
+  private sanitizer = inject(DomSanitizer);
 
   get allowMultiple(): boolean {
     return !!this.question?.allow_multiple_correct;
+  }
+
+  isMultiChecked(i: number): boolean {
+    return this.multiSelected[i] ?? false;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -76,10 +71,6 @@ export class QuizQuestionComponent implements OnChanges {
   mediaSrc(m: MediaSelectorValue): string {
     // Pour images/vidéos : on part du principe que file est déjà une URL absolue ou relative
     return (m.file as string | null) || m.external_url || '';
-  }
-
-  private isYoutubeUrl(url: string): boolean {
-    return /youtu\.be|youtube\.com/.test(url);
   }
 
   toYoutubeEmbed(url: string): string {
@@ -114,14 +105,18 @@ export class QuizQuestionComponent implements OnChanges {
     return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
   }
 
-  // ---------- Sélection réponses (démo UI) ----------
-
   onToggleCheckbox(index: number): void {
     this.multipleSelection[index] = !this.multipleSelection[index];
   }
 
+  // ---------- Sélection réponses (démo UI) ----------
+
   onSelectRadio(index: number): void {
     this.singleSelectionIndex = index;
+  }
+
+  private isYoutubeUrl(url: string): boolean {
+    return /youtu\.be|youtube\.com/.test(url);
   }
 }
 

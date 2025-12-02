@@ -50,7 +50,7 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     background: #f9fafb;
 
     th {
-      text-align: left;
+      text-align: center;
       padding: 0.75rem;
       font-size: 0.85rem;
       color: $color-muted;
@@ -72,6 +72,9 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       &.muted {
         color: $color-muted;
       }
+      &.center {
+        text-align: center;
+      }
     }
   }
 }
@@ -84,4 +87,12 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   p-button {
     margin-left: 0.25rem;
   }
+}
+
+.active-icon {
+  color: #2e7d32;
+}
+
+.inactive-icon {
+  color: #b71c1c;
 }

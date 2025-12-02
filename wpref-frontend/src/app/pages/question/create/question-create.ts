@@ -48,6 +48,7 @@ export class QuestionCreate implements OnInit {
     description: [''],
     explanation: [''],
     allow_multiple_correct: [false],
+    active:[true],
     is_mode_practice: [true],
     is_mode_exam: [false],
     // on envoie subject_ids au backend (write_only dans ton serializer)

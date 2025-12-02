@@ -55,6 +55,7 @@ class QuestionSerializer(serializers.ModelSerializer):
             "description",
             "explanation",
             "allow_multiple_correct",
+            "active",
             "is_mode_practice",
             "is_mode_exam",
             "subjects",

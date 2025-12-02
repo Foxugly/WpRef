@@ -10,11 +10,42 @@
 
 }
 
-/* -------- Titre -------- */
-.quiz-question__title {
-  font-size: 1.4rem;
-  margin: 0 0 0.5rem;
+.quiz-question--card {
+  background: #eef2ff;
+  padding-top:  1.4rem;
+
 }
+
+.quiz-question--card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0.5rem 1rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.header-left,
+.header-right {
+  width: 32px;   /* pour garder le centre parfaitement centré */
+  text-align: center;
+}
+
+.header-center {
+  flex: 1;
+  text-align: center;
+}
+
+/* Icônes ON/OFF */
+.active-icon {
+  color: #2e7d32;  // vert
+}
+
+.inactive-icon {
+  color: #b71c1c;  // rouge
+}
+
 
 /* -------- Sujets -------- */
 .quiz-question__subjects {
@@ -25,11 +56,11 @@
   color: #6b7280;
 
   .subject-badge {
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
+
+    //border: 1px solid #c7d2fe;
     padding: 0.15rem 0.5rem;
-    border-radius: 0.4rem;
-    font-size: 0.8rem;
+    //border-radius: 0.4rem;
+    //font-size: 0.8rem;
   }
 }
 
@@ -38,6 +69,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  background: transparent;
 
   &-image,
   &-video,
@@ -55,8 +87,8 @@
 
 /* -------- Description -------- */
 .quiz-question__description {
-  font-size: 0.95rem;
-  line-height: 1.5;
+  //font-size: 0.8rem;
+  //line-height: 1.5;
 }
 
 /* -------- Réponses -------- */
@@ -64,7 +96,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding-left: 50px;
+  //padding-left: 20px;
 }
 
 /* Une ligne de réponse */
@@ -72,7 +104,18 @@
   display: flex;
   align-items: center;   /* ✅ centrage vertical */
   gap: 0.5rem;
-  padding: 0.25rem 0;
+  //padding: 0.25rem 0;
+  padding-top:0.6rem;
+  padding-bottom: 0.6rem;
+  padding-left: 1.4rem;
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  border-radius: 0.4rem;
+}
+
+.answer-line--correct {
+  background: #e3f9e5;      // vert très clair
+  border-color: #2e7d32;    // vert plus soutenu
 }
 
 /* Label de la réponse */
@@ -99,11 +142,6 @@
 :host ::ng-deep .answer-line .p-radiobutton .p-radiobutton-box {
   margin: 0;
 }
-
-::ng-deep .p-panel .p-panel-content {
-  padding-bottom: 0 !important;
-}
-
 
 /* Optionnel : réduire un peu la taille des icônes */
 /*

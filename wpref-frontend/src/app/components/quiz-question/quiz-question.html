@@ -1,20 +1,33 @@
 <div class="quiz-question">
-  <!-- Titre -->
-  <h2 class="quiz-question__title">
-    {{ question.title }}
-  </h2>
+  <p-card class="quiz-question--card">
+    <!-- HEADER -->
+    <ng-template pTemplate="header">
+      <div class="quiz-question--card-header">
 
-  <!-- Sujets -->
-  @if (question.subjects) {
-    @if (question.subjects.length) {
-      <div class="quiz-question__subjects">
-        @for (s of question.subjects; track s.id) {
-          <span class="subject-badge">{{ s.name }}</span>
-        }
+        <!-- Gauche : statut question.active -->
+        <div class="header-left">
+          @if (displayMode === 'preview') {
+            <i
+              class="pi"
+              [ngClass]="question.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+            ></i>
+          }
+        </div>
+
+        <!-- Centre : label -->
+        <div class="header-center">
+          Question
+        </div>
+
+        <!-- Droite : icône fixe -->
+        <div class="header-right">
+          @if (displayMode === 'exam') {
+            <i class="pi pi-bookmark"></i>
+          }
+        </div>
       </div>
-    }
-  }
-  <p-panel [showHeader]=false class="quiz-question--panel">
+    </ng-template>
+
     <!-- Médias -->
     @if (question.media) {
       @if (question.media.length) {
@@ -60,34 +73,45 @@
         class="quiz-question__description"
       ></div>
     }
-  </p-panel>
-  <!-- Réponses -->
-  <section class="quiz-question__answers">
-    @for (opt of question.answer_options; track opt.id ?? $index; let i = $index) {
-      <div class="answer-line">
-        @if (question.allow_multiple_correct) {
-          <!-- MULTI → checkbox -->
-          <p-checkbox
-            (ngModelChange)="onToggleMulti(i, $event)"
-            [binary]="true"
-            [ngModel]="multiSelected[i] ?? false"
-            inputId="answer-{{ i }}"
-          ></p-checkbox>
-        } @else {
-          <!-- SINGLE → radio -->
-          <p-radiobutton
-            (ngModelChange)="onSelectSingle(opt)"
-            [ngModel]="singleSelected"
-            [value]="opt"
-            inputId="answer-{{ i }}"
-            name="question-{{ question.id }}"
-          ></p-radiobutton>
-        }
+    <div class="quiz-question__answers">
+      @for (opt of question.answer_options; track opt.id ?? $index; let i = $index) {
+        <div class="answer-line" [ngClass]="{ 'answer-line--correct': showCorrectAnswers && opt.is_correct}">
+          @if (question.allow_multiple_correct) {
+            <!-- MULTI → checkbox -->
+            <p-checkbox
+              (ngModelChange)="onToggleMulti(i, $event)"
+              [binary]="true"
+              [ngModel]="isMultiChecked(i)"
+              inputId="answer-{{ i }}"
+            ></p-checkbox>
+          } @else {
+            <!-- SINGLE → radio -->
+            <p-radiobutton
+              (ngModelChange)="onSelectSingle(opt)"
+              [ngModel]="singleSelected"
+              [value]="opt"
+              inputId="answer-{{ i }}"
+              name="question-{{ question.id }}"
+            ></p-radiobutton>
+          }
 
-        <label [for]="'answer-' + i" class="answer-label">
-          <div [innerHTML]="opt.content"></div>
-        </label>
+          <label [for]="'answer-' + i" class="answer-label">
+            <div [innerHTML]="opt.content"></div>
+          </label>
+        </div>
+      }
+      <!-- Description -->
+      @if (showCorrectAnswers && question.explanation) {
+        <div
+          [innerHTML]="question.explanation"
+          class="quiz-question__description"
+        ></div>
+      }
+    </div>
+    <ng-template pTemplate="footer">
+      <div class="card-footer">
       </div>
-    }
-  </section>
+    </ng-template>
+  </p-card>
+  <!-- Réponses -->
 </div>

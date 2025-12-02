@@ -1,14 +1,15 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Router, RouterLink} from '@angular/router';
+import {Router} from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
+import { PaginatorModule } from 'primeng/paginator';
 
 @Component({
   standalone: true,
   selector: 'app-subject-list',
-  imports: [RouterLink, FormsModule, Button, InputTextModule],
+  imports: [FormsModule, Button, InputTextModule, PaginatorModule],
   templateUrl: './subject-list.html',
   styleUrl: './subject-list.scss'
 })
@@ -19,6 +20,10 @@ export class SubjectList implements OnInit {
   subjects = signal<Subject[]>([]);
   q = signal('');
 
+  // 📌 Pagination
+  first = 0;  // index de départ
+  rows = 10;  // nombre de lignes par page
+
   ngOnInit() {
     this.load();
   }
@@ -27,7 +32,10 @@ export class SubjectList implements OnInit {
     this.subjectService
       .list({ search: this.q() || undefined })
       .subscribe({
-        next: (subs: Subject[]) => this.subjects.set(subs),
+        next: (subs: Subject[]) => {
+          this.subjects.set(subs);
+          this.first = 0;  // retour à la première page à chaque recherche
+        },
         error: (err: unknown) => {
           console.error('Erreur lors du chargement des sujets', err);
           this.subjects.set([]);
@@ -40,8 +48,20 @@ export class SubjectList implements OnInit {
     this.load();
   }
 
+  // Liste paginée pour la page courante
+  get pagedSubjects(): Subject[] {
+    const all = this.subjects() || [];
+    return all.slice(this.first, this.first + this.rows);
+  }
+
+  // Handler appelé par p-paginator
+  onPageChange(event: any) {
+    this.first = event.first;
+    this.rows = event.rows;
+  }
+
   goNew() {
-    this.router.navigate(['/subject']);
+    this.router.navigate(['/subject/add']);
   }
 
   goEdit(id: number) {

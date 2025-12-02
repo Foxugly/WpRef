@@ -11,6 +11,7 @@ class Question(models.Model):
     allow_multiple_correct = models.BooleanField(
         "Plusieurs bonnes réponses ?", default=False
     )
+    active = models.BooleanField(default=True)
     is_mode_practice = models.BooleanField("Pour s'exercer", default=True)
     is_mode_exam = models.BooleanField("Pour les examens", default=False)
     subjects = models.ManyToManyField(Subject, related_name="questions", through="QuestionSubject")

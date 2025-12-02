@@ -28,8 +28,8 @@ class QuestionMediaInline(admin.StackedInline):
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ("title", "allow_multiple_correct", "created_at")
-    list_filter = ("allow_multiple_correct", "subjects")  # OK: on peut filtrer dessus
+    list_display = ("title", "allow_multiple_correct",  "active", "is_mode_practice", "is_mode_exam", "created_at")
+    list_filter = ("allow_multiple_correct", "active", "is_mode_practice", "is_mode_exam", "subjects")  # OK: on peut filtrer dessus
     search_fields = ("title",)
     inlines = [QuestionMediaInline, AnswerOptionInline, QuestionSubjectInline]
     # ⚠️ Supprimer ceci, c'est la cause de l'erreur :

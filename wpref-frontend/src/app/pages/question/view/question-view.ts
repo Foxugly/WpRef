@@ -1,29 +1,31 @@
 // src/app/pages/question/detail/question-detail.ts
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-
+import {Component, inject, OnInit, signal, effect} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {ActivatedRoute, Router} from '@angular/router';
 import {Question, QuestionService,} from '../../../services/question/question';
-import { QuizQuestionComponent } from '../../../components/quiz-question/quiz-question';
-import { ButtonModule } from 'primeng/button';
-
+import {QuizQuestionComponent} from '../../../components/quiz-question/quiz-question';
+import {ButtonModule} from 'primeng/button';
+import {ToggleButtonModule} from 'primeng/togglebutton';
+import { FormsModule } from '@angular/forms';
 @Component({
   standalone: true,
   selector: 'app-question-view',
   templateUrl: './question-view.html',
   styleUrl: './question-view.scss',
-  imports: [CommonModule, QuizQuestionComponent, ButtonModule],
+  imports: [CommonModule, QuizQuestionComponent, ButtonModule, ToggleButtonModule, FormsModule],
 })
 export class QuestionView implements OnInit {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private questionService = inject(QuestionService);
-
   id!: number;
-
   loading = signal(false);
   error = signal<string | null>(null);
   question = signal<Question | null>(null);
+  /** Flag pour dire au composant enfant d'afficher les bonnes réponses en vert */
+  showCorrect: boolean = false;
+  /** À adapter à ton système d’authentification réel */
+  isAdmin = false; // TODO: remplace par un vrai check de rôle (userService, token, etc.)
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private questionService = inject(QuestionService);
 
   ngOnInit(): void {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
@@ -32,6 +34,21 @@ export class QuestionView implements OnInit {
       return;
     }
     this.loadQuestion();
+  }
+
+  goBack(): void {
+    this.router.navigate(['/question/list']);
+  }
+
+  goEdit(id: number) {
+    this.router.navigate(['/question', id, 'edit']);
+  }
+
+  /** true si l'utilisateur PEUT voir les réponses (admin ou mode practice) */
+  canRevealCorrect(): boolean {
+    const q = this.question();
+    if (!q) return false;
+    return this.isAdmin || q.is_mode_practice;
   }
 
   private loadQuestion(): void {
@@ -51,11 +68,4 @@ export class QuestionView implements OnInit {
     });
   }
 
-  goBack(): void {
-    this.router.navigate(['/question/list']);
-  }
-
-  goEdit(id: number) {
-    this.router.navigate(['/question', id, 'edit']);
-  }
 }

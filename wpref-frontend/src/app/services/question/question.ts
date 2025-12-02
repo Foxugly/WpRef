@@ -12,6 +12,7 @@ export interface Question {
   description: string;
   explanation: string;
   allow_multiple_correct: boolean;
+  active: boolean;
   is_mode_practice: boolean;
   is_mode_exam: boolean;
   subjects: Subject[];
@@ -32,6 +33,7 @@ export interface QuestionCreatePayload {
   description: string;
   explanation: string;
   allow_multiple_correct: boolean;
+  active: boolean;
   is_mode_practice: boolean;
   is_mode_exam: boolean;
   subject_ids: number[];
@@ -117,6 +119,7 @@ export class QuestionService {
     formData.append('description', payload.description ?? '');
     formData.append('explanation', payload.explanation ?? '');
     formData.append('allow_multiple_correct', String(!!payload.allow_multiple_correct));
+    formData.append('active', String(!!payload.active));
     formData.append('is_mode_practice', String(!!payload.is_mode_practice));
     formData.append('is_mode_exam', String(!!payload.is_mode_exam));
     // subject_ids : plusieurs valeurs

@@ -44,6 +44,7 @@ export class QuestionEdit implements OnInit {
     description: [''],
     explanation: [''],
     allow_multiple_correct: [false],
+    active: [true],
     is_mode_practice: [true],
     is_mode_exam: [false],
     // on envoie subject_ids au backend (write_only dans ton serializer)
@@ -197,6 +198,7 @@ export class QuestionEdit implements OnInit {
           description: q.description,
           explanation: q.explanation,
           allow_multiple_correct: q.allow_multiple_correct,
+          active:q.active,
           is_mode_practice: q.is_mode_practice,
           is_mode_exam: q.is_mode_exam,
           subject_ids: subjectIds,

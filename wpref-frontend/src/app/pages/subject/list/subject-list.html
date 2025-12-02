@@ -2,7 +2,7 @@
   <h2>Sujets</h2>
   <div class="actions">
     <input pInputText placeholder="Rechercher…" [ngModel]="q()" (ngModelChange)="q.set($event); load()">
-    <p-button id="btn_add_subject" icon="pi pi-plus" routerLink="/subject/add" label="Nouveau" severity="primary"/>
+    <p-button id="btn_add_subject" icon="pi pi-plus" (onClick)="goNew()" label="Nouveau" severity="primary"/>
   </div>
 </div>
 
@@ -15,7 +15,7 @@
         <tr><th>Nom</th><th>Slug</th><th>Description</th><th style="width:60px;">Actions</th></tr>
       </thead>
       <tbody>
-        @for (s of subjects(); track s.id) {
+        @for (s of pagedSubjects; track s.id) {
           <tr>
             <td>{{ s.name }}</td>
             <td>{{ s.slug }}</td>
@@ -28,6 +28,17 @@
         }
       </tbody>
     </table>
+    @if (subjects().length > rows) {
+      <div class="table-paginator">
+        <p-paginator
+          [rows]="rows"
+          [totalRecords]="subjects().length"
+          [first]="first"
+          [rowsPerPageOptions]="[5, 10, 20, 50]"
+          (onPageChange)="onPageChange($event)"
+        ></p-paginator>
+      </div>
+    }
   }
 </div>
 

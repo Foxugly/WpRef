@@ -1,26 +1,26 @@
 <div class="page">
   <div class="question__header">
-  <div class="header-left">
-    <p-button
-      label="Retour à la liste"
-      icon="pi pi-arrow-left"
-      (onClick)="goBack()"
-      severity="secondary"
-      text
-    ></p-button>
-  </div>
+    <div class="header-left">
+      <p-button
+        (onClick)="goBack()"
+        icon="pi pi-arrow-left"
+        label="Retour à la liste"
+        severity="secondary"
+        text
+      ></p-button>
+    </div>
 
-  <h1 class="header-title">Détail de la question</h1>
+    <h1 class="header-title">Détail de la question</h1>
 
-  <div class="header-right">
-    <p-button
-      label="Modifier"
-      icon="pi pi-pencil"
-      (onClick)="goEdit(id)"
-      severity="secondary"
-    ></p-button>
+    <div class="header-right">
+      <p-button
+        (onClick)="goEdit(id)"
+        icon="pi pi-pencil"
+        label="Modifier"
+        severity="secondary"
+      ></p-button>
+    </div>
   </div>
-</div>
 
 
   @if (loading()) {
@@ -30,6 +30,20 @@
       {{ error() }}
     </div>
   } @else if (question()) {
-    <app-quiz-question [question]="question()!"></app-quiz-question>
+    <app-quiz-question
+      [question]="question()!"
+      [showCorrectAnswers]="showCorrect"
+      displayMode="preview"
+    ></app-quiz-question>
+    <div class="question-detail__buttons">
+      <p-toggleButton
+        [(ngModel)]="showCorrect"
+        [disabled]="!canRevealCorrect()"
+        onLabel="Afficher les bonnes réponses"
+        offLabel="Masquer les bonnes réponses"
+        onIcon="pi pi-check"
+        offIcon="pi pi-eye-slash"
+      ></p-toggleButton>
+    </div>
   }
 </div>

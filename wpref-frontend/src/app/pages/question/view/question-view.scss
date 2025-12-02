@@ -27,6 +27,12 @@
   }
 }
 
+.question-detail__buttons {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
 :host ::ng-deep .p-panel {
     background: #F2F6FF !important;
     color: black !important;

@@ -1,8 +1,8 @@
 <div class="toolbar">
   <h2>Questions</h2>
   <div class="actions">
-    <input pInputText placeholder="Rechercher…" [ngModel]="q()" (ngModelChange)="q.set($event); load()">
-    <p-button id="btn_add_subject" icon="pi pi-plus" routerLink="/question/add" label="Nouveau" severity="primary"/>
+    <input (ngModelChange)="q.set($event); load()" [ngModel]="q()" pInputText placeholder="Rechercher…">
+    <p-button icon="pi pi-plus" id="btn_add_subject" label="Nouveau" (onClick)="goNew()"  severity="primary"></p-button>
   </div>
 </div>
 
@@ -12,21 +12,64 @@
   } @else {
     <table class="table">
       <thead>
-        <tr><th>Titre</th><th style="width:60px;">Actions</th></tr>
+      <tr>
+        <th>Titre</th>
+        <th>Active</th>
+        <th>Subjects</th>
+        <th style="width:60px;">Actions</th>
+      </tr>
       </thead>
       <tbody>
-        @for (q of questions(); track q.id) {
+        @for (q of pagedQuestions; track q.id) {
           <tr>
             <td>{{ q.title }}</td>
+            <td class="center"><i
+              class="pi"
+              [ngClass]="q.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+            ></i></td>
+            <td class="center">@if (q.subjects) {
+              @if (q.subjects.length) {
+                <div class="quiz-question__subjects">
+                  @for (s of q.subjects; track s.id) {
+                    <p-button
+                      [label]="s.name"
+                      size="small"
+                      (onClick)="goSubject(s.id)"
+                      variant="outlined"
+                      severity="secondary"
+                      [style]="{ marginRight: '5px' }"
+                    ></p-button>
+                  }
+                </div>
+              }
+            }</td>
             <td class="row-actions">
-              <p-button id="btn_add_question" icon="pi pi-eye" (click)="goView(q.id)" severity="secondary" size="small"/>
-              <p-button id="btn_add_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"/>
-              <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger" size="small"/>
+              <p-button id="btn_add_question" icon="pi pi-eye" (click)="goView(q.id)" severity="secondary"
+                        size="small"></p-button>
+              <p-button id="btn_add_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"></p-button>
+              <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger"
+                        size="small"></p-button>
             </td>
           </tr>
         }
       </tbody>
     </table>
+        <table class="table">
+      <!-- thead + tbody (comme ci-dessus) -->
+    </table>
+
+    @if (questions().length > rows) {
+      <div class="table-paginator">
+        <p-paginator
+          [rows]="rows"
+          [totalRecords]="questions().length"
+          [first]="first"
+          [rowsPerPageOptions]="[5, 10, 20, 50]"
+          (onPageChange)="onPageChange($event)"
+        ></p-paginator>
+      </div>
+    }
+
   }
 </div>
 
