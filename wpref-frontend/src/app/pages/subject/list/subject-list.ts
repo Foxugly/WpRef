@@ -1,6 +1,5 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Router} from '@angular/router';
 import { SubjectService, Subject } from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
@@ -15,7 +14,6 @@ import { PaginatorModule } from 'primeng/paginator';
 })
 export class SubjectList implements OnInit {
   private subjectService = inject(SubjectService);
-  private router = inject(Router);
 
   subjects = signal<Subject[]>([]);
   q = signal('');
@@ -61,14 +59,14 @@ export class SubjectList implements OnInit {
   }
 
   goNew() {
-    this.router.navigate(['/subject/add']);
+    this.subjectService.goNew();
   }
 
   goEdit(id: number) {
-    this.router.navigate(['/subject', id, 'edit']);
+    this.subjectService.goEdit(id);
   }
 
   goDelete(id: number) {
-    this.router.navigate(['/subject', id, 'delete']);
+    this.subjectService.goDelete(id);
   }
 }

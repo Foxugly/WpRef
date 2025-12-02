@@ -3,15 +3,15 @@
   <form (ngSubmit)="save()" [formGroup]="form" class="card">
     <label>Nom</label>
     <input formControlName="name" id="name" pInputText type="text"/>
-    @if (form.controls.name.touched && form.controls.name.invalid) {
+    @if (form.get('name')?.touched && form.get('name')?.invalid) {
       <small class="field-error">Nom requis (≥ 2 caractères)</small>
     }
 
     <label>Description</label>
-    <p-editor [style]="{ height: '100px' }" formControlName="description" placeholder="Description…"/>
+    <p-editor [style]="{ height: '100px' }" formControlName="description" placeholder="Description…"></p-editor>
     <div class="actions">
-      <p-button icon="pi pi-save" (onClick)="save()" id="btn_save" label="Enregistrer" severity="primary" />
-      <p-button id="btn_back" label="Annuler" routerLink="/subject/list" severity="secondary"/>
+      <p-button (onClick)="save()" icon="pi pi-save" id="btn_save" label="Enregistrer" severity="primary"></p-button>
+      <p-button (onClick)="goBack()" id="btn_back" label="Annuler" severity="secondary"></p-button>
     </div>
   </form>
 
@@ -19,7 +19,9 @@
     <div class="header-line">
       <span class="title">Questions associées</span>
       <div class="actions">
-        <p-button icon="pi pi-plus" routerLink="/question/add" id="btn_add_question" label="Ajouter une question" size="small" severity="primary"/>
+        <p-button (onClick)="goQuestionNew()"
+                  icon="pi pi-plus" id="btn_add_question" label="Ajouter une question" severity="primary"
+                  size="small"></p-button>
       </div>
     </div>
     @if ((questions || []).length === 0) {
@@ -37,9 +39,11 @@
             <tr>
               <td>{{ q.title }}</td>
               <td class="row-actions">
-              <p-button id="btn_edit_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"/>
-              <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger" size="small"/>
-            </td>
+                <p-button id="btn_edit_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info"
+                          size="small"/>
+                <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger"
+                          size="small"/>
+              </td>
             </tr>
           }
         </tbody>

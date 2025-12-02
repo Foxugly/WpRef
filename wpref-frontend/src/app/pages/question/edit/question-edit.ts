@@ -1,6 +1,6 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
-import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {ActivatedRoute} from '@angular/router';
 import {Question, QuestionCreatePayload, QuestionService,} from '../../../services/question/question';
 import {Subject, SubjectService} from '../../../services/subject/subject';
 import {Editor} from 'primeng/editor';
@@ -18,7 +18,6 @@ import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/me
   templateUrl: './question-edit.html',
   styleUrl: './question-edit.scss',
   imports: [
-    RouterLink,
     ReactiveFormsModule,
     Editor,
     CheckboxModule,
@@ -53,7 +52,6 @@ export class QuestionEdit implements OnInit {
     media: [[] as MediaSelectorValue[]],
   });
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
 
@@ -125,7 +123,8 @@ export class QuestionEdit implements OnInit {
       next: () => {
         this.saving.set(false);
         this.success.set('Question mise à jour avec succès.');
-        this.router.navigate(['/question/list']);
+        //this.router.navigate(['/question/list']);
+        this.goList()
       },
       error: (err) => {
         console.error('Erreur update question', err);
@@ -140,11 +139,15 @@ export class QuestionEdit implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/question/list']);
+    this.questionService.goBack()
+  }
+
+  goList(): void {
+    this.questionService.goList()
   }
 
   goView(id: number) {
-    this.router.navigate(['/question', id, 'view']);
+    this.questionService.goView(id)
   }
 
   private loadSubjects(): void {
@@ -198,7 +201,7 @@ export class QuestionEdit implements OnInit {
           description: q.description,
           explanation: q.explanation,
           allow_multiple_correct: q.allow_multiple_correct,
-          active:q.active,
+          active: q.active,
           is_mode_practice: q.is_mode_practice,
           is_mode_exam: q.is_mode_exam,
           subject_ids: subjectIds,

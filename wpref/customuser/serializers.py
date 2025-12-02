@@ -1,9 +1,10 @@
 # customuser/api/serializers.py
-
-from quiz.models import Quiz
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 
+from quiz.models import Quiz
 from .models import CustomUser
 
 
@@ -68,14 +69,6 @@ class QuizSimpleSerializer(serializers.ModelSerializer):
         fields = ["id", "title", "slug"]
 
 
-# accounts/api/serializers.py
-from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
-from rest_framework import serializers
-
-User = get_user_model()
-
-
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -107,6 +100,6 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
+        model = CustomUser
         fields = ["id", "username", "email", "first_name", "last_name", "language"]
         read_only_fields = ["id", "username"]

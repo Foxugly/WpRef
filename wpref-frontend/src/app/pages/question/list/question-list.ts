@@ -1,6 +1,5 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Router} from '@angular/router';
 import {Question, QuestionService} from '../../../services/question/question';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
@@ -21,7 +20,6 @@ export class QuestionList implements OnInit {
   first = 0;           // index de départ (offset)
   rows = 10;           // nb de lignes par page
   private questionService = inject(QuestionService);
-  private router = inject(Router);
 
   ngOnInit() {
     this.load();
@@ -33,7 +31,7 @@ export class QuestionList implements OnInit {
       .subscribe({
         next: (subs: Question[]) => {
           this.questions.set(subs);
-          this.first = 0;           // 👈 on revient à la première page à chaque recherche
+          this.first = 0;
         },
         error: (err: unknown) => {
           console.error('Erreur lors du chargement des questions', err);
@@ -59,23 +57,23 @@ export class QuestionList implements OnInit {
     this.rows = event.rows;     // nb d’items par page
   }
 
-  goNew() {
-    this.router.navigate(['/question/add']);
+  goNew():void {
+    this.questionService.goNew();
   }
 
-  goView(id: number) {
-    this.router.navigate(['/question', id, 'view']);
+  goView(id: number):void {
+    this.questionService.goView(id);
   }
 
-  goEdit(id: number) {
-    this.router.navigate(['/question', id, 'edit']);
+  goEdit(id: number):void {
+    this.questionService.goEdit(id);
   }
 
-  goDelete(id: number) {
-    this.router.navigate(['/question', id, 'delete']);
+  goDelete(id: number):void {
+    this.questionService.goDelete(id);
   }
 
-  goSubject(id: number) {
-    this.router.navigate(['/subject', id, 'edit']);
+  goSubject(id: number):void {
+    this.questionService.goSubjectEdit(id);
   }
 }

@@ -81,6 +81,29 @@ export class QuestionService {
     return this.http.delete<void>(`${this.base}${this.questionPath}${id}/`);
   }
 
+  goBack(): void {
+    this.router.navigate(['/question/list']);
+  }
+
+  goList(): void {
+    this.router.navigate(['/question/list']);
+  }
+  goView(id: number) {
+    this.router.navigate(['/question', id, 'view']);
+  }
+  goNew():void{
+    this.router.navigate(['/question/add']);
+  }
+  goEdit(id: number):void {
+    this.router.navigate(['/question', id, 'edit']);
+  }
+  goDelete(id: number):void {
+    this.router.navigate(['/question', id, 'delete']);
+  }
+  goSubjectEdit(id:number):void{
+    this.router.navigate(['/subject', id, 'edit']);
+  }
+
 
   private buildFormData(payload: QuestionCreatePayload | QuestionUpdatePayload): FormData {
     const formData = new FormData();

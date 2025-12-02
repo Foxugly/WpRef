@@ -1,12 +1,14 @@
 // src/app/pages/question/detail/question-detail.ts
-import {Component, inject, OnInit, signal, effect} from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {ActivatedRoute, Router} from '@angular/router';
+import {ActivatedRoute} from '@angular/router';
 import {Question, QuestionService,} from '../../../services/question/question';
 import {QuizQuestionComponent} from '../../../components/quiz-question/quiz-question';
 import {ButtonModule} from 'primeng/button';
 import {ToggleButtonModule} from 'primeng/togglebutton';
-import { FormsModule } from '@angular/forms';
+import {FormsModule} from '@angular/forms';
+import {UserService} from '../../../services/user/user';
+
 @Component({
   standalone: true,
   selector: 'app-question-view',
@@ -22,10 +24,11 @@ export class QuestionView implements OnInit {
   /** Flag pour dire au composant enfant d'afficher les bonnes réponses en vert */
   showCorrect: boolean = false;
   /** À adapter à ton système d’authentification réel */
-  isAdmin = false; // TODO: remplace par un vrai check de rôle (userService, token, etc.)
+
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
   private questionService = inject(QuestionService);
+  private userService = inject(UserService);
+  isAdmin = this.userService.isAdmin();
 
   ngOnInit(): void {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
@@ -37,11 +40,11 @@ export class QuestionView implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/question/list']);
+    this.questionService.goBack()
   }
 
   goEdit(id: number) {
-    this.router.navigate(['/question', id, 'edit']);
+    this.questionService.goEdit(id);
   }
 
   /** true si l'utilisateur PEUT voir les réponses (admin ou mode practice) */

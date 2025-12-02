@@ -1,10 +1,7 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
-
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
-import {Router, RouterLink} from '@angular/router';
 import {QuestionCreatePayload, QuestionService} from '../../../services/question/question';
 import {Subject, SubjectService} from '../../../services/subject/subject';
-
 import {Editor} from 'primeng/editor';
 import {CheckboxModule} from 'primeng/checkbox';
 import {InputTextModule} from 'primeng/inputtext';
@@ -20,7 +17,6 @@ import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/me
   templateUrl: './question-create.html',
   styleUrl: './question-create.scss',
   imports: [
-    RouterLink,
     ReactiveFormsModule,
     Editor,
     CheckboxModule,
@@ -48,15 +44,13 @@ export class QuestionCreate implements OnInit {
     description: [''],
     explanation: [''],
     allow_multiple_correct: [false],
-    active:[true],
+    active: [true],
     is_mode_practice: [true],
     is_mode_exam: [false],
-    // on envoie subject_ids au backend (write_only dans ton serializer)
     subject_ids: [[] as number[]],
     answer_options: this.fb.array([]),
     media: [[] as MediaSelectorValue[]],
   });
-  private router = inject(Router);
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
 
@@ -75,6 +69,14 @@ export class QuestionCreate implements OnInit {
   }
 
   // ------------- Lifecycle -------------
+
+  goList(): void {
+    this.questionService.goList()
+  }
+
+  goBack(): void {
+    this.questionService.goBack()
+  }
 
   ngOnInit(): void {
     this.loadSubjects();
@@ -141,7 +143,7 @@ export class QuestionCreate implements OnInit {
       next: () => {
         this.saving.set(false);
         this.success.set('Question créée avec succès.');
-        this.router.navigate(['/question/list']);
+        this.goList()
       },
       error: (err) => {
         console.error('Erreur création question', err);
