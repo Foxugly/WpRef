@@ -10,6 +10,7 @@ import { UserService } from '../../services/user/user';
 import { LangCode } from '../../../environments/environment';
 import { LangSelectComponent } from '../lang-select/lang-select';
 import { UserMenuComponent } from '../user-menu/user-menu';
+import {QuizMenuComponent} from '../quiz-menu/quiz-menu';
 
 @Component({
   selector: 'app-topmenu',
@@ -20,7 +21,8 @@ import { UserMenuComponent } from '../user-menu/user-menu';
     RouterLinkActive,
     MenubarModule,
     LangSelectComponent,
-    UserMenuComponent
+    UserMenuComponent,
+    QuizMenuComponent,
 ],
   templateUrl: './topmenu.html',
   styleUrl: './topmenu.scss'

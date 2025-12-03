@@ -39,9 +39,9 @@
             <tr>
               <td>{{ q.title }}</td>
               <td class="row-actions">
-                <p-button id="btn_edit_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info"
+                <p-button id="btn_edit_question" icon="pi pi-pencil" (click)="goQuestionEdit(q.id)" severity="info"
                           size="small"/>
-                <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger"
+                <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goQuestionDelete(q.id)" severity="danger"
                           size="small"/>
               </td>
             </tr>

@@ -143,7 +143,7 @@ export class QuestionCreate implements OnInit {
       next: () => {
         this.saving.set(false);
         this.success.set('Question créée avec succès.');
-        this.goList()
+        this.goList();
       },
       error: (err) => {
         console.error('Erreur création question', err);

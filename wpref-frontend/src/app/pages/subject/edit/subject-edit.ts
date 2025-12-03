@@ -3,7 +3,7 @@ import {Component, inject, OnInit} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
 import {Subject, SubjectService} from '../../../services/subject/subject';
-import {Question} from '../../../services/question/question';
+import {Question, QuestionService} from '../../../services/question/question';
 import {Editor} from 'primeng/editor';
 import {InputTextModule} from 'primeng/inputtext';
 import {Button} from 'primeng/button';
@@ -26,6 +26,7 @@ export class SubjectEdit implements OnInit {
   });
   private route = inject(ActivatedRoute);
   private subjectService = inject(SubjectService);
+  private questionService = inject(QuestionService);
 
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
@@ -46,15 +47,15 @@ export class SubjectEdit implements OnInit {
   }
 
   goQuestionNew(): void {
-    this.goQuestionNew();
+    this.questionService.goNew();
   }
 
-  goEdit(id: number) {
-    this.subjectService.goEdit(id);
+  goQuestionEdit(id: number) {
+    this.questionService.goEdit(id);
   }
 
-  goDelete(id: number) {
-    this.subjectService.goDelete(id);
+  goQuestionDelete(id: number) {
+    this.questionService.goDelete(id);
   }
 
   goBack(): void {

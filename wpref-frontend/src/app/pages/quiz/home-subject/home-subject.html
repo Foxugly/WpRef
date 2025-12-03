@@ -1,0 +1,66 @@
+<div class="quiz-config-page">
+  <p-card class="quiz-config-card">
+    <ng-template pTemplate="header">
+      <div class="quiz-config-header">
+        <h2>Configure your quiz</h2>
+      </div>
+    </ng-template>
+
+    <div class="quiz-config-form" [formGroup]="form">
+      <div class="field">
+        <label for="subjects">Sujets</label>
+        <p-multiSelect
+          formControlName="subject_ids"
+          [options]="subjectOptions"
+          [showClear]="true"
+          class="w-full"
+          id="subjects"
+          optionLabel="name"
+          optionValue="code"
+          (onChange)="onChangeSubjects()"
+          placeholder="Select your subject(s)">
+        </p-multiSelect>
+      </div>
+
+      <div class="field">
+        <label for="nbQuestions">Nombre de questions <span id="label_n_questions"></span></label>
+        <p-inputNumber
+          formControlName="n_questions"
+          [max]="100"
+          [min]="1"
+          [showButtons]="true"
+          id="nbQuestions">
+        </p-inputNumber>
+      </div>
+
+      <div class="field field--inline">
+        <label>
+          <p-checkbox [binary]="true" formControlName="with_timer"></p-checkbox>
+          Timer activé
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="timer">Timer (in minutes)</label>
+        <p-inputNumber
+          formControlName="timer"
+          [max]="120"
+          [min]="1"
+          [showButtons]="true"
+          id="timer">
+        </p-inputNumber>
+      </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <div class="quiz-config-footer">
+        <p-button
+          label="Générer le quiz"
+          icon="pi pi-sync"
+          severity="primary"
+          (onClick)="generate_quiz()">
+        </p-button>
+      </div>
+    </ng-template>
+  </p-card>
+</div>

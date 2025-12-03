@@ -13,7 +13,6 @@ import {ImageModule} from 'primeng/image';
 import {ButtonModule} from 'primeng/button';
 import {FormsModule} from '@angular/forms';
 
-
 @Component({
   standalone: true,
   selector: 'app-quiz-question',
@@ -100,7 +99,6 @@ export class QuizQuestionComponent implements OnChanges {
   externalSafeUrl(m: MediaSelectorValue): SafeResourceUrl | null {
     const raw = m.external_url || '';
     if (!raw) return null;
-
     const embed = this.isYoutubeUrl(raw) ? this.toYoutubeEmbed(raw) : raw;
     return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
   }
@@ -110,33 +108,26 @@ export class QuizQuestionComponent implements OnChanges {
   }
 
   // ---------- Sélection réponses (démo UI) ----------
-
   onSelectRadio(index: number): void {
     this.singleSelectionIndex = index;
   }
 
   stripOuterP(html: string): string {
     if (!html) return html;
-
     const trimmed = html.trim();
-
-    // Vérifie si ENTIEREMENT entouré par <p>...</p>
+    let inner = trimmed;
     if (trimmed.startsWith('<p') && trimmed.endsWith('</p>')) {
-
-      // Trouver la fin du tag <p ...>
       const startTagEnd = trimmed.indexOf('>') + 1;
-
-      // Supprimer </p> final
       const endTagStart = trimmed.lastIndexOf('</p>');
-
-      return trimmed.substring(startTagEnd, endTagStart).trim();
+      inner = trimmed.substring(startTagEnd, endTagStart).trim();
     }
-
-    return html;
+    inner = inner
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\u00A0/g, ' ');
+    return inner;
   }
 
   private isYoutubeUrl(url: string): boolean {
     return /youtu\.be|youtube\.com/.test(url);
   }
 }
-

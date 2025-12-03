@@ -26,6 +26,8 @@ import { QuestionEdit } from './pages/question/edit/question-edit';
 import { QuestionDelete } from './pages/question/delete/question-delete';
 import { QuestionView } from './pages/question/view/question-view';
 
+// QUIZ
+import { QuizSubjectHome } from './pages/quiz/home-subject/home-subject';
 
 
 export const routes: Routes = [
@@ -37,13 +39,17 @@ export const routes: Routes = [
   { path: 'reset-password', component: ResetPassword},
   { path: 'change-password', component: ChangePassword},
   { path: 'register', component: Register },
+  // SUBJECT
   { path: 'subject/list', component: SubjectList , canActivate: [authGuard] },
   { path: 'subject/add', component: SubjectCreate , canActivate: [authGuard] },
   { path: 'subject/:id/edit', component: SubjectEdit , canActivate: [authGuard] },
   { path: 'subject/:id/delete', component: SubjectDelete , canActivate: [authGuard] },
+  // QUESTION
   { path: 'question/list', component: QuestionList , canActivate: [authGuard] },
   { path: 'question/add', component: QuestionCreate , canActivate: [authGuard] },
   { path: 'question/:id/edit', component: QuestionEdit , canActivate: [authGuard] },
   { path: 'question/:id/delete', component: QuestionDelete , canActivate: [authGuard] },
   { path: 'question/:id/view', component: QuestionView , canActivate: [authGuard]  },
+  // QUIZ
+  { path: 'quiz/subject', component: QuizSubjectHome},
 ];

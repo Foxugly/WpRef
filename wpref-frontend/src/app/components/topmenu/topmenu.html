@@ -8,8 +8,9 @@
 
         <div class="topmenu__links">
           @if (auth.isLoggedIn()) {
-            <a routerLink="/subject/list" routerLinkActive="active">Sujets</a>
-            <a routerLink="/question/list" routerLinkActive="active">Questions</a>
+            <!--<a routerLink="/subject/list" routerLinkActive="active">Sujets</a>
+            <a routerLink="/question/list" routerLinkActive="active">Questions</a>-->
+            <app-quiz-menu></app-quiz-menu>
           }
         </div>
       </div>
