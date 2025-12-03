@@ -115,7 +115,7 @@ class QuizAPITestCase(APITestCase):
     # -------------------------------------------------------------------------
     @staticmethod
     def _quiz_list_url():
-        return reverse("api:quiz:quiz-list")
+        return reverse("api:quiz:list")
 
     @staticmethod
     def _quiz_detail_url(quiz):

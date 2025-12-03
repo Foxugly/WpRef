@@ -6,6 +6,7 @@ import {InputTextModule} from 'primeng/inputtext';
 import {CommonModule} from '@angular/common';
 import {PaginatorModule} from 'primeng/paginator';
 
+
 @Component({
   standalone: true,
   selector: 'app-question-list',

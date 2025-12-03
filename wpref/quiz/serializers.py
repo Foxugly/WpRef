@@ -5,16 +5,23 @@ from .models import Quiz, QuizSession, QuizAttempt, QuizQuestion
 
 
 class QuizSessionSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(source="quiz.title", read_only=True)
+    nb_questions = serializers.IntegerField(source="quiz.max_questions", read_only=True )
+    user = serializers.CharField(source="user.get_full_name", read_only=True)
+
     class Meta:
         model = QuizSession
         fields = [
             "id",
-            "quiz",
+            "title",
+            "nb_questions",
+            "user",
+            "created_at",
             "started_at",
+            "expired_at",
             "is_closed",
             "max_duration",
         ]
-
 
 class QuizAttemptSerializer(serializers.ModelSerializer):
     class Meta:

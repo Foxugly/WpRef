@@ -9,6 +9,7 @@ export const environment = {
   apiUserPreferencesPath : 'user/me/',
   apiSubjectPath : 'subject/',
   apiQuestionPath : 'question/',
+  apiQuizPath : 'quiz/',
 
 };
 

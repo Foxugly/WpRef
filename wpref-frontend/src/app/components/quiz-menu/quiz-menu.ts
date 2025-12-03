@@ -5,6 +5,7 @@ import {Router} from '@angular/router';
 import {Menubar} from 'primeng/menubar';
 import {SubjectService} from '../../services/subject/subject';
 import {QuestionService} from '../../services/question/question';
+import {QuizService} from '../../services/quiz/quiz';
 
 @Component({
   standalone: true,
@@ -19,11 +20,16 @@ export class QuizMenuComponent implements OnInit {
   items: MenuItem[] = [];
   subjectService = inject(SubjectService);
   questionService = inject(QuestionService);
+  quizService = inject(QuizService);
   constructor(private router: Router, public auth: AuthService,) {
   }
 
   ngOnInit(): void {
     this.buildItems();
+  }
+
+  goList():void{
+    this.quizService.goList();
   }
 
   goSubjectList():void{
@@ -61,6 +67,11 @@ export class QuizMenuComponent implements OnInit {
         label: 'Quiz',
         icon: 'pi pi-list-check',
         items: [
+          {
+            label: 'Quiz',
+            icon: 'pi pi-list',
+            command: () => this.goList(),
+          },
           {
             label: 'Quiz par sujets',
             icon: 'pi pi-pencil',

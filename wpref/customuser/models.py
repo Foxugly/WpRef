@@ -11,4 +11,4 @@ class CustomUser(AbstractUser):
         return self.username if not (self.first_name and self.last_name) else self.get_full_name()
 
     def get_full_name(self):
-        return "%s %s" % (self.first_name, self.last_name)
+        return "%s %s (%s)" % (self.first_name, self.last_name, self.username)

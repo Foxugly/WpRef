@@ -1,5 +1,7 @@
 # quiz/api/views.py
+import random
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from question.models import Question, AnswerOption
@@ -162,8 +164,8 @@ class QuizAttemptView(GenericAPIView):
                 selected_ids = set(qa.selected_options.values_list("id", flat=True))
 
         show_correct = (
-            session.quiz.mode == Quiz.MODE_PRACTICE
-            or session.is_closed
+                session.quiz.mode == Quiz.MODE_PRACTICE
+                or session.is_closed
         )
 
         options = []
@@ -203,7 +205,6 @@ class QuizAttemptView(GenericAPIView):
             return Response({"detail": "Aucune tentative à supprimer."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 
 class QuizCloseView(GenericAPIView):
@@ -377,3 +378,141 @@ class QuizViewSet(viewsets.ModelViewSet):
             {"detail": "Question retirée du quiz."},
             status=status.HTTP_204_NO_CONTENT,
         )
+
+    @action(detail=False, methods=["post"], url_path="subject-question-count")
+    def subject_question_count(self, request, *args, **kwargs):
+        subject_ids = request.data.get("subject_ids", [])
+        print(subject_ids)
+
+        if not isinstance(subject_ids, list):
+            return Response(
+                {"detail": "subject_ids doit être une liste d'entiers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Questions actives liées à AU MOINS 1 des subjects sélectionnés
+        qs = (
+            Question.objects.filter(
+                active=True,  # adapte le nom du champ si différent
+                is_mode_practice=True,
+                subjects__id__in=subject_ids
+            )
+            .distinct()
+        )
+
+        return Response({"count": qs.count()})
+
+    @action(detail=False, methods=["post"], url_path="generate", permission_classes=[IsAuthenticated])
+    def generate(self, request, *args, **kwargs):
+        subject_ids = request.data.get("subject_ids", [])
+        max_questions = int(request.data.get("max_questions", 10))
+
+        if not isinstance(subject_ids, list):
+            return Response(
+                {"detail": "subject_ids doit être une liste d'entiers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Optionnel : vérifier que ce sont bien des entiers
+        try:
+            subject_ids = [int(sid) for sid in subject_ids]
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "subject_ids doit contenir uniquement des entiers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Pool de questions
+        qs = (
+            Question.objects.filter(
+                active=True,
+                is_mode_practice=True,
+                subjects__id__in=subject_ids,
+            )
+            .distinct()
+        )
+
+        total_available = qs.count()
+        if total_available == 0:
+            return Response(
+                {"detail": "Aucune question disponible pour ces sujets."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # On limite au nombre disponible
+        nb_to_pick = min(max_questions, total_available)
+
+        questions = list(qs)
+        questions_sample = random.sample(questions, nb_to_pick)
+
+        # Création du quiz "temporaire/généré"
+        title = request.data.get("title") or f"Quiz généré {timezone.now():%Y-%m-%d %H:%M}"
+        description = request.data.get("description", "Quiz généré automatiquement.")
+
+        quiz = Quiz.objects.create(
+            title=title,
+            description=description,
+            mode=Quiz.MODE_PRACTICE,
+            max_questions=nb_to_pick,
+        )
+
+        # Création des liaisons via QuizQuestion (PAS .questions.add)
+        for idx, q in enumerate(questions_sample, start=1):
+            QuizQuestion.objects.create(
+                quiz=quiz,
+                question=q,
+                sort_order=idx,
+                weight=1,
+            )
+
+        # Création de la session (et on la démarre directement)
+        session = QuizSession.objects.create(
+            quiz=quiz,
+            user=request.user,
+            started_at=timezone.now(),
+        )
+
+        return Response(
+            {
+                "detail": "Quiz généré",
+                "quiz_slug": quiz.slug,
+                "quiz_id": quiz.id,
+                "session_id": str(session.id),
+                "question_count": nb_to_pick,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def list(self, request, *args, **kwargs):
+        print("QUIZVIEWSET LIST")
+        """
+        GET /api/quiz/
+        -> liste des sessions de quiz liées à ce user.
+        """
+
+        if request.user.is_staff or getattr(request.user, "is_admin", False):
+            qs = QuizSession.objects.all().order_by("created_at")
+        else:
+            qs = QuizSession.objects.filter(user=request.user).order_by("created_at")
+
+        search = request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                Q(quiz__title__icontains=search) |
+                Q(user__first_name__icontains=search) |
+                Q(user__last_name__icontains=search) |
+                Q(user__username__icontains=search) |
+                Q(created_at__icontains=search) |
+                Q(started_at__icontains=search) |
+                Q(expired_at__icontains=search)
+            )
+
+        # 🔹 Pagination DRF standard
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = QuizSessionSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # 🔹 Cas sans pagination
+        serializer = QuizSessionSerializer(qs, many=True)
+        return Response(serializer.data)

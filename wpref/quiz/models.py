@@ -21,7 +21,7 @@ class Quiz(models.Model):
     mode = models.CharField(
         max_length=10,
         choices=MODE_CHOICES,
-        default=MODE_EXAM,  # par défaut : mode examen
+        default=MODE_PRACTICE,  # par défaut : mode examen
     )
     description = models.TextField("Description", blank=True)
 
@@ -52,7 +52,16 @@ class Quiz(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            base_slug = slugify(self.title) or "quiz"
+            slug = base_slug
+            counter = 1
+
+            # Boucle tant qu'un quiz avec ce slug existe déjà
+            while Quiz.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            self.slug = slug
         super().save(*args, **kwargs)
 
     @property
@@ -98,7 +107,7 @@ class QuizQuestion(models.Model):
 class QuizSession(models.Model):
     """
     Une instance de quiz pour un utilisateur (ou anonyme).
-    C'est ce 'quiz_id' que tu renvoies à /quiz/<slug>/start/.
+    C'est ce 'quiz_id' que tu renvoies 1à /quiz/<slug>/start/.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="sessions")
@@ -109,30 +118,42 @@ class QuizSession(models.Model):
         on_delete=models.SET_NULL,
         related_name="quiz_sessions",
     )
-
     # ✅ date de début du quiz (stocke la date actuelle)
-    started_at = models.DateTimeField(default=timezone.now)
-
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    expired_at = models.DateTimeField(null=True, blank=True)
     # ✅ booléen pour savoir si le quiz est clôturé
     is_closed = models.BooleanField(default=False)
-
-    # ✅ durée maximale du quiz (par défaut 30 minutes)
-    max_duration = models.DurationField(default=timedelta(minutes=30))
+    # ✅ durée maximale du quiz (par défaut 10 minutes)
+    max_duration = models.PositiveIntegerField(default=10)
 
     def __str__(self):
         return f"Session {self.user} - {self.quiz}"
 
     @property
     def expires_at(self):
-        return self.started_at + self.max_duration
+        if self.expired_at:
+            return self.expired_at
+        return None
 
     @property
     def is_expired(self):
-        return timezone.now() > self.expires_at
+        if self.expired_at :
+            return timezone.now() > self.expires_at
+        return None
+
+    @property
+    def is_done(self):
+        return self.is_expired or self.is_closed
 
     def can_answer(self):
         """Petit helper pratique dans les vues."""
         return not self.is_closed and not self.is_expired
+
+    def save(self, *args, **kwargs):
+        if self.started_at and not self.expired_at:
+            self.expired_at = self.started_at + timedelta(minutes=self.max_duration)
+        super().save(*args, **kwargs)
 
 class QuizAttempt(models.Model):
     """

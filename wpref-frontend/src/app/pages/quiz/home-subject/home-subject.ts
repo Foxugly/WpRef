@@ -3,19 +3,12 @@ import {CommonModule} from '@angular/common';
 import {FormBuilder, FormGroup, ReactiveFormsModule} from '@angular/forms';
 
 import {Subject, SubjectService} from '../../../services/subject/subject';
-
+import {QuizService, QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
 import {MultiSelectModule} from 'primeng/multiselect';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {Checkbox} from 'primeng/checkbox';
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
-
-export interface QuizSubjectCreatePayload {
-  subject_ids: number[];
-  n_question: number;
-  with_timer: boolean;
-  timer: number | null;
-}
 
 @Component({
   standalone: true,
@@ -32,6 +25,7 @@ export class QuizSubjectHome implements OnInit {
   subjects = signal<Subject[]>([]);
   //selectedSubjectIds: number[] = [];
   private subjectService = inject(SubjectService);
+  private quizService = inject(QuizService);
   private fb = inject(FormBuilder);
   // Formulaire principal
   form: FormGroup = this.fb.group({
@@ -60,9 +54,10 @@ export class QuizSubjectHome implements OnInit {
       return;
     }
     this.saving.set(true);
+    console.log("GENERATE")
     const raw = this.form.value as QuizSubjectCreatePayload;
     // TODO: appel backend /quiz/start ou autre
-    /* this.questionService.create(raw).subscribe({
+    this.quizService.generateQuizSession(raw).subscribe({
       next: () => {
         this.saving.set(false);
         this.success.set('Question créée avec succès.');
@@ -76,10 +71,7 @@ export class QuizSubjectHome implements OnInit {
         }
         this.saving.set(false);
       },
-    });*/
-
-    this.saving.set(false);
-    this.success.set('Quiz prêt à démarrer (simulation).');
+    });
   }
 
   private setMaxQuestions(maxQuestions: number): void {
@@ -99,8 +91,22 @@ export class QuizSubjectHome implements OnInit {
     console.log("onChangeSubjects");
     const selectedIds = this.form.get('subject_ids')?.value as number[];
     console.log(selectedIds);
-    // TODO APPEL /quiz/n/ avec
-    this.setMaxQuestions(42);
+    this.quizService.getQuestionCountBySubjects(selectedIds).subscribe({
+      next: (data) => {
+        this.saving.set(false);
+        this.success.set('Question mise à jour avec succès.');
+        this.setMaxQuestions(data.count);
+      },
+      error: (err) => {
+        console.error('Erreur update question', err);
+        if (err.error && typeof err.error === 'object') {
+          this.error.set(JSON.stringify(err.error));
+        } else {
+          this.error.set("Erreur lors de l'enregistrement de la question.");
+        }
+        this.saving.set(false);
+      },
+    });
   }
 
   private loadSubjects(): void {
