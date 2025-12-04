@@ -2,74 +2,69 @@
   <h2>Questions</h2>
   <div class="actions">
     <input (ngModelChange)="q.set($event); load()" [ngModel]="q()" pInputText placeholder="Rechercher…">
-    <p-button icon="pi pi-plus" id="btn_add_subject" label="Nouveau" (onClick)="goNew()"  severity="primary"></p-button>
+    <p-button (onClick)="goNew()" icon="pi pi-plus" id="btn_add_subject" label="Nouveau" severity="primary"></p-button>
   </div>
 </div>
 
-<div class="card">
-  @if ((questions() || []).length === 0) {
-    <p class="muted">Aucune question.</p>
-  } @else {
-    <table class="table">
-      <thead>
-      <tr>
-        <th>Titre</th>
-        <th>Active</th>
-        <th>Subjects</th>
-        <th style="width:60px;">Actions</th>
-      </tr>
-      </thead>
-      <tbody>
-        @for (q of pagedQuestions; track q.id) {
-          <tr>
-            <td>{{ q.title }}</td>
-            <td class="center"><i
-              class="pi"
-              [ngClass]="q.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
-            ></i></td>
-            <td class="center">@if (q.subjects) {
-              @if (q.subjects.length) {
-                <div class="quiz-question__subjects">
-                  @for (s of q.subjects; track s.id) {
-                    <p-button
-                      [label]="s.name"
-                      size="small"
-                      (onClick)="goSubject(s.id)"
-                      variant="outlined"
-                      severity="secondary"
-                      [style]="{ marginRight: '5px' }"
-                    ></p-button>
-                  }
-                </div>
-              }
-            }</td>
-            <td class="row-actions">
-              <p-button id="btn_add_question" icon="pi pi-eye" (click)="goView(q.id)" severity="secondary"
-                        size="small"></p-button>
-              <p-button id="btn_add_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"></p-button>
-              <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger"
-                        size="small"></p-button>
-            </td>
-          </tr>
+<p-table
+  [value]="pagedQuestions"
+  showGridlines
+  size="small"
+  stripedRows
+>
+  <ng-template #header>
+    <tr>
+      <th>Titre</th>
+      <th>Active</th>
+      <th>Subjects</th>
+      <th style="width:60px;">Actions</th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-q>
+    <tr>
+      <td>{{ q.title }}</td>
+      <td class="center-cell"><i
+        [ngClass]="q.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+        class="pi"
+      ></i></td>
+      <td class="center-cell">@if (q.subjects) {
+        @if (q.subjects.length) {
+          <div class="quiz-question__subjects">
+            @for (s of q.subjects; track s.id) {
+              <p-button
+                (onClick)="goSubject(s.id)"
+                [label]="s.name"
+                [style]="{ marginRight: '5px' }"
+                severity="secondary"
+                size="small"
+                variant="outlined"
+              ></p-button>
+            }
+          </div>
         }
-      </tbody>
-    </table>
-        <table class="table">
-      <!-- thead + tbody (comme ci-dessus) -->
-    </table>
-    @if (questions().length > rows) {
-      <div class="table-paginator">
-        <p-paginator
-          [rows]="rows"
-          [totalRecords]="questions().length"
-          [first]="first"
-          [rowsPerPageOptions]="[5, 10, 20, 50]"
-          (onPageChange)="onPageChange($event)"
-        ></p-paginator>
-      </div>
-    }
+      }</td>
+      <td class="row-actions">
+        <p-button (click)="goView(q.id)" icon="pi pi-eye" id="btn_add_question" severity="secondary"
+                  size="small"></p-button>
+        <p-button (click)="goEdit(q.id)" icon="pi pi-pencil" id="btn_add_question" severity="info"
+                  size="small"></p-button>
+        <p-button (click)="goDelete(q.id)" icon="pi pi-trash" id="btn_delete_question" severity="danger"
+                  size="small"></p-button>
+      </td>
+    </tr>
 
-  }
-</div>
+  </ng-template>
+</p-table>
+@if (questions().length > rows) {
+  <div class="table-paginator">
+    <p-paginator
+      (onPageChange)="onPageChange($event)"
+      [first]="first"
+      [rowsPerPageOptions]="[5, 10, 20, 50]"
+      [rows]="rows"
+      [totalRecords]="questions().length"
+    ></p-paginator>
+  </div>
+}
 
 

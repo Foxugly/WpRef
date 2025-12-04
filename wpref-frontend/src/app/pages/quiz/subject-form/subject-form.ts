@@ -2,13 +2,15 @@ import {Component, EventEmitter, inject, Input, OnInit, Output, signal} from '@a
 import {CommonModule} from '@angular/common';
 import {FormBuilder, FormGroup, ReactiveFormsModule} from '@angular/forms';
 
-import {Subject, SubjectService} from '../../../services/subject/subject';
-import {QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
+
 import {MultiSelectModule} from 'primeng/multiselect';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {CheckboxModule} from 'primeng/checkbox';
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
+
+import {Subject, SubjectService} from '../../../services/subject/subject';
+import {QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
 
 @Component({
   standalone: true,
@@ -32,9 +34,9 @@ export class QuizSubjectForm implements OnInit {
   // Formulaire principal
   form: FormGroup = this.fb.group({
     subject_ids: [[] as number[]],
-    n_questions: [10],
-    with_timer: [true],
-    timer: [10],
+    max_questions: [10],
+    with_duration: [true],
+    duration: [10],
   });
 
   private _maxQuestions: number | null = null;
@@ -67,7 +69,6 @@ export class QuizSubjectForm implements OnInit {
 
   onSubmit(): void {
     this.error.set(null);
-
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -77,18 +78,13 @@ export class QuizSubjectForm implements OnInit {
   }
 
   onChangeSubjects(): void {
-    console.log("Subject-form onChangeSubjects");
     const selectedIds = this.form.get('subject_ids')?.value as number[];
     this.subjectsChange.emit(selectedIds);
   }
 
   private applyMaxQuestions(maxQuestions: number): void {
-    console.log("subject-form applyMaxQuestions");
-    console.log(maxQuestions);
-
     const ctrl = this.form.get('n_questions');
     const current = ctrl?.value ?? 0;
-
     if (current > maxQuestions) {
       ctrl?.setValue(maxQuestions);
     }

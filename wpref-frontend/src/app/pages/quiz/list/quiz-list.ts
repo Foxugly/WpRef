@@ -7,10 +7,11 @@ import {PaginatorModule} from 'primeng/paginator';
 import {QuizService, QuizSession, QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
 import {DialogModule} from 'primeng/dialog';
 import {QuizSubjectForm} from '../subject-form/subject-form'
+import {TableModule} from 'primeng/table';
 
 @Component({
   selector: 'app-quiz-list',
-  imports: [CommonModule, DialogModule, FormsModule, ButtonModule, InputTextModule, PaginatorModule, QuizSubjectForm],
+  imports: [CommonModule, DialogModule, FormsModule, ButtonModule, InputTextModule, TableModule, PaginatorModule, QuizSubjectForm],
   templateUrl: './quiz-list.html',
   styleUrl: './quiz-list.scss',
 })
@@ -43,7 +44,6 @@ export class QuizList implements OnInit {
       .listQuizSession({search: this.q() || undefined})
       .subscribe({
         next: (quizz: QuizSession[]) => {
-          console.log(quizz)
           this.quizz.set(quizz);
           this.first = 0;
         },
@@ -77,11 +77,8 @@ export class QuizList implements OnInit {
   }
 
   onSubjectsChange(ids: number[]): void {
-    console.log("quiz-list onSubjectsChange");
     this.quizService.getQuestionCountBySubjects(ids).subscribe({
       next: (data): void => {
-        console.log("quiz-list onSubjectsChange retour");
-        console.log(data.count);
         this.maxQuestions.set(data.count);
       },
       error: (err): void => console.error('Erreur getQuestionCountBySubjects', err),

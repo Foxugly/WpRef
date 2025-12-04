@@ -33,6 +33,8 @@ class Quiz(models.Model):
     )
 
     is_active = models.BooleanField("Actif ?", default=True)
+    with_duration = models.BooleanField("Avec Timer ?", default=True)
+    duration = models.PositiveIntegerField("temps (en minutes)",default=10)
 
     # Pool de questions possibles pour ce quiz
     questions = models.ManyToManyField(
@@ -125,7 +127,6 @@ class QuizSession(models.Model):
     # ✅ booléen pour savoir si le quiz est clôturé
     is_closed = models.BooleanField(default=False)
     # ✅ durée maximale du quiz (par défaut 10 minutes)
-    max_duration = models.PositiveIntegerField(default=10)
 
     def __str__(self):
         return f"Session {self.user} - {self.quiz}"
@@ -152,7 +153,7 @@ class QuizSession(models.Model):
 
     def save(self, *args, **kwargs):
         if self.started_at and not self.expired_at:
-            self.expired_at = self.started_at + timedelta(minutes=self.max_duration)
+            self.expired_at = self.started_at + timedelta(minutes=self.quiz.duration)
         super().save(*args, **kwargs)
 
 class QuizAttempt(models.Model):

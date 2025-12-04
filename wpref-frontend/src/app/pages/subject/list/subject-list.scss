@@ -91,3 +91,10 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: center;
 }
+
+:host ::ng-deep .p-datatable thead > tr > th {
+  text-align: center !important;
+}
+.center-cell {
+  text-align: center;
+}

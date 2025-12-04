@@ -48,9 +48,11 @@ class QuizAdmin(admin.ModelAdmin):
         "mode",
         "is_active",
         "questions_count",
+        "with_duration",
+        "duration",
         "created_at",
     )
-    list_filter = ("mode", "is_active", "created_at")
+    list_filter = ("mode", "is_active", "max_questions", "with_duration", "duration", "created_at")
     search_fields = ("title", "description")
     prepopulated_fields = {"slug": ("title",)}
     inlines = [QuizQuestionInline]
@@ -60,7 +62,7 @@ class QuizAdmin(admin.ModelAdmin):
             "fields": ("title", "slug", "mode", "description"),
         }),
         ("Configuration", {
-            "fields": ("max_questions", "is_active"),
+            "fields": ("max_questions", "is_active", "with_duration", "duration"),
         }),
         ("Métadonnées", {
             "fields": ("questions_count", "created_at"),
@@ -78,21 +80,22 @@ class QuizSessionAdmin(admin.ModelAdmin):
         "id",
         "quiz",
         "user",
+        "created_at",
         "started_at",
+        "expired_at",
         "is_closed",
-        "is_expired_admin",
-        "max_duration",
+        #"is_expired_admin",
     )
-    list_filter = ("quiz", "is_closed", "started_at")
+    list_filter = ("quiz", "user", "is_closed")
     search_fields = ("id", "quiz__title", "user__username", "user__email")
-    readonly_fields = ("started_at", "expires_at_admin")
+    #readonly_fields = ("started_at", "expires_at_admin")
 
     fieldsets = (
         (None, {
-            "fields": ("quiz", "user"),
+            "fields": ("id", "quiz", "user"),
         }),
         ("État", {
-            "fields": ("started_at", "max_duration", "is_closed", "expires_at_admin"),
+            "fields": ("created_at", "started_at", "expired_at", "is_closed"),
         }),
     )
 

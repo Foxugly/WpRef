@@ -7,9 +7,9 @@ import {Question} from '../question/question';
 
 export interface QuizSubjectCreatePayload {
   subject_ids: number[];
-  n_question: number;
-  with_timer: boolean;
-  timer: number | null;
+  max_questions: number;
+  with_duration: boolean;
+  duration: number | null;
 }
 
 export interface QuizSession {
@@ -18,9 +18,10 @@ export interface QuizSession {
   title: string;
   is_closed: boolean;
   subject_ids: number[];
-  nb_questions : number;
-  max_duration : number;
-  with_timer: boolean;
+  mode : string;
+  max_questions : number;
+  duration : number;
+  with_duration: boolean;
   timer: number | null;
   questions: Question[];
   created_at: string;

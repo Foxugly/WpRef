@@ -1,6 +1,7 @@
 # quiz/api/views.py
 import random
 
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -11,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
+from subject.models import Subject
 
 from .models import Quiz, QuizQuestion, QuizSession, QuizAttempt, QuizAnswer
 from .serializers import (
@@ -20,7 +22,7 @@ from .serializers import (
     QuizSummarySerializer,
     QuizSerializer,
     QuizQuestionInlineSerializer,
-    QuizQuestionUpdateSerializer, QuizAttemptDetailSerializer
+    QuizQuestionUpdateSerializer, QuizAttemptDetailSerializer, QuizGenerateInputSerializer
 )
 
 
@@ -40,7 +42,8 @@ class QuizStartView(GenericAPIView):
             "quiz": session.quiz.id,
             "started_at": session.started_at,
             "is_closed": session.is_closed,
-            "max_duration": session.max_duration,
+            "with_duration": session.quiz.with_duration,
+            "duration": session.quiz.duration,
             "n_questions": session.quiz.max_questions,
         }
         return Response(data, status=status.HTTP_201_CREATED)
@@ -273,9 +276,10 @@ class QuizSummaryView(GenericAPIView):
             "started_at": session.started_at,
             "is_closed": session.is_closed,
             "is_expired": session.is_expired,
-            "max_duration": session.max_duration,
+            "with_duration": session.quiz.with_duration,
+            "duration": session.quiz.duration,
             "expires_at": session.expires_at,
-            "total_questions": total_questions,
+            "max_questions": session.quiz.max_questions,
             "answered_questions": answered_questions,
             "correct_answers": correct_answers,
         }
@@ -402,25 +406,23 @@ class QuizViewSet(viewsets.ModelViewSet):
 
         return Response({"count": qs.count()})
 
-    @action(detail=False, methods=["post"], url_path="generate", permission_classes=[IsAuthenticated])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="generate",
+        permission_classes=[IsAuthenticated],
+    )
     def generate(self, request, *args, **kwargs):
-        subject_ids = request.data.get("subject_ids", [])
-        max_questions = int(request.data.get("max_questions", 10))
+        input_serializer = QuizGenerateInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        data = input_serializer.validated_data
 
-        if not isinstance(subject_ids, list):
-            return Response(
-                {"detail": "subject_ids doit être une liste d'entiers"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Optionnel : vérifier que ce sont bien des entiers
-        try:
-            subject_ids = [int(sid) for sid in subject_ids]
-        except (TypeError, ValueError):
-            return Response(
-                {"detail": "subject_ids doit contenir uniquement des entiers"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        subject_ids = data["subject_ids"]
+        max_questions = data["max_questions"]
+        with_duration = data["with_duration"]
+        duration = data["duration"]
+        title = data.get("title") or f"Quiz généré {timezone.now():%Y-%m-%d %H:%M}"
+        description_from_request = data.get("description")
 
         # Pool de questions
         qs = (
@@ -439,38 +441,59 @@ class QuizViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # On limite au nombre disponible
+        # Limiter au nombre disponible
         nb_to_pick = min(max_questions, total_available)
 
-        questions = list(qs)
-        questions_sample = random.sample(questions, nb_to_pick)
+        # Tirage aléatoire sans charger tous les objets complets si tu veux optimiser la mémoire
+        question_ids = list(qs.values_list("id", flat=True))
+        picked_ids = random.sample(question_ids, nb_to_pick)
+        picked_questions = list(
+            Question.objects.filter(id__in=picked_ids)
+        )  # garde l’ordre arbitraire, c’est OK pour un quiz random
 
-        # Création du quiz "temporaire/généré"
-        title = request.data.get("title") or f"Quiz généré {timezone.now():%Y-%m-%d %H:%M}"
-        description = request.data.get("description", "Quiz généré automatiquement.")
+        # Préparation description
+        subject_names = Subject.objects.filter(
+            id__in=subject_ids
+        ).values_list("name", flat=True)
 
-        quiz = Quiz.objects.create(
-            title=title,
-            description=description,
-            mode=Quiz.MODE_PRACTICE,
-            max_questions=nb_to_pick,
-        )
+        default_description = "Quiz généré automatiquement.\n"
+        default_description += "Sujet(s) : " + " - ".join(sorted(set(subject_names))) + "\n"
+        default_description += f"Nombre de questions : {nb_to_pick}\n"
+        default_description += "Durée : "
+        if with_duration:
+            default_description += f"Oui ({duration} minutes)\n"
+        else:
+            default_description += "Non\n"
 
-        # Création des liaisons via QuizQuestion (PAS .questions.add)
-        for idx, q in enumerate(questions_sample, start=1):
-            QuizQuestion.objects.create(
-                quiz=quiz,
-                question=q,
-                sort_order=idx,
-                weight=1,
+        description = description_from_request or default_description
+
+        with transaction.atomic():
+            quiz = Quiz.objects.create(
+                title=title,
+                description=description,
+                mode=Quiz.MODE_PRACTICE,
+                max_questions=nb_to_pick,
+                duration=duration,
+                with_duration=with_duration,
             )
 
-        # Création de la session (et on la démarre directement)
-        session = QuizSession.objects.create(
-            quiz=quiz,
-            user=request.user,
-            started_at=timezone.now(),
-        )
+            # bulk_create pour optimiser les insertions
+            quiz_questions = [
+                QuizQuestion(
+                    quiz=quiz,
+                    question=q,
+                    sort_order=idx,
+                    weight=1,
+                )
+                for idx, q in enumerate(picked_questions, start=1)
+            ]
+            QuizQuestion.objects.bulk_create(quiz_questions)
+
+            # Création de la session
+            session = QuizSession.objects.create(
+                quiz=quiz,
+                user=request.user,
+            )
 
         return Response(
             {
@@ -483,6 +506,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+
     def list(self, request, *args, **kwargs):
         """
         GET /api/quiz/
@@ -490,9 +514,9 @@ class QuizViewSet(viewsets.ModelViewSet):
         """
 
         if request.user.is_staff or getattr(request.user, "is_admin", False):
-            qs = QuizSession.objects.all().order_by("created_at")
+            qs = QuizSession.objects.all().order_by("-created_at")
         else:
-            qs = QuizSession.objects.filter(user=request.user).order_by("created_at")
+            qs = QuizSession.objects.filter(user=request.user).order_by("-created_at")
 
         search = request.query_params.get("search")
         if search:

@@ -19,7 +19,7 @@
     <div class="field">
       <label for="nbQuestions">Nombre de questions <span *ngIf="maxQuestions"> (max: {{ maxQuestions }})</span></label>
       <p-inputNumber
-        formControlName="n_questions"
+        formControlName="max_questions"
         [max]="100"
         [min]="1"
         [showButtons]="true"
@@ -29,7 +29,7 @@
 
     <div class="field field--inline">
       <label>
-        <p-checkbox [binary]="true" formControlName="with_timer"></p-checkbox>
+        <p-checkbox [binary]="true" formControlName="with_duration"></p-checkbox>
         Timer activé
       </label>
     </div>
@@ -37,7 +37,7 @@
     <div class="field">
       <label for="timer">Timer (in minutes)</label>
       <p-inputNumber
-        formControlName="timer"
+        formControlName="duration"
         [max]="120"
         [min]="1"
         [showButtons]="true"

@@ -2,96 +2,98 @@
   <h2>Quizz</h2>
   <div class="actions">
     <input (ngModelChange)="q.set($event); load()" [ngModel]="q()" pInputText placeholder="Rechercher…">
-    <p-button icon="pi pi-plus" id="btn_add_subject" label="Nouveau" (onClick)="goNew()" severity="primary"></p-button>
+    <p-button (onClick)="goNew()" icon="pi pi-plus" id="btn_add_subject" label="Nouveau" severity="primary"></p-button>
   </div>
 </div>
 
-<div class="card">
-  @if ((quizz() || []).length === 0) {
-    <p class="muted">Aucun quiz.</p>
-  } @else {
-    <table class="table">
-      <thead>
-      <tr>
-        <th>Titre</th>
-        <th>Utilisateur</th>
-        <th>Nb Questions</th>
-        <th>Duration</th>
-        <th>Active</th>
-        <th>Created at</th>
-        <th>Started at</th>
-        <th>Ended at</th>
-        <th style="width:60px;">Actions</th>
-      </tr>
-      </thead>
-      <tbody>
-        @for (q of pagedQuiz; track q.id) {
-          <tr>
-            <td>{{ q.title }}</td>
-            <td class="center">{{ q.user }}</td>
-            <td class="center">{{ q.nb_questions }}</td>
-            <td class="center">{{ q.max_duration }}</td>
-            <td class="center"><i
-              class="pi"
-              [ngClass]="!q.is_closed ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
-            ></i></td>
-            <td>{{ q.created_at| date : 'medium' }}</td>
-            <td>{{ q.started_at| date : 'medium' }}</td>
-            <td>{{ q.closed_at| date : 'medium' }}</td>
-            <td class="row-actions">
-              <p-button id="btn_add_question" icon="pi pi-eye" (click)="goView(q.id)" severity="secondary"
-                        size="small"></p-button><!--
+<p-table
+  [value]="pagedQuiz"
+  showGridlines
+  size="small"
+  stripedRows
+>
+  <ng-template #header>
+    <tr>
+      <th>Titre</th>
+      <th>Utilisateur</th>
+      <th>Mode</th>
+      <th>Nb Questions</th>
+      <th>Duration</th>
+      <th>Active</th>
+      <th>Created at</th>
+      <th>Started at</th>
+      <th>Ended at</th>
+      <th style="width:60px;">Actions</th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-q>
+    <tr>
+      <td>{{ q.title }}</td>
+      <td class="center-cell">{{ q.user }}</td>
+      <td class="center-cell">{{ q.mode }}</td>
+      <td class="center-cell">{{ q.max_questions }}</td>
+      <td class="center-cell">
+        <i
+          [ngClass]="q.with_duration ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+          class="pi"
+        ></i>
+        @if (q.with_duration) {
+          ( {{ q.duration }} min)
+        }</td>
+      <td class="center-cell"><i
+        [ngClass]="!q.is_closed ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+        class="pi"
+      ></i></td>
+      <td class="center-cell">{{ q.created_at| date : 'short' }}</td>
+      <td class="center-cell">{{ q.started_at| date : 'short' }}</td>
+      <td class="center-cell">{{ q.closed_at| date : 'short' }}</td>
+      <td class="row-actions">
+        <p-button (click)="goView(q.id)" icon="pi pi-eye" id="btn_add_question" severity="secondary"
+                  size="small"></p-button><!--
               <p-button id="btn_add_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"></p-button>
               <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger"
                         size="small"></p-button>-->
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-    <table class="table">
-      <!-- thead + tbody (comme ci-dessus) -->
-    </table>
-
-    @if (quizz().length > rows) {
-      <div class="table-paginator">
-        <p-paginator
-          [rows]="rows"
-          [totalRecords]="quizz().length"
-          [first]="first"
-          [rowsPerPageOptions]="[5, 10, 20, 50]"
-          (onPageChange)="onPageChange($event)"
-        ></p-paginator>
-      </div>
-    }
-  }
-</div>
+      </td>
+    </tr>
+  </ng-template>
+</p-table>
+@if (quizz().length > rows) {
+  <div class="table-paginator">
+    <p-paginator
+      (onPageChange)="onPageChange($event)"
+      [first]="first"
+      [rowsPerPageOptions]="[5, 10, 20, 50]"
+      [rows]="rows"
+      [totalRecords]="quizz().length"
+    ></p-paginator>
+  </div>
+}
 <p-dialog
-  header="Nouveau quiz"
   [(visible)]="visible"
+  [contentStyle]="{ 'max-height': '70vh', 'overflow-y': 'auto' }"
   [modal]="true"
   [style]="{ width: '600px', height: '80vh' }"
-  [contentStyle]="{ 'max-height': '70vh', 'overflow-y': 'auto' }"
+  header="Nouveau quiz"
 >
   <app-quiz-subject-form
     #subjectForm
-    [saving]="saving()"
-    [success]="success()"
-    [maxQuestions]="maxQuestions()"
     (generate)="onGenerate($event)"
     (subjectsChange)="onSubjectsChange($event)"
+    [maxQuestions]="maxQuestions()"
+    [saving]="saving()"
+    [success]="success()"
   >
   </app-quiz-subject-form>
 
   <ng-template pTemplate="footer">
     <button
-      pButton
-      label="Générer"
-      icon="pi pi-sync"
-      [disabled]="saving()"
       (click)="subjectForm.submitForm()"
+      [disabled]="saving()"
+      icon="pi pi-sync"
+      label="Générer"
+      pButton
     ></button>
-    <button pButton label="Annuler" class="p-button-text" (click)="closeDialog()"></button>
+    <button (click)="closeDialog()" class="p-button-text" label="Annuler" pButton></button>
   </ng-template>
 
 </p-dialog>

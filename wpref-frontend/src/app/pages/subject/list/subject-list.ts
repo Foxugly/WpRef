@@ -4,11 +4,12 @@ import { SubjectService, Subject } from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
+import {TableModule} from 'primeng/table';
 
 @Component({
   standalone: true,
   selector: 'app-subject-list',
-  imports: [FormsModule, Button, InputTextModule, PaginatorModule],
+  imports: [FormsModule, Button, InputTextModule, PaginatorModule, TableModule],
   templateUrl: './subject-list.html',
   styleUrl: './subject-list.scss'
 })

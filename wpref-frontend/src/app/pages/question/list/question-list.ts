@@ -5,12 +5,13 @@ import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {CommonModule} from '@angular/common';
 import {PaginatorModule} from 'primeng/paginator';
+import {TableModule} from 'primeng/table';
 
 
 @Component({
   standalone: true,
   selector: 'app-question-list',
-  imports: [CommonModule, FormsModule, Button, InputTextModule, PaginatorModule],
+  imports: [CommonModule, FormsModule, Button, InputTextModule, PaginatorModule, TableModule],
   templateUrl: './question-list.html',
   styleUrl: './question-list.scss'
 })
