@@ -2,7 +2,7 @@
   <h2>Quizz</h2>
   <div class="actions">
     <input (ngModelChange)="q.set($event); load()" [ngModel]="q()" pInputText placeholder="Rechercher…">
-    <p-button icon="pi pi-plus" id="btn_add_subject" label="Nouveau" (onClick)="goNew()"  severity="primary"></p-button>
+    <p-button icon="pi pi-plus" id="btn_add_subject" label="Nouveau" (onClick)="goNew()" severity="primary"></p-button>
   </div>
 </div>
 
@@ -37,9 +37,9 @@
             ></i></td>
             <td>{{ q.created_at| date : 'medium' }}</td>
             <td>{{ q.started_at| date : 'medium' }}</td>
-            <td>{{ q.closed_at| date : 'medium'   }}</td>
+            <td>{{ q.closed_at| date : 'medium' }}</td>
             <td class="row-actions">
-             <p-button id="btn_add_question" icon="pi pi-eye" (click)="goView(q.id)" severity="secondary"
+              <p-button id="btn_add_question" icon="pi pi-eye" (click)="goView(q.id)" severity="secondary"
                         size="small"></p-button><!--
               <p-button id="btn_add_question" icon="pi pi-pencil" (click)="goEdit(q.id)" severity="info" size="small"></p-button>
               <p-button id="btn_delete_question" icon="pi pi-trash" (click)="goDelete(q.id)" severity="danger"
@@ -49,7 +49,7 @@
         }
       </tbody>
     </table>
-        <table class="table">
+    <table class="table">
       <!-- thead + tbody (comme ci-dessus) -->
     </table>
 
@@ -66,5 +66,33 @@
     }
   }
 </div>
+<p-dialog
+  header="Nouveau quiz"
+  [(visible)]="visible"
+  [modal]="true"
+  [style]="{ width: '600px', height: '80vh' }"
+  [contentStyle]="{ 'max-height': '70vh', 'overflow-y': 'auto' }"
+>
+  <app-quiz-subject-form
+    #subjectForm
+    [saving]="saving()"
+    [success]="success()"
+    [maxQuestions]="maxQuestions()"
+    (generate)="onGenerate($event)"
+    (subjectsChange)="onSubjectsChange($event)"
+  >
+  </app-quiz-subject-form>
 
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      label="Générer"
+      icon="pi pi-sync"
+      [disabled]="saving()"
+      (click)="subjectForm.submitForm()"
+    ></button>
+    <button pButton label="Annuler" class="p-button-text" (click)="closeDialog()"></button>
+  </ng-template>
+
+</p-dialog>
 

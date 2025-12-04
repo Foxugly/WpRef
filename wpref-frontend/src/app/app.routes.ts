@@ -27,7 +27,6 @@ import { QuestionDelete } from './pages/question/delete/question-delete';
 import { QuestionView } from './pages/question/view/question-view';
 
 // QUIZ
-import { QuizSubjectHome } from './pages/quiz/home-subject/home-subject';
 import { QuizList } from './pages/quiz/list/quiz-list';
 
 export const routes: Routes = [
@@ -51,6 +50,5 @@ export const routes: Routes = [
   { path: 'question/:id/delete', component: QuestionDelete , canActivate: [authGuard] },
   { path: 'question/:id/view', component: QuestionView , canActivate: [authGuard]  },
   // QUIZ
-  { path: 'quiz/subject', component: QuizSubjectHome},
   { path: 'quiz/list', component: QuizList},
 ];

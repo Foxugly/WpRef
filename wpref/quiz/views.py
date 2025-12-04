@@ -484,7 +484,6 @@ class QuizViewSet(viewsets.ModelViewSet):
         )
 
     def list(self, request, *args, **kwargs):
-        print("QUIZVIEWSET LIST")
         """
         GET /api/quiz/
         -> liste des sessions de quiz liées à ce user.

@@ -1,31 +1,44 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Button} from 'primeng/button';
+import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {CommonModule} from '@angular/common';
 import {PaginatorModule} from 'primeng/paginator';
-import {QuizSession, QuizService} from '../../../services/quiz/quiz';
-import {Question} from '../../../services/question/question';
+import {QuizService, QuizSession, QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
+import {DialogModule} from 'primeng/dialog';
+import {QuizSubjectForm} from '../subject-form/subject-form'
 
 @Component({
-  selector: 'app-list',
-  imports: [CommonModule, FormsModule, Button, InputTextModule, PaginatorModule],
+  selector: 'app-quiz-list',
+  imports: [CommonModule, DialogModule, FormsModule, ButtonModule, InputTextModule, PaginatorModule, QuizSubjectForm],
   templateUrl: './quiz-list.html',
   styleUrl: './quiz-list.scss',
 })
 export class QuizList implements OnInit {
   quizz = signal<QuizSession[]>([]);
   q = signal('');
-  // 👉 ÉTAT DE PAGINATION
+
   first = 0;           // index de départ (offset)
   rows = 10;           // nb de lignes par page
+  // état dialog
+  visible = false;
+
+  saving = signal(false);
+  success = signal<string | null>(null);
+  maxQuestions = signal<number | null>(null);
+
   private quizService = inject(QuizService);
 
-  ngOnInit() {
+  get pagedQuiz(): QuizSession[] {
+    const all = this.quizz() || [];
+    return all.slice(this.first, this.first + this.rows);
+  }
+
+  ngOnInit(): void {
     this.load();
   }
 
-  load() {
+  load(): void {
     this.quizService
       .listQuizSession({search: this.q() || undefined})
       .subscribe({
@@ -41,19 +54,50 @@ export class QuizList implements OnInit {
       });
   }
 
-  goNew():void{
-    this.quizService.goNew();
+  closeDialog(): void {
+    this.visible = false;
   }
-  goView(id:number):void{
+
+  onGenerate(payload: any): void {
+    this.saving.set(true);
+    this.success.set(null);
+
+    this.quizService.generateQuizSession(payload).subscribe({
+      next: (): void => {
+        this.saving.set(false);
+        this.success.set('Quiz généré avec succès.');
+        this.closeDialog();
+        this.load();
+      },
+      error: (err) => {
+        console.error('Erreur génération quiz', err);
+        this.saving.set(false);
+      },
+    });
+  }
+
+  onSubjectsChange(ids: number[]): void {
+    console.log("quiz-list onSubjectsChange");
+    this.quizService.getQuestionCountBySubjects(ids).subscribe({
+      next: (data): void => {
+        console.log("quiz-list onSubjectsChange retour");
+        console.log(data.count);
+        this.maxQuestions.set(data.count);
+      },
+      error: (err): void => console.error('Erreur getQuestionCountBySubjects', err),
+    });
+  }
+
+  goNew(): void {
+    this.success.set(null);
+    this.visible = true;
+  }
+
+  goView(id: number): void {
     this.quizService.goList();
   }
 
-  get pagedQuiz(): QuizSession[] {
-    const all = this.quizz() || [];
-    return all.slice(this.first, this.first + this.rows);
-  }
-
-  onPageChange(event: any) {
+  onPageChange(event: any): void {
     this.first = event.first;   // index de départ
     this.rows = event.rows;     // nb d’items par page
   }
