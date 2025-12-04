@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* On laisse le wrapper gérer la largeur */
+.question-button {
+  width: 100%;
+}
+
+/* On cible le VRAI bouton interne PrimeNG en cassant l'encapsulation */
+:host ::ng-deep .question-button .p-button {
+  height: 30px;          /* hauteur uniforme pour tous */
+  min-width : 30px;
+  width: 70%;
+  padding: 0;            /* pour éviter les variations */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}

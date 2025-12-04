@@ -1,0 +1,23 @@
+<div class="layout">
+  <aside class="layout__left">
+    <p class="center">QUIZ TITLE</p>
+    <p class="center">USER</p>
+    <p class="center">MODE</p>
+    <p class="center">DURATION </p>
+    <p class="center">09:59</p>
+    <app-quiz-nav
+      [items]="questions"
+      [columns]="5"
+      (questionSelected)="onQuestionSelected($event)"
+    ></app-quiz-nav>
+  </aside>
+
+  <main class="layout__right">
+    <!-- ta question courante, etc. -->
+    Question actuelle : {{ currentQuestionIndex }}
+
+    <!-- exemples de boutons de test -->
+    <button (click)="markAnswered(currentQuestionIndex)">Marquer comme répondue</button>
+    <button (click)="toggleFlag(currentQuestionIndex)">Basculer flag</button>
+  </main>
+</div>

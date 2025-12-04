@@ -1,0 +1,9 @@
+:host {
+  display: block;
+}
+
+.quiz-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), 1fr);
+  gap: 0.5rem;
+}

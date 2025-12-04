@@ -1,0 +1,14 @@
+<p-panel header="Questions">
+  <div class="quiz-grid" [style.--cols]="columns">
+    <app-question-button
+      *ngFor="let item of items"
+      [label]="item.index.toString()"
+      [backgroundColor]="getBackgroundColor(item)"
+      [borderColor]="getBorderColor(item)"
+      [borderWidth]="getBorderWidth(item)"
+      [textColor]="getTextColor(item)"
+      borderRadius="6px"
+      (clicked)="onClick(item)"
+    ></app-question-button>
+  </div>
+</p-panel>

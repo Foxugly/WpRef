@@ -1,8 +1,20 @@
 <div class="user-menu">
   @if (auth.isLoggedIn()) {
-    <p-menu id="user_menu" #user_menu [model]="items" [popup]="true"/>
-    <p-button icon="pi pi-user" class="user-trigger" styleClass="btn-ghost" (click)="user_menu.toggle($event)" label="{{ auth.getUsername() }}"/>
+    <p-menu
+      id="user_menu"
+      #user_menu
+      [model]="items"
+      [popup]="true"/>
+    <p-button
+      icon="pi pi-user"
+      severity="secondary"
+      class="user-trigger"
+      (click)="user_menu.toggle($event)"
+      label="{{ auth.getUsername() }}"/>
   } @else {
-    <p-button styleClass="btn-ghost" routerLink="/login" routerLinkActive="active" label="login" />
+    <p-button
+      routerLink="/login"
+      routerLinkActive="active"
+      label="login" />
   }
 </div>

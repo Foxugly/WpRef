@@ -1,0 +1,48 @@
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+/* Colonne gauche : nav sticky */
+.layout__left {
+  flex: 0 0 25%;
+  min-width: 240px;
+  max-width: 380px;
+  box-sizing: border-box;
+
+  /* le panel reste visible quand on scrolle */
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Colonne droite : contenu qui scrolle */
+.layout__right {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+}
+
+/* 🔁 Responsive : en mobile, une seule colonne, plus de sticky */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .layout__left {
+    position: static;
+    width: 100%;
+    max-height: none;
+    order: 1;
+  }
+
+  .layout__right {
+    width: 100%;
+    order: 2;
+  }
+}
+
+.center{
+  text-align: center;
+}

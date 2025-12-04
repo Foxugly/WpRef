@@ -1,32 +1,19 @@
-<nav class="topmenu">
-  <p-menubar>
-    <!-- GAUCHE : logo + liens + langues -->
-    <ng-template pTemplate="start">
-      <div class="topmenu__left">
-        <img alt="Logo" class="logo" src="/assets/logo.svg"/>
-        <span class="title">WpRef</span>
+<p-menubar [model]="menuItems">
+  <!-- GAUCHE : logo + liens + langues -->
+  <ng-template pTemplate="start">
+    <a class="logo-container" routerLink="/">
+      <img alt="Logo" class="logo" src="/assets/logo.svg"/>
+    </a>
+  </ng-template>
 
-        <div class="topmenu__links">
-          @if (auth.isLoggedIn()) {
-            <!--<a routerLink="/subject/list" routerLinkActive="active">Sujets</a>
-            <a routerLink="/question/list" routerLinkActive="active">Questions</a>-->
-            <app-quiz-menu></app-quiz-menu>
-          }
-        </div>
-      </div>
-    </ng-template>
-
-    <!-- DROITE : menu utilisateur -->
-
-    <ng-template pTemplate="end">
-      <div class="topmenu__right">
-        <a routerLink="/about" routerLinkActive="active">A propos</a>
-        <app-lang-select
-          (langChange)="onLangChange($event)"
-          [lang]="currentLang">
-        </app-lang-select>
-        <app-user-menu></app-user-menu>
-      </div>
-    </ng-template>
-  </p-menubar>
-</nav>
+  <ng-template pTemplate="end">
+    <div class="right-zone">
+      <a routerLink="/about" routerLinkActive="active" class="link">A propos</a>
+      <app-lang-select
+        (langChange)="onLangChange($event)"
+        [lang]="currentLang">
+      </app-lang-select>
+      <app-user-menu></app-user-menu>
+    </div>
+  </ng-template>
+</p-menubar>

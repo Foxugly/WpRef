@@ -1,6 +1,25 @@
-:host ::ng-deep .btn-ghost.p-button,
-:host ::ng-deep .btn-ghost.p-button:hover{
-  background: transparent;
-  border: none;
-  box-shadow: none;
+/* Assure que le wrapper est visible */
+.user-menu {
+  display: flex;
+  align-items: center;
+}
+
+/* Bouton utilisateur toujours visible */
+:host ::ng-deep .user-trigger.p-button {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-color, #333) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/* Supprimer TOUT changement au survol */
+:host ::ng-deep .user-trigger.p-button:hover,
+:host ::ng-deep .user-trigger.p-button:focus,
+:host ::ng-deep .user-trigger.p-button:active {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
 }
