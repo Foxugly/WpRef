@@ -1,0 +1,105 @@
+<div class="page">
+  <div class="question__header">
+    <div class="header-left">
+      <p-button
+        (onClick)="goBack()"
+        icon="pi pi-arrow-left"
+        label="Retour à la liste"
+        severity="secondary"
+        text
+      ></p-button>
+    </div>
+
+    <h1 class="header-title">Résumé du quiz</h1>
+  </div>
+  @if (loading()) {
+    <div class="question-detail__status">Chargement…</div>
+  } @else if (error()) {
+    <div class="question-detail__status question-detail__status--error">
+      {{ error() }}
+    </div>
+  } @else {
+    @if (quizSession()) {
+      <p-card class="quiz-summary-card">
+        <div class="quiz-summary-grid">
+          <!-- Colonne 1 -->
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Titre</span>
+            <span class="quiz-summary-value">{{ quizSession()?.title }}</span>
+          </div>
+
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Utilisateur</span>
+            <span class="quiz-summary-value">{{ quizSession()?.user }}</span>
+          </div>
+
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Description</span>
+            <span class="quiz-summary-value">
+              <!-- À adapter si tu as une liste de subjects -->
+
+            </span>
+          </div>
+
+          <!-- Colonne 2 -->
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Mode</span>
+            <span class="quiz-summary-value">{{ quizSession()?.mode }}</span>
+          </div>
+
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Nombre de questions</span>
+            <span class="quiz-summary-value">{{ quizSession()?.max_questions }}</span>
+          </div>
+
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Timer</span>
+            <span class="quiz-summary-value">
+              {{ quizSession()?.with_duration ? 'Activé' : 'Désactivé' }}
+              @if (quizSession()?.with_duration) {
+                <span> ({{ quizSession()?.duration }} min)</span>
+              }
+            </span>
+          </div>
+
+          <!-- Colonne 3 -->
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Créé le</span>
+            <span class="quiz-summary-value">
+              {{ quizSession()?.created_at | date : 'short' }}
+            </span>
+          </div>
+
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Démarré le</span>
+            <span class="quiz-summary-value">
+              {{ quizSession()?.started_at | date : 'short' }}
+            </span>
+          </div>
+
+          <div class="quiz-summary-item">
+            <span class="quiz-summary-label">Expire le</span>
+            <span class="quiz-summary-value">
+              {{ quizSession()?.expired_at | date : 'short' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="quiz-summary-footer">
+          @if (quizSession()?.started_at) {
+            <span class="quiz-summary-action">
+              <i class="pi pi-arrow-right"></i>
+              <span>Aller à la question 1</span>
+            </span>
+          } @else {
+            <span class="quiz-summary-action">
+              <i class="pi pi-play"></i>
+              <span>Démarrer le quiz</span>
+            </span>
+          }
+        </div>
+      </p-card>
+    }
+  }
+</div>
+

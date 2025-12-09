@@ -89,10 +89,13 @@ export class QuizList implements OnInit {
     this.success.set(null);
     this.visible = true;
   }
-
-  goView(id: number): void {
+  goList(): void {
     this.quizService.goList();
   }
+   goView(id: number): void {
+    this.quizService.goView(id);
+  }
+
 
   onPageChange(event: any): void {
     this.first = event.first;   // index de départ

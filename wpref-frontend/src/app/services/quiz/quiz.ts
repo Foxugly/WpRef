@@ -16,6 +16,7 @@ export interface QuizSession {
   id: number;
   user : string;
   title: string;
+  //description:string;
   is_closed: boolean;
   subject_ids: number[];
   mode : string;
@@ -26,7 +27,7 @@ export interface QuizSession {
   questions: Question[];
   created_at: string;
   started_at: string;
-  closed_at: string;
+  expired_at: string;
 }
 
 @Injectable({
@@ -39,12 +40,12 @@ export class QuizService {
   constructor(private http: HttpClient, private router: Router) {
   }
 
-  goNew():void{
-    this.router.navigate(['/quiz/list']);
+  goList():void{
+    this.router.navigate(['/quiz','list']);
   }
 
-  goList():void{
-    this.router.navigate(['/quiz/list']);
+  goView(id:number):void{
+    this.router.navigate(['/quiz', id]);
   }
 
 
@@ -66,5 +67,10 @@ export class QuizService {
         params: params?.search ? {search: params.search} : {}
       }
     );
+  }
+
+  retrieveSession(id: number):Observable<QuizSession> {
+    console.log("retrieveSession");
+    return this.http.get<QuizSession>(`${this.base}${this.quizPath}${id}/summary/`);
   }
 }

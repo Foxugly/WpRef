@@ -1,0 +1,87 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+.question__header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+
+  .header-left {
+    justify-self: start;
+  }
+
+  .header-title {
+    text-align: center;
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+  }
+
+  .header-right {
+    justify-self: end;
+  }
+}
+
+.quiz-summary-card {
+  margin-top: 1.5rem;
+}
+
+.quiz-summary-grid {
+  display: grid;
+  gap: 1rem 2rem;
+  grid-template-columns: 1fr;   // mobile : une seule colonne
+  grid-auto-flow: row;          // on remplit ligne par ligne en mobile
+}
+
+.quiz-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.quiz-summary-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-color-secondary, #6b7280); // gris doux
+}
+
+.quiz-summary-value {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-color, #111827);
+  word-break: break-word;
+}
+
+.quiz-summary-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quiz-summary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  cursor: default; // pas de clic tant que tu n’as pas de logique
+}
+
+.quiz-summary-action i {
+  font-size: 0.9rem;
+}
+
+@media (min-width: 768px) {
+  .quiz-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, auto);  // 3 lignes
+    grid-auto-flow: column;               // ⚠️ remplissage colonne par colonne
+  }
+}

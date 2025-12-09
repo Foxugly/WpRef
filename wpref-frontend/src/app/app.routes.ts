@@ -28,6 +28,7 @@ import { QuestionView } from './pages/question/view/question-view';
 
 // QUIZ
 import { QuizList } from './pages/quiz/list/quiz-list';
+import { QuizView } from './pages/quiz/view/quiz-view';
 import {QuizPlay} from './components/quiz-play/quiz-play';
 
 export const routes: Routes = [
@@ -52,5 +53,7 @@ export const routes: Routes = [
   { path: 'question/:id/view', component: QuestionView , canActivate: [authGuard]  },
   // QUIZ
   { path: 'quiz/list', component: QuizList},
+  { path: 'quiz/:id', component: QuizView},
+ // { path: 'quiz/:id/question/:question_id', component: QuizSessionView},
    { path: 'quiz/test', component: QuizPlay},
 ];

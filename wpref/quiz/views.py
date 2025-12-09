@@ -1,5 +1,6 @@
 # quiz/api/views.py
 import random
+from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Q
@@ -19,17 +20,16 @@ from .serializers import (
     QuizAttemptSerializer,
     QuizSessionSerializer,
     QuizAttemptInputSerializer,
-    QuizSummarySerializer,
     QuizSerializer,
     QuizQuestionInlineSerializer,
     QuizQuestionUpdateSerializer, QuizAttemptDetailSerializer, QuizGenerateInputSerializer
 )
 
 
-class QuizStartView(GenericAPIView):
+class QuizCreateView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = QuizSessionSerializer
-    queryset = QuizSession.objects.all()
+    #queryset = QuizSession.objects.all()
 
     def post(self, request, slug):
         quiz = get_object_or_404(Quiz, slug=slug)
@@ -48,6 +48,49 @@ class QuizStartView(GenericAPIView):
         }
         return Response(data, status=status.HTTP_201_CREATED)
 
+
+class QuizSessionView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = QuizSessionSerializer
+
+    def get(self, request, quiz_id):
+        session = get_object_or_404(QuizSession, pk=quiz_id)
+        if not (request.user.is_staff or session.user == request.user):
+            return Response({"detail": "Vous n'êtes pas autorisé à accéder à ce quiz."},
+                            status=status.HTTP_403_FORBIDDEN)
+        data = {
+            "id": str(session.id),
+            "quiz": session.quiz.id,
+            "started_at": session.started_at,
+            "is_closed": session.is_closed,
+            "with_duration": session.quiz.with_duration,
+            "duration": session.quiz.duration,
+            "n_questions": session.quiz.max_questions,
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class QuizSessionStartView(GenericAPIView):
+    def post(self, request, quiz_id):
+        session = get_object_or_404(QuizSession, pk=quiz_id)
+
+        if not (request.user.is_staff or session.user == request.user):
+            return Response({"detail": "Vous n'êtes pas autorisé à accéder à ce quiz."},
+                            status=status.HTTP_403_FORBIDDEN)
+        session.started_at = timezone.now()
+        if session.quiz.with_duration:
+            session.expired_at = session.started_at + timedelta(minutes=session.quiz.duration)
+        session.save()
+        data = {
+            "id": str(session.id),
+            "quiz": session.quiz.id,
+            "started_at": session.started_at,
+            "is_closed": session.is_closed,
+            "with_duration": session.quiz.with_duration,
+            "duration": session.quiz.duration,
+            "n_questions": session.quiz.max_questions,
+        }
+        return Response(data, status=status.HTTP_200_OK)
 
 class QuizAttemptView(GenericAPIView):
     """
@@ -253,7 +296,7 @@ class QuizSummaryView(GenericAPIView):
     → Seuls proprio de la session + admin.
     """
     permission_classes = [IsAuthenticated]
-    serializer_class = QuizSummarySerializer
+    serializer_class = QuizSessionSerializer
 
     def get(self, request, quiz_id):
         session = get_object_or_404(QuizSession, pk=quiz_id)
@@ -264,26 +307,12 @@ class QuizSummaryView(GenericAPIView):
                 {"detail": "Vous n'êtes pas autorisé à accéder à ce quiz."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-
-        total_questions = session.quiz.quiz_questions.count()
-        attempts = session.attempts.all()
-        answered_questions = attempts.count()
-        correct_answers = attempts.filter(is_correct=True).count()
-
-        data = {
-            "quiz_id": str(session.id),
-            "quiz_title": session.quiz.title,
-            "started_at": session.started_at,
-            "is_closed": session.is_closed,
-            "is_expired": session.is_expired,
-            "with_duration": session.quiz.with_duration,
-            "duration": session.quiz.duration,
-            "expires_at": session.expires_at,
-            "max_questions": session.quiz.max_questions,
-            "answered_questions": answered_questions,
-            "correct_answers": correct_answers,
-        }
-        return Response(data, status=status.HTTP_200_OK)
+        #attempts = session.attempts.all()
+        #answered_questions = attempts.count()
+        #correct_answers = attempts.filter(is_correct=True).count()
+        serializer = QuizSessionSerializer(session)
+        print(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class QuizViewSet(viewsets.ModelViewSet):

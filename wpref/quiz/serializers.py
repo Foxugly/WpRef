@@ -2,21 +2,26 @@
 from rest_framework import serializers
 
 from .models import Quiz, QuizSession, QuizAttempt, QuizQuestion
-
+from subject.serializers import SubjectSerializer
 
 class QuizSessionSerializer(serializers.ModelSerializer):
     title = serializers.CharField(source="quiz.title", read_only=True)
+    #description = serializers.CharField(source="quiz.description", read_only=True)
     with_duration = serializers.BooleanField(source="quiz.with_duration", read_only=True)
     duration = serializers.IntegerField(source="quiz.duration", read_only=True)
     max_questions = serializers.IntegerField(source="quiz.max_questions", read_only=True )
     user = serializers.CharField(source="user.get_full_name", read_only=True)
     mode = serializers.CharField(source="quiz.mode", read_only=True)
+    # => champs calculés
+    correct_answers = serializers.SerializerMethodField()
 
+    # subjects = SubjectSerializer(source="quiz.subjects", many=True, read_only=True)
     class Meta:
         model = QuizSession
         fields = [
             "id",
             "title", # quiz
+            #"description",
             "user",
             "mode",
             "created_at",
@@ -26,7 +31,12 @@ class QuizSessionSerializer(serializers.ModelSerializer):
             "with_duration", # quiz
             "duration", # quiz
             "max_questions", #quiz
+            "correct_answers",
+            #"subjects",
         ]
+
+    def get_correct_answers(self, obj):
+        return obj.attempts.filter(is_correct=True).count()
 
 class QuizAttemptSerializer(serializers.ModelSerializer):
     class Meta:
@@ -83,31 +93,6 @@ class QuizAttemptDetailSerializer(serializers.Serializer):
     title = serializers.CharField()
     description = serializers.CharField(allow_blank=True)
     options = QuizOptionStateSerializer(many=True)
-
-
-class QuizSummarySerializer(serializers.Serializer):
-    title = serializers.CharField(source="quiz.title", read_only=True)
-    with_duration = serializers.BooleanField(source="quiz.with_duration", read_only=True)
-    duration = serializers.IntegerField(source="quiz.duration", read_only=True)
-    max_questions = serializers.IntegerField(source="quiz.max_questions", read_only=True)
-    user = serializers.CharField(source="user.get_full_name", read_only=True)
-
-    class Meta:
-        model = QuizSession
-        fields = [
-            "id",
-            "title",
-            "quiz",
-            "created_at",
-            "started_at",
-            "expired_at",
-            "is_closed",
-            "with_duration",
-            "duration",
-            "max_questions",
-            "answered_questions",
-            "correct_answers",
-        ]
 
 
 class QuizSerializer(serializers.ModelSerializer):

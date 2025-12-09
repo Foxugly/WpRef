@@ -111,7 +111,7 @@ class QuizSession(models.Model):
     Une instance de quiz pour un utilisateur (ou anonyme).
     C'est ce 'quiz_id' que tu renvoies 1à /quiz/<slug>/start/.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    #id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="sessions")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -152,7 +152,7 @@ class QuizSession(models.Model):
         return not self.is_closed and not self.is_expired
 
     def save(self, *args, **kwargs):
-        if self.started_at and not self.expired_at:
+        if self.started_at and not self.expired_at and self.quiz.with_duration:
             self.expired_at = self.started_at + timedelta(minutes=self.quiz.duration)
         super().save(*args, **kwargs)
 

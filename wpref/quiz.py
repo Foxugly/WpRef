@@ -76,6 +76,7 @@ def get_quiz_question(base_url: str, token: str, quiz_id: str, question_i: int) 
     url = base_url.rstrip("/") + path_quiz_attempt.replace("<QUIZ_ID>", quiz_id).replace(
         "<QUESTION_ORDER>", str(question_i)
     )
+    print(url)
     resp = requests.get(url, headers=headers)
     if resp.status_code not in (200, 201):
         raise RuntimeError(
@@ -122,6 +123,11 @@ def answer_to_quiz_session_questions(base_url: str, token: str, quiz_id: str, n_
     Pour chaque question, on récupère la question + options,
     on choisit une réponse aléatoire et on la poste.
     """
+    print("answer_to_quiz_session_questions")
+    print(base_url)
+    print(token)
+    print(quiz_id)
+    print(n_questions)
     for i in range(n_questions):
         data = get_quiz_question(base_url, token, quiz_id, i + 1)
         print(f"Question {i + 1}/{n_questions} : {data['title']}")
