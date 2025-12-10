@@ -8,8 +8,8 @@
         <div class="header-left">
           @if (displayMode === 'preview') {
             <i
-              class="pi"
               [ngClass]="question.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+              class="pi"
             ></i>
           }
         </div>
@@ -29,42 +29,40 @@
     </ng-template>
 
     <!-- Médias -->
-    @if (question.media) {
-      @if (question.media.length) {
-        <div class="quiz-question__media">
-          @for (m of question.media; track m.id ?? m.sort_order; let i = $index) {
-            @switch (m.kind) {
-              @case ('image') {
-                <img
-                  [alt]="question.title"
-                  [src]="mediaSrc(m)"
-                  class="quiz-question__media-image"
-                />
-              }
-              @case ('video') {
-                <video
-                  [src]="mediaSrc(m)"
-                  class="quiz-question__media-video"
-                  controls
-                >
-                  Votre navigateur ne supporte pas la vidéo.
-                </video>
-              }
-              @case ('external') {
-                @if (externalSafeUrl(m); as url) {
-                  <div class="youtube-wrapper">
-                    <iframe
-                      [src]="url"
-                      allowfullscreen
-                      frameborder="0"
-                    ></iframe>
-                  </div>
-                }
+    @if (question.media.length) {
+      <div class="quiz-question__media">
+        @for (m of question.media; track m.id ?? m.sort_order; let i = $index) {
+          @switch (m.kind) {
+            @case ('image') {
+              <img
+                [alt]="question.title"
+                [src]="mediaSrc(m)"
+                class="quiz-question__media-image"
+              />
+            }
+            @case ('video') {
+              <video
+                [src]="mediaSrc(m)"
+                class="quiz-question__media-video"
+                controls
+              >
+                Votre navigateur ne supporte pas la vidéo.
+              </video>
+            }
+            @case ('external') {
+              @if (externalSafeUrl(m); as url) {
+                <div class="youtube-wrapper">
+                  <iframe
+                    [src]="url"
+                    allowfullscreen
+                    frameborder="0"
+                  ></iframe>
+                </div>
               }
             }
           }
-        </div>
-      }
+        }
+      </div>
     }
     <!-- Description -->
     @if (question.description) {
@@ -75,7 +73,7 @@
     }
     <div class="quiz-question__answers">
       @for (opt of question.answer_options; track opt; let i = $index) {
-        <div class="answer-line" [ngClass]="{ 'answer-line--correct': showCorrectAnswers && opt.is_correct}">
+        <div [ngClass]="{ 'answer-line--correct': showCorrectAnswers && opt.is_correct}" class="answer-line">
           @if (allowMultiple) {
             <!-- MULTI → checkbox -->
             <p-checkbox

@@ -41,6 +41,7 @@ export class QuizQuestionComponent implements OnChanges {
   singleSelectionIndex: number | null = null;
   private sanitizer = inject(DomSanitizer);
 
+
   get allowMultiple(): boolean {
     return !!this.question?.allow_multiple_correct;
   }

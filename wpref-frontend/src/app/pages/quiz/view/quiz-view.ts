@@ -40,6 +40,13 @@ export class QuizView implements OnInit {
     this.quizService.goList()
   }
 
+  goStart(): void {
+    this.quizService.goStart(this.id);
+  }
+  goQuestion():void{
+    this.quizService.goQuestion(this.id, 1);
+}
+
   private loadQuizSession(): void {
     this.loading.set(true);
     this.error.set(null);

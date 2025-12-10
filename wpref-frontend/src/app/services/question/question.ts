@@ -68,16 +68,16 @@ export class QuestionService {
     return this.http.post<Question>(`${this.base}${this.questionPath}`, formData);
   }
 
-  update(id: number, payload: QuestionUpdatePayload): Observable<Question> {
+  update(id: number | undefined, payload: QuestionUpdatePayload): Observable<Question> {
     const formData = this.buildFormData(payload);
     return this.http.put<Question>(`${this.base}${this.questionPath}${id}/`, formData);
   }
 
-  retrieve(id: number): Observable<Question> {
+  retrieve(id: number | undefined): Observable<Question> {
     return this.http.get<Question>(`${this.base}${this.questionPath}${id}/`);
   }
 
-  delete(id: number): Observable<void> {
+  delete(id: number | undefined): Observable<void> {
     return this.http.delete<void>(`${this.base}${this.questionPath}${id}/`);
   }
 

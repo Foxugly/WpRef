@@ -30,6 +30,7 @@ import { QuestionView } from './pages/question/view/question-view';
 import { QuizList } from './pages/quiz/list/quiz-list';
 import { QuizView } from './pages/quiz/view/quiz-view';
 import {QuizPlay} from './components/quiz-play/quiz-play';
+import {QuizQuestionView} from './pages/quiz/question-view/question-view';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'subjects', pathMatch: 'full' },
@@ -54,6 +55,6 @@ export const routes: Routes = [
   // QUIZ
   { path: 'quiz/list', component: QuizList},
   { path: 'quiz/:id', component: QuizView},
- // { path: 'quiz/:id/question/:question_id', component: QuizSessionView},
+  { path: 'quiz/:quiz_id/question/:question_id', component: QuizQuestionView},
    { path: 'quiz/test', component: QuizPlay},
 ];

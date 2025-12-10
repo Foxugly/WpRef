@@ -3,6 +3,8 @@ from rest_framework import serializers
 
 from .models import Quiz, QuizSession, QuizAttempt, QuizQuestion
 from subject.serializers import SubjectSerializer
+from question.serializers import QuestionLiteSerializer
+
 
 class QuizSessionSerializer(serializers.ModelSerializer):
     title = serializers.CharField(source="quiz.title", read_only=True)
@@ -14,6 +16,7 @@ class QuizSessionSerializer(serializers.ModelSerializer):
     mode = serializers.CharField(source="quiz.mode", read_only=True)
     # => champs calculés
     correct_answers = serializers.SerializerMethodField()
+    questions = QuestionLiteSerializer(source="quiz.questions", many=True, read_only=True)
 
     # subjects = SubjectSerializer(source="quiz.subjects", many=True, read_only=True)
     class Meta:
@@ -33,6 +36,7 @@ class QuizSessionSerializer(serializers.ModelSerializer):
             "max_questions", #quiz
             "correct_answers",
             #"subjects",
+            "questions",
         ]
 
     def get_correct_answers(self, obj):

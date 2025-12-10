@@ -76,7 +76,6 @@ def get_quiz_question(base_url: str, token: str, quiz_id: str, question_i: int) 
     url = base_url.rstrip("/") + path_quiz_attempt.replace("<QUIZ_ID>", quiz_id).replace(
         "<QUESTION_ORDER>", str(question_i)
     )
-    print(url)
     resp = requests.get(url, headers=headers)
     if resp.status_code not in (200, 201):
         raise RuntimeError(

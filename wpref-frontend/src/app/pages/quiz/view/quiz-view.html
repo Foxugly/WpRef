@@ -87,15 +87,9 @@
 
         <div class="quiz-summary-footer">
           @if (quizSession()?.started_at) {
-            <span class="quiz-summary-action">
-              <i class="pi pi-arrow-right"></i>
-              <span>Aller à la question 1</span>
-            </span>
+              <p-button (onClick)="goQuestion()" icon="pi pi-arrow-right" label="Aller au quiz" severity="primary"></p-button>
           } @else {
-            <span class="quiz-summary-action">
-              <i class="pi pi-play"></i>
-              <span>Démarrer le quiz</span>
-            </span>
+            <p-button (onClick)="goStart()" icon="pi pi-play" label="Démarrer le quiz" severity="primary"></p-button>
           }
         </div>
       </p-card>

@@ -71,7 +71,11 @@ class QuizSessionView(GenericAPIView):
 
 
 class QuizSessionStartView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = QuizSessionSerializer
+
     def post(self, request, quiz_id):
+        print("QuizSessionStartView")
         session = get_object_or_404(QuizSession, pk=quiz_id)
 
         if not (request.user.is_staff or session.user == request.user):
@@ -81,16 +85,8 @@ class QuizSessionStartView(GenericAPIView):
         if session.quiz.with_duration:
             session.expired_at = session.started_at + timedelta(minutes=session.quiz.duration)
         session.save()
-        data = {
-            "id": str(session.id),
-            "quiz": session.quiz.id,
-            "started_at": session.started_at,
-            "is_closed": session.is_closed,
-            "with_duration": session.quiz.with_duration,
-            "duration": session.quiz.duration,
-            "n_questions": session.quiz.max_questions,
-        }
-        return Response(data, status=status.HTTP_200_OK)
+        session = self.get_serializer(session)
+        return Response(session.data, status=status.HTTP_200_OK)
 
 class QuizAttemptView(GenericAPIView):
     """
@@ -300,18 +296,13 @@ class QuizSummaryView(GenericAPIView):
 
     def get(self, request, quiz_id):
         session = get_object_or_404(QuizSession, pk=quiz_id)
-
         # Règle d'accès : proprio ou admin
         if not (request.user.is_staff or session.user == request.user):
             return Response(
                 {"detail": "Vous n'êtes pas autorisé à accéder à ce quiz."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        #attempts = session.attempts.all()
-        #answered_questions = attempts.count()
-        #correct_answers = attempts.filter(is_correct=True).count()
         serializer = QuizSessionSerializer(session)
-        print(serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -415,7 +406,6 @@ class QuizViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="subject-question-count")
     def subject_question_count(self, request, *args, **kwargs):
         subject_ids = request.data.get("subject_ids", [])
-        print(subject_ids)
 
         if not isinstance(subject_ids, list):
             return Response(

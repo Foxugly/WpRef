@@ -1,0 +1,25 @@
+<div class="layout">
+  <aside class="layout__left">
+    <app-quiz-nav
+      (questionSelected)="onQuestionSelected($event)"
+      [columns]="5"
+      [items]="questionNavItems()">
+
+    </app-quiz-nav>
+  </aside>
+
+  <main class="layout__right">
+    @if (question()) {
+      <app-quiz-question
+        [question]="question()!"
+        [showCorrectAnswers]="showCorrect"
+        displayMode="preview"
+      ></app-quiz-question>
+    } @else {
+      <!-- optionnel : loader, message, etc. -->
+      <p>Chargement de la question…</p>
+    }
+    <button (click)="markAnswered(index)">Marquer comme répondue</button>
+    <button (click)="toggleFlag(index)">Basculer flag</button>
+  </main>
+</div>

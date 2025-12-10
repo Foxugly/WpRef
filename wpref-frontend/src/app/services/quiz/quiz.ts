@@ -14,14 +14,14 @@ export interface QuizSubjectCreatePayload {
 
 export interface QuizSession {
   id: number;
-  user : string;
+  user: string;
   title: string;
   //description:string;
   is_closed: boolean;
   subject_ids: number[];
-  mode : string;
-  max_questions : number;
-  duration : number;
+  mode: string;
+  max_questions: number;
+  duration: number;
   with_duration: boolean;
   timer: number | null;
   questions: Question[];
@@ -36,16 +36,47 @@ export interface QuizSession {
 export class QuizService {
   private base = environment.apiBaseUrl;
   private quizPath = environment.apiQuizPath;
+  private payload: QuizSubjectCreatePayload | null = null;
 
   constructor(private http: HttpClient, private router: Router) {
   }
 
-  goList():void{
-    this.router.navigate(['/quiz','list']);
+  goList(): void {
+    this.router.navigate(['/quiz', 'list']);
   }
 
-  goView(id:number):void{
+  startQuizSession(id: number): Observable<QuizSession> {
+    return this.http.post<QuizSession>(`${this.base}${this.quizPath}${id}/start/`, {});
+  }
+
+  goStart(id: number): void {
+    console.log("goStart");
+    this.startQuizSession(id).subscribe({
+      next: (session) => {
+        console.log('Session démarrée :', session);
+        this.router.navigate(['/quiz', id, 'question', 1]);
+      },
+      error: (err) => {
+        console.error('Erreur startQuizSession', err);
+      },
+    });
+  }
+
+
+  goView(id: number): void {
     this.router.navigate(['/quiz', id]);
+  }
+
+  goQuestion(id: number, i: number): void {
+    this.router.navigate(['/quiz', id, 'question', i]);
+  }
+
+  goQuestionNext(id: number, i: number): void {
+    this.goQuestion(id, i + 1);
+  }
+
+  goQuestionPrev(id: number, i: number): void {
+    this.goQuestion(id, i - 1);
   }
 
 
@@ -69,7 +100,7 @@ export class QuizService {
     );
   }
 
-  retrieveSession(id: number):Observable<QuizSession> {
+  retrieveSession(id: number): Observable<QuizSession> {
     console.log("retrieveSession");
     return this.http.get<QuizSession>(`${this.base}${this.quizPath}${id}/summary/`);
   }
