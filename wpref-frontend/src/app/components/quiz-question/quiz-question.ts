@@ -46,6 +46,7 @@ export class QuizQuestionComponent implements OnChanges {
   @Input() hasPrevious = false;
   @Input() hasNext = false;
   @Output() answeredToggled = new EventEmitter<void>();
+  @Output() flagToggled = new EventEmitter<boolean>();
   // ➜ nouveaux events pour laisser le parent gérer la navigation
   @Output() goNext = new EventEmitter<AnswerPayload>();
   @Output() goPrevious = new EventEmitter<AnswerPayload>();

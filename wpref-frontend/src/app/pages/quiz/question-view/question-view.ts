@@ -32,16 +32,11 @@ export class QuizQuestionView implements OnInit {
 
   ngOnInit(): void {
     this.quiz_id = Number(this.route.snapshot.paramMap.get('quiz_id'));
-    this.question_id = Number(this.route.snapshot.paramMap.get('question_id'));
+    this.question_id = 1;
     if (!this.quiz_id || Number.isNaN(this.quiz_id)) {
       this.error.set('Identifiant de question invalide.');
       return;
     }
-    if (!this.question_id || Number.isNaN(this.question_id)) {
-      this.error.set('Identifiant de question invalide.');
-      return;
-    }
-
     this.loadQuestion();
   }
 
@@ -80,13 +75,10 @@ export class QuizQuestionView implements OnInit {
   }
 
   markAnswered(index: number): void {
-    console.log("markAnswered");
     this.quizNavItems.update(items =>
       items.map(item => {
-        console.log("item before:", item);
         if (item.index === index) {
           const updated = {...item, answered: true};
-          console.log("item updated:", updated);
           return updated;
         }
         return item;
@@ -95,18 +87,12 @@ export class QuizQuestionView implements OnInit {
   }
 
   toggleFlag(): void {
-    console.log("toggleFlag");
-
     this.quizNavItems.update(items =>
       items.map(item => {
-        console.log("checking item:", item);
-
         if (item.index === this.index) {
           const updated = {...item, flagged: !item.flagged};
-          console.log("updated item:", updated);
           return updated;
         }
-
         return item;
       })
     );
@@ -137,9 +123,9 @@ export class QuizQuestionView implements OnInit {
     this.quizService.saveAnswer(this.quiz_id, payload).subscribe({
       next: (response) => {
         // on marque la question comme répondue
-        if (response.status != 204) {
-          this.markAnswered(payload.index);
-        }
+        if (response.status === 200 || response.status === 201) {
+        this.markAnswered(payload.index);
+      }
         if (afterSave) {
           afterSave();
         }

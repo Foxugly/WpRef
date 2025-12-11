@@ -1,7 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { PanelModule } from 'primeng/panel';
-import { QuestionButton } from '../question-button/question-button';
+import {Component, EventEmitter, Input, Output} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {PanelModule} from 'primeng/panel';
+import {QuestionButton} from '../question-button/question-button';
 import {Question} from '../../services/question/question';
 
 export interface QuizNavItem {
@@ -9,7 +9,7 @@ export interface QuizNavItem {
   id: number;
   answered: boolean;
   flagged: boolean;
-  question : Question;
+  question: Question;
 }
 
 @Component({
@@ -35,7 +35,6 @@ export class QuizNav {
 
   /** Couleur de fond selon l'état de la question */
   getBackgroundColor(item: QuizNavItem): string {
-    //console.log(item);
     /*if (item.flagged) {
       // Question marquée : fond clair
       return '#fff7f7';

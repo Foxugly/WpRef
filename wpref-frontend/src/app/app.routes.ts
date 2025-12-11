@@ -55,6 +55,6 @@ export const routes: Routes = [
   // QUIZ
   { path: 'quiz/list', component: QuizList},
   { path: 'quiz/:id', component: QuizView},
-  { path: 'quiz/:quiz_id/question/:question_id', component: QuizQuestionView},
+  { path: 'quiz/:quiz_id/questions', component: QuizQuestionView},
    { path: 'quiz/test', component: QuizPlay},
 ];

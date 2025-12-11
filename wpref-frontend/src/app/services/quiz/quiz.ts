@@ -51,11 +51,9 @@ export class QuizService {
   }
 
   goStart(id: number): void {
-    console.log("goStart");
     this.startQuizSession(id).subscribe({
       next: (session) => {
-        console.log('Session démarrée :', session);
-        this.router.navigate(['/quiz', id, 'question', 1]);
+        this.router.navigate(['/quiz', id, 'questions']);
       },
       error: (err) => {
         console.error('Erreur startQuizSession', err);
@@ -68,18 +66,9 @@ export class QuizService {
     this.router.navigate(['/quiz', id]);
   }
 
-  goQuestion(id: number, i: number): void {
-    this.router.navigate(['/quiz', id, 'question', i]);
+  goQuestion(id: number): void {
+    this.router.navigate(['/quiz', id, 'questions']);
   }
-
-  goQuestionNext(id: number, i: number): void {
-    this.goQuestion(id, i + 1);
-  }
-
-  goQuestionPrev(id: number, i: number): void {
-    this.goQuestion(id, i - 1);
-  }
-
 
   getQuestionCountBySubjects(subjectIds: number[]) {
     return this.http.post<{ count: number }>(

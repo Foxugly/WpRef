@@ -47,8 +47,6 @@ export class QuizPlay {
   }
 
   markAnswered(index: number): void {
-    console.log('markAnswered', index);
-
     const i = this.questionNavItems.findIndex((q) => q.index === index);
     if (i === -1) return;
 

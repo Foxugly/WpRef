@@ -22,8 +22,8 @@
         <!-- Droite : icône fixe -->
         <div class="header-right">
           <p-togglebutton
-            (onChange)="answeredToggled.emit()"
-            [(ngModel)]="quizNavItem.answered"
+            (onChange)="flagToggled.emit($event.checked)"
+            [ngModel]="quizNavItem.flagged"
             class="w-36"
             offIcon="pi pi-bookmark"
             onIcon="pi pi-bookmark-fill"></p-togglebutton>

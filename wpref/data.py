@@ -48,7 +48,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     # --- SCRUM (10 questions) ---
     {
         "title": "Quels sont les trois piliers de Scrum ?",
-        "description": "",
+        "description": "Quels sont les trois piliers de Scrum ?",
         "explanation": "Les trois piliers de Scrum sont la Transparence, l’Inspection et l’Adaptation.",
         "allow_multiple_correct": True,
         "subject_names": ["Scrum – Bases"],
@@ -61,7 +61,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quelles sont les valeurs de Scrum ?",
-        "description": "",
+        "description": "Quelles sont les valeurs de Scrum ?",
         "explanation": "Les valeurs sont : Engagement, Focus, Ouverture, Respect, Courage.",
         "allow_multiple_correct": True,
         "subject_names": ["Scrum – Bases"],
@@ -76,7 +76,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Combien de rôles Scrum officiels le framework définit-il ?",
-        "description": "",
+        "description": "Combien de rôles Scrum officiels le framework définit-il ?",
         "explanation": "Le Guide Scrum définit trois rôles : Scrum Master, Product Owner, Developers.",
         "allow_multiple_correct": False,
         "subject_names": ["Scrum – Bases", "Scrum – Rôles"],
@@ -88,7 +88,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Lesquels sont des rôles définis par Scrum ?",
-        "description": "",
+        "description": "Lesquels sont des rôles définis par Scrum ?",
         "explanation": "Les seuls rôles Scrum sont Scrum Master, Product Owner et Developers.",
         "allow_multiple_correct": True,
         "subject_names": ["Scrum – Rôles"],
@@ -101,7 +101,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Qui est responsable de maximiser la valeur du produit ?",
-        "description": "",
+        "description": "Qui est responsable de maximiser la valeur du produit ?",
         "explanation": "Le Product Owner est responsable de maximiser la valeur du produit.",
         "allow_multiple_correct": False,
         "subject_names": ["Scrum – Rôles"],
@@ -113,7 +113,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Laquelle de ces affirmations sur le Sprint Backlog est correcte ?",
-        "description": "",
+        "description": "Laquelle de ces affirmations sur le Sprint Backlog est correcte ?",
         "explanation": "Le Sprint Backlog est un plan émergent pour le Sprint, détenu par les Developers.",
         "allow_multiple_correct": True,
         "subject_names": ["Scrum – Bases"],
@@ -137,7 +137,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Durée maximale recommandée pour la Daily Scrum ?",
-        "description": "",
+        "description": "Durée maximale recommandée pour la Daily Scrum ?",
         "explanation": "La Daily Scrum est time-boxée à 15 minutes.",
         "allow_multiple_correct": False,
         "subject_names": ["Scrum – Bases"],
@@ -149,7 +149,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quand considère-t-on qu’un Sprint est terminé ?",
-        "description": "",
+        "description": "Quand considère-t-on qu’un Sprint est terminé ?",
         "explanation": "Un Sprint est terminé lorsque la time-box est écoulée.",
         "allow_multiple_correct": False,
         "subject_names": ["Scrum – Bases"],
@@ -173,7 +173,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quel artefact contient l’Objectif de Produit (Product Goal) ?",
-        "description": "",
+        "description": "Quel artefact contient l’Objectif de Produit (Product Goal) ?",
         "explanation": "L’Objectif de Produit est associé au Product Backlog.",
         "allow_multiple_correct": False,
         "subject_names": ["Scrum – Bases"],
@@ -185,7 +185,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Lesquels de ces événements sont time-boxés dans Scrum ?",
-        "description": "",
+        "description": "Lesquels de ces événements sont time-boxés dans Scrum ?",
         "explanation": "Tous les événements Scrum sont time-boxés.",
         "allow_multiple_correct": True,
         "subject_names": ["Scrum – Bases"],
@@ -200,7 +200,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     # --- DJANGO (10 questions) ---
     {
         "title": "Que représente un modèle (Model) dans Django ?",
-        "description": "",
+        "description": "Que représente un modèle (Model) dans Django ?",
         "explanation": "Un modèle représente la structure d’une table en base de données.",
         "allow_multiple_correct": False,
         "subject_names": ["Django – Modèles & ORM"],
@@ -224,7 +224,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quel type de champ Django utiliser pour stocker un texte long ?",
-        "description": "",
+        "description": "Quel type de champ Django utiliser pour stocker un texte long ?",
         "explanation": "TextField est adapté aux textes longs.",
         "allow_multiple_correct": False,
         "subject_names": ["Django – Modèles & ORM"],
@@ -236,7 +236,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quelles instructions créent et sauvegardent un objet Django en base ?",
-        "description": "",
+        "description": "Quelles instructions créent et sauvegardent un objet Django en base ?",
         "explanation": "On instancie le modèle puis on appelle save(), ou on utilise Model.objects.create().",
         "allow_multiple_correct": True,
         "subject_names": ["Django – Modèles & ORM"],
@@ -260,7 +260,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quelle commande applique les migrations en Django ?",
-        "description": "",
+        "description": "Quelle commande applique les migrations en Django ?",
         "explanation": "La commande est `python manage.py migrate`.",
         "allow_multiple_correct": False,
         "subject_names": ["Django – Modèles & ORM"],
@@ -296,7 +296,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quel est le rôle principal d’un serializer dans Django REST Framework ?",
-        "description": "",
+        "description": "Quel est le rôle principal d’un serializer dans Django REST Framework ?",
         "explanation": "Les serializers transforment les instances de modèles en JSON (et inversement) et valident les données.",
         "allow_multiple_correct": True,
         "subject_names": ["Django – API REST"],
@@ -320,7 +320,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quelles méthodes HTTP sont considérées comme 'safe' par DRF ?",
-        "description": "",
+        "description": "Quelles méthodes HTTP sont considérées comme 'safe' par DRF ?",
         "explanation": "Les méthodes GET, HEAD et OPTIONS sont considérées comme safe.",
         "allow_multiple_correct": True,
         "subject_names": ["Django – API REST"],
@@ -334,7 +334,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Quel code de statut HTTP correspond à 'Created' ?",
-        "description": "",
+        "description": "Quel code de statut HTTP correspond à 'Created' ?",
         "explanation": "Le code 201 signifie que la ressource a été créée.",
         "allow_multiple_correct": False,
         "subject_names": ["Django – API REST"],
@@ -346,7 +346,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Pour s’authentifier via JWT, quelles informations sont envoyées au endpoint de login ?",
-        "description": "",
+        "description": "Pour s’authentifier via JWT, quelles informations sont envoyées au endpoint de login ?",
         "explanation": "On envoie généralement username et password dans le corps de la requête POST.",
         "allow_multiple_correct": True,
         "subject_names": ["Django – API REST"],
@@ -362,7 +362,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
     },
     {
         "title": "Sur un endpoint detail d’un ModelViewSet DRF, quels verbes HTTP sont typiquement permis ?",
-        "description": "",
+        "description": "Sur un endpoint detail d’un ModelViewSet DRF, quels verbes HTTP sont typiquement permis ?",
         "explanation": "Par défaut : GET, PUT, PATCH, DELETE (et HEAD/OPTIONS implicites).",
         "allow_multiple_correct": True,
         "subject_names": ["Django – API REST"],

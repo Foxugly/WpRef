@@ -5,12 +5,17 @@ import requests
 
 BASE_URL = "http://localhost:8000"  # ou "http://127.0.0.1:8000"
 
+
+SU_USERNAME = "admin"
+SU_PASSWORD = "SuperPassword123"
+
 U2_USERNAME = "user2"
 U2_EMAIL = "user2@example.com"
 U2_PASSWORD = "SuperPassword123"
 
 path_token = "/api/token/"
-path_quiz_creation = "/api/quiz/<SLUG>/start/"
+path_quiz_creation = "/api/quiz/<SLUG>/create/"
+path_quiz_start = "/api/quiz/<QUIZ_ID>/start/"
 # On utilise maintenant /attempt/ aussi bien pour GET (question + état) que pour POST (réponse)
 path_quiz_attempt = "/api/quiz/<QUIZ_ID>/attempt/<QUESTION_ORDER>/"
 path_quiz_close = "/api/quiz/<QUIZ_ID>/close/"
@@ -22,10 +27,10 @@ def get_json_credential(username, password):
 def get_url(base_url, path):
     return base_url.rstrip("/") + path
 
-def get_access_token(base_url: str, token_path: str) -> str:
+def get_access_token(base_url: str, token_path: str, username:str, password:str) -> str:
     """Récupère un token JWT (SimpleJWT) du user2."""
     url = get_url(base_url, token_path)
-    resp = requests.post(url, json=get_json_credential(U2_USERNAME, U2_PASSWORD))
+    resp = requests.post(url, json=get_json_credential(username, password))
     if resp.status_code != 200:
         raise RuntimeError(
             f"Échec de l'authentification ({resp.status_code}): {resp.text}"
@@ -35,6 +40,12 @@ def get_access_token(base_url: str, token_path: str) -> str:
     if not access:
         raise RuntimeError("Réponse token sans champ 'access': " + str(data))
     return access
+
+def get_admin_token(base_url: str, token_path: str) -> str:
+    return get_access_token(base_url, token_path, U2_USERNAME, U2_PASSWORD)
+
+def get_user_token(base_url: str, token_path: str) -> str:
+    return get_access_token(base_url, token_path, U2_USERNAME, U2_PASSWORD)
 
 
 def auth_headers(token: str) -> Dict[str, str]:
@@ -53,6 +64,7 @@ def create_quiz_session(base_url: str, token: str, quiz_slug: str) -> Dict[str, 
     print("=== Création du quiz ===")
     url = base_url.rstrip("/") + path_quiz_creation.replace("<SLUG>", quiz_slug)
     json_dict = {}
+    print(url)
     resp = requests.post(url, json=json_dict, headers=headers)
     if resp.status_code not in (200, 201):
         raise RuntimeError(
@@ -62,6 +74,23 @@ def create_quiz_session(base_url: str, token: str, quiz_slug: str) -> Dict[str, 
     print(f" - quiz créé: {data['id']})")
     return data
 
+# ============================================================
+# START QUIZ
+# ============================================================
+
+def start_quiz_session(base_url: str, token: str, quiz_id: int) -> Dict[str, Any]:
+    headers = auth_headers(token)
+    print("=== Création du quiz ===")
+    url = base_url.rstrip("/") + path_quiz_start.replace("<QUIZ_ID>", quiz_id)
+    json_dict = {}
+    resp = requests.post(url, json=json_dict, headers=headers)
+    if resp.status_code not in (200, 201):
+        raise RuntimeError(
+            f"Erreur démarrage quiz {quiz_id!r} ({resp.status_code}): {resp.text}"
+        )
+    data = resp.json()
+    print(f" - quiz démarré: {data['id']})")
+    return data
 
 # ============================================================
 # QUESTIONS (GET via /attempt/)
@@ -185,15 +214,23 @@ def get_quiz_session_questions(base_url: str, token: str, quiz_id: str, n_questi
 def main():
     # 1) Authentification
     print("\n=== Création quiz ===")
-    token = get_access_token(BASE_URL, path_token)
-    print("Token:", token)
-
-    # 2) Démarrer une session de quiz pour le slug donné
+    token_admin = get_admin_token(BASE_URL, path_token)
+    print("Token:", token_admin)
+    token = get_user_token(BASE_URL, path_token)
+    # 2) Créer une session de quiz pour le slug donné
     data = create_quiz_session(BASE_URL, token, "django-exam-1")
     quiz_session_id = data["id"]
     n_questions = data["n_questions"]
     print(data)
     print("quiz créé.\n")
+    # 2bis) Démarrer une session de quiz
+    #token = get_user_token(BASE_URL, path_token)
+    print("Token:", token)
+    data = start_quiz_session(BASE_URL, token, quiz_session_id)
+    #quiz_session_id = data["id"]
+    #n_questions = data["n_questions"]
+    print(data)
+    print("quiz démaré.\n")
 
     # 3) Répondre aux questions
     answer_to_quiz_session_questions(BASE_URL, token, quiz_session_id, n_questions)

@@ -10,7 +10,7 @@ router = DefaultRouter()
 router.register(r"", QuizViewSet, basename="quiz")
 
 urlpatterns = router.urls + [
-    path("<slug:slug>/", QuizCreateView.as_view(), name="quiz-create"),
+    path("<slug:slug>/create/", QuizCreateView.as_view(), name="quiz-create"),
     path("<int:quiz_id>/start/", QuizSessionStartView.as_view(), name="quiz-start", ),
     path("<int:quiz_id>/attempt/<int:question_order>/", QuizAttemptView.as_view(), name="quiz-attempt"),
     path("<int:quiz_id>/close/", QuizCloseView.as_view(), name="quiz-close"),

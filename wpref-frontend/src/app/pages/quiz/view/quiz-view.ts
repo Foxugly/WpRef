@@ -33,7 +33,6 @@ export class QuizView implements OnInit {
       return;
     }
     this.loadQuizSession();
-    console.log(this.quizSession());
   }
 
   goBack(): void {
@@ -44,7 +43,7 @@ export class QuizView implements OnInit {
     this.quizService.goStart(this.id);
   }
   goQuestion():void{
-    this.quizService.goQuestion(this.id, 1);
+    this.quizService.goQuestion(this.id);
 }
 
   private loadQuizSession(): void {
@@ -53,7 +52,6 @@ export class QuizView implements OnInit {
 
     this.quizService.retrieveSession(this.id).subscribe({
       next: (q) => {
-        console.log("next");
         this.quizSession.set(q);
         this.loading.set(false);
       },

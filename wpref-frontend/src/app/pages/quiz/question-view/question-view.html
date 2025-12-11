@@ -17,6 +17,7 @@
         (answeredToggled)="toggleFlag()"
         (goNext)="onNextQuestion($event)"
         (goPrevious)="onPreviousQuestion($event)"
+        (flagToggled)="toggleFlag()"
         [hasNext]="hasQuestionNext(index)"
         [hasPrevious]="hasQuestionPrev(index)"
       ></app-quiz-question>
@@ -24,7 +25,5 @@
       <!-- optionnel : loader, message, etc. -->
       <p>Chargement de la question…</p>
     }
-    <button (click)="markAnswered(index)">Marquer comme répondue</button>
-    <!--<button (click)="toggleFlag(index)">Basculer flag</button>-->
   </main>
 </div>
