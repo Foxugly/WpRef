@@ -112,18 +112,17 @@ class QuizAttemptView(GenericAPIView):
         return session, quiz_question
 
     def post(self, request, quiz_id, question_order):
+        print("QuizAttemptView POST")
         session, quiz_question = self.get_session_and_quiz_question(
             quiz_id, question_order
         )
-
-        # Règle d'accès : proprio ou admin
+            # Règle d'accès : proprio ou admin
         if not (request.user.is_staff or session.user == request.user):
             return Response(
                 {"detail": "Vous n'êtes pas autorisé à répondre à ce quiz."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-
-        # Vérifie si on peut encore répondre (non clôturé et non expiré)
+          # Vérifie si on peut encore répondre (non clôturé et non expiré)
         if not session.can_answer():
             return Response(
                 {"detail": "Ce quiz est clôturé ou a expiré."},
@@ -131,46 +130,48 @@ class QuizAttemptView(GenericAPIView):
             )
 
         # ✅ Validation via serializer d'entrée
-        input_serializer = QuizAttemptInputSerializer(data=request.data)
-        input_serializer.is_valid(raise_exception=True)
-        selected_ids = input_serializer.validated_data["selected_option_ids"]
+        print("#3")
+        if len(request.data.get("selected_option_ids")):
+            input_serializer = QuizAttemptInputSerializer(data=request.data)
+            input_serializer.is_valid(raise_exception=True)
+            selected_ids = input_serializer.validated_data["selected_option_ids"]
+            print("#4")
+            # 1) on crée / met à jour QuizAttempt
+            attempt, new = QuizAttempt.objects.update_or_create(
+                session=session,
+                question_order=question_order,
+                defaults={
+                    "question": quiz_question.question,
+                },
+            )
+            if new:
+                print("#5")
+                # 2) on crée / met à jour QuizAnswer
+                quiz_answer, _ = QuizAnswer.objects.get_or_create(
+                    attempt=attempt,
+                    question=quiz_question.question,
+                )
+                print("#6")
+                options_qs = AnswerOption.objects.filter(
+                    question=quiz_question.question,
+                    id__in=selected_ids,
+                )
+                quiz_answer.selected_options.set(options_qs)
 
-        # 1) on crée / met à jour QuizAttempt
-        attempt, _ = QuizAttempt.objects.update_or_create(
-            session=session,
-            question_order=question_order,
-            defaults={
-                "question": quiz_question.question,
-            },
-        )
+                # 3) scoring
+                earned, max_score = quiz_answer.compute_score(save=True)
+                attempt.is_correct = (earned == max_score and max_score > 0)
+                attempt.save(update_fields=["is_correct"])
 
-        # 2) on crée / met à jour QuizAnswer
-        quiz_answer, _ = QuizAnswer.objects.get_or_create(
-            attempt=attempt,
-            question=quiz_question.question,
-        )
-
-        options_qs = AnswerOption.objects.filter(
-            question=quiz_question.question,
-            id__in=selected_ids,
-        )
-        quiz_answer.selected_options.set(options_qs)
-
-        # 3) scoring
-        earned, max_score = quiz_answer.compute_score(save=True)
-        attempt.is_correct = (earned == max_score and max_score > 0)
-        attempt.save(update_fields=["is_correct"])
-
-        # 4) réponse
-        data = {
-            "session": str(attempt.session_id),
-            "question": attempt.question_id,
-            "question_order": attempt.question_order,
-            "selected_option_ids": list(options_qs.values_list("id", flat=True)),
-            "is_correct": attempt.is_correct,
-            "answered_at": attempt.answered_at,
-        }
-        return Response(data, status=status.HTTP_200_OK)
+                # 4) réponse
+                data = {}
+                return Response(data, status=status.HTTP_201_CREATED)
+            else:
+                data = {}
+                return Response(data, status=status.HTTP_200_OK)
+        else:
+            data = {}
+            return Response(data, status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, quiz_id, question_order):
         """

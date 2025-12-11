@@ -68,11 +68,8 @@ export class QuizPlay {
   }
 
   toggleFlag(index: number): void {
-    console.log('toggleFlag', index);
-
     const i = this.questionNavItems.findIndex((q) => q.index === index);
     if (i === -1) return;
-
     const old = this.questionNavItems[i];
     const updated: QuizNavItem = {
       ...old,
@@ -80,7 +77,6 @@ export class QuizPlay {
       // éventuel comportement : une question flaggée peut être non répondue
       answered: old.answered,
     };
-
     this.questionNavItems = [
       ...this.questionNavItems.slice(0, i),
       updated,

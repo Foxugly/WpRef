@@ -15,6 +15,10 @@
         [showCorrectAnswers]="showCorrect"
         displayMode="preview"
         (answeredToggled)="toggleFlag()"
+        (goNext)="onNextQuestion($event)"
+        (goPrevious)="onPreviousQuestion($event)"
+        [hasNext]="hasQuestionNext(index)"
+        [hasPrevious]="hasQuestionPrev(index)"
       ></app-quiz-question>
     } @else {
       <!-- optionnel : loader, message, etc. -->

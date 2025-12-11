@@ -15,6 +15,13 @@ import {FormsModule} from '@angular/forms';
 import {ToggleButtonModule} from 'primeng/togglebutton';
 import {QuizNavItem} from '../quiz-nav/quiz-nav';
 
+
+export interface AnswerPayload {
+  questionId: number;
+  index:number;
+  selectedOptionIds: number[];
+}
+
 @Component({
   standalone: true,
   selector: 'app-quiz-question',
@@ -36,13 +43,16 @@ export class QuizQuestionComponent implements OnChanges {
   @Input({required: true}) quizNavItem!: QuizNavItem;
   @Input() showCorrectAnswers = false;
   @Input() displayMode: 'preview' | 'exam' = 'preview';
+  @Input() hasPrevious = false;
+  @Input() hasNext = false;
   @Output() answeredToggled = new EventEmitter<void>();
+  // ➜ nouveaux events pour laisser le parent gérer la navigation
+  @Output() goNext = new EventEmitter<AnswerPayload>();
+  @Output() goPrevious = new EventEmitter<AnswerPayload>();
+  selectedOptionIds: number[] = [];
+  // Pour le radio uniquement (choix unique)
+  selectedRadioId: number | null = null;
 
-  singleSelected: any = null;
-  multiSelected: Record<number, boolean> = {};
-  /** Sélection locale, juste pour l’affichage (aucun call backend ici) */
-  multipleSelection: boolean[] = [];
-  singleSelectionIndex: number | null = null;
   private sanitizer = inject(DomSanitizer);
 
   get question(): Question {
@@ -53,32 +63,53 @@ export class QuizQuestionComponent implements OnChanges {
     return !!this.quizNavItem.question.allow_multiple_correct;
   }
 
-  isMultiChecked(i: number): boolean {
-    return this.multiSelected[i] ?? false;
+  /** RADIO : choix unique */
+  onSelectRadio(optionId: number | null): void {
+    this.selectedRadioId = optionId;
+    this.selectedOptionIds = optionId == null ? [] : [optionId];
+  }
+
+  onNextClick(): void {
+    this.goNext.emit(this.buildPayload());
+  }
+
+  onPreviousClick(): void {
+    this.goPrevious.emit(this.buildPayload());
+  }
+
+  /** CHECKBOX : choix multiple */
+  onToggleCheckbox(optionId: number | undefined, checked: boolean) {
+    if (optionId == null) {
+      return;
+    }
+    if (checked) {
+      if (!this.selectedOptionIds.includes(optionId)) {
+        this.selectedOptionIds.push(optionId);
+      }
+    } else {
+      this.selectedOptionIds = this.selectedOptionIds.filter(id => id !== optionId);
+    }
+  }
+
+  isChecked(optionId?: number): boolean {
+    return optionId != null && this.selectedOptionIds.includes(optionId);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['quizNavItem'] && this.quizNavItem) {
-      const len = this.quizNavItem.question.answer_options?.length ?? 0;
-      this.multipleSelection = Array(len).fill(false);
-      this.singleSelectionIndex = null;
+      // on reset la sélection quand on change de question
+      this.selectedOptionIds = [];
+      this.selectedRadioId = null;
     }
   }
 
-  public onSelectSingle(opt: any) {
-    this.singleSelected = opt;
-  }
-
-  public onToggleMulti(index: number, checked: boolean) {
-    this.multiSelected[index] = checked;
-  }
-
-  // ---------- Médias ----------
 
   mediaSrc(m: MediaSelectorValue): string {
     // Pour images/vidéos : on part du principe que file est déjà une URL absolue ou relative
     return (m.file as string | null) || m.external_url || '';
   }
+
+  // ---------- Médias ----------
 
   toYoutubeEmbed(url: string): string {
     try {
@@ -111,15 +142,6 @@ export class QuizQuestionComponent implements OnChanges {
     return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
   }
 
-  onToggleCheckbox(index: number): void {
-    this.multipleSelection[index] = !this.multipleSelection[index];
-  }
-
-  // ---------- Sélection réponses (démo UI) ----------
-  onSelectRadio(index: number): void {
-    this.singleSelectionIndex = index;
-  }
-
   stripOuterP(html: string): string {
     if (!html) return html;
     const trimmed = html.trim();
@@ -133,6 +155,14 @@ export class QuizQuestionComponent implements OnChanges {
       .replace(/&nbsp;/g, ' ')
       .replace(/\u00A0/g, ' ');
     return inner;
+  }
+
+  private buildPayload(): AnswerPayload {
+    return {
+      questionId: this.question.id,
+      index: this.quizNavItem.index,
+      selectedOptionIds: [...this.selectedOptionIds], // copie
+    };
   }
 
   private isYoutubeUrl(url: string): boolean {

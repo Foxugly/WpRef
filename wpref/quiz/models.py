@@ -133,9 +133,7 @@ class QuizSession(models.Model):
 
     @property
     def expires_at(self):
-        if self.expired_at:
-            return self.expired_at
-        return None
+        return self.expired_at if self.expired_at else None
 
     @property
     def is_expired(self):

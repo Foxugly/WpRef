@@ -4,6 +4,7 @@ import {Router} from '@angular/router';
 import {environment} from '../../../environments/environment';
 import {Observable} from 'rxjs';
 import {Question} from '../question/question';
+import {AnswerPayload} from '../../components/quiz-question/quiz-question';
 
 export interface QuizSubjectCreatePayload {
   subject_ids: number[];
@@ -101,7 +102,14 @@ export class QuizService {
   }
 
   retrieveSession(id: number): Observable<QuizSession> {
-    console.log("retrieveSession");
     return this.http.get<QuizSession>(`${this.base}${this.quizPath}${id}/summary/`);
+  }
+
+  saveAnswer(quiz_id: number, payload: AnswerPayload) {
+    const url = `${this.base}${this.quizPath}${quiz_id}/attempt/${payload.index}/`;
+    const mypayload = {
+      "selected_option_ids": payload.selectedOptionIds
+    }
+    return this.http.post<any>(url, mypayload, {observe: 'response'});
   }
 }

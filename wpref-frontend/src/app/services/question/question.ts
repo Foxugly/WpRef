@@ -22,7 +22,7 @@ export interface Question {
 }
 
 export interface AnswerOption {
-  id?: number;
+  id: number;
   content: string;
   is_correct: boolean;
   sort_order: number;

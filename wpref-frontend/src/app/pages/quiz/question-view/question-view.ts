@@ -3,7 +3,7 @@ import {ActivatedRoute} from '@angular/router';
 import {QuizService, QuizSession} from '../../../services/quiz/quiz';
 import {Question, QuestionService} from '../../../services/question/question';
 import {UserService} from '../../../services/user/user';
-import {QuizQuestionComponent} from '../../../components/quiz-question/quiz-question';
+import {AnswerPayload, QuizQuestionComponent} from '../../../components/quiz-question/quiz-question';
 import {QuizNav, QuizNavItem} from '../../../components/quiz-nav/quiz-nav';
 
 @Component({
@@ -45,57 +45,111 @@ export class QuizQuestionView implements OnInit {
     this.loadQuestion();
   }
 
-  hasNext(i: number): boolean {
-    return i < (this.quizSession()?.questions.length ?? 0) - 1;
+  /**
+   * Appelé par le composant enfant quand l'utilisateur clique sur "Suivante"
+   */
+  onNextQuestion(payload: AnswerPayload): void {
+    this.saveAnswer(payload, () => {
+      this.goQuestionNext(this.index);
+    });
   }
 
-  goNext(i: number): void {
-    if (this.hasNext(i)) {
-      this.quizService.goQuestionNext(this.quiz_id, i);
+  /**
+   * Appelé par le composant enfant quand l'utilisateur clique sur "Précédente"
+   */
+  onPreviousQuestion(payload: AnswerPayload): void {
+    this.saveAnswer(payload, () => {
+      this.goQuestionPrev(this.index);
+    });
+  }
+
+  goQuestionNext(index: number): void {
+    if (this.hasQuestionNext(index)) {
+      this.changeQuestion(index + 1);
     }
   }
 
-  hasPrev(i: number): boolean {
-    return i > 0;
-  }
-
-  goPrev(i: number): void {
-    if (this.hasPrev(i)) {
-      this.quizService.goQuestionPrev(this.quiz_id, i);
+  goQuestionPrev(index: number): void {
+    if (this.hasQuestionPrev(index)) {
+      this.changeQuestion(index - 1);
     }
   }
 
   onQuestionSelected(index: number): void {
-    console.log("onQuestionselected", index);
+    this.changeQuestion(index);
+  }
+
+  markAnswered(index: number): void {
+    console.log("markAnswered");
+    this.quizNavItems.update(items =>
+      items.map(item => {
+        console.log("item before:", item);
+        if (item.index === index) {
+          const updated = {...item, answered: true};
+          console.log("item updated:", updated);
+          return updated;
+        }
+        return item;
+      })
+    );
+  }
+
+  toggleFlag(): void {
+    console.log("toggleFlag");
+
+    this.quizNavItems.update(items =>
+      items.map(item => {
+        console.log("checking item:", item);
+
+        if (item.index === this.index) {
+          const updated = {...item, flagged: !item.flagged};
+          console.log("updated item:", updated);
+          return updated;
+        }
+
+        return item;
+      })
+    );
+  }
+
+
+  protected hasQuestionNext(index: number): boolean {
+    return index < (this.quizSession()?.questions.length ?? 0);
+  }
+
+  protected hasQuestionPrev(index: number): boolean {
+    return index > 1;
+  }
+
+  protected changeQuestion(index: number): void {
     const item = this.quizNavItems().find(q => q.index === index);
     if (!item) {
       console.warn("QuestionNavItem introuvable pour index", index);
       return;
     }
+    this.index = index;
     this.quizNavItem.set(item);
   }
 
-
-  markAnswered(index: number): void {
-    this.quizNavItems.update(items =>
-      items.map(item =>
-        item.index === index
-          ? {...item, answered: true}
-          : item
-      )
-    );
+  private saveAnswer(payload: AnswerPayload, afterSave?: () => void): void {
+    // À adapter au nom réel de ta méthode d'API :
+    // ex: this.quizService.saveAnswer(this.quiz_id, payload)
+    this.quizService.saveAnswer(this.quiz_id, payload).subscribe({
+      next: (response) => {
+        // on marque la question comme répondue
+        if (response.status != 204) {
+          this.markAnswered(payload.index);
+        }
+        if (afterSave) {
+          afterSave();
+        }
+      },
+      error: (err) => {
+        console.error('Erreur lors de la sauvegarde de la réponse', err);
+        // tu peux afficher un toast ou mettre un message dans this.error
+      }
+    });
   }
-
-  toggleFlag(): void {
-    this.quizNavItems.update(items =>
-      items.map(item =>
-        item.index === this.index
-          ? {...item, flagged: !item.flagged}
-          : item
-      )
-    );
-  }
-
 
   private buildQuestionNavItems(questions: Question[]): void {
     const navItems: QuizNavItem[] = questions.map((q, idx) => ({
@@ -110,7 +164,6 @@ export class QuizQuestionView implements OnInit {
   }
 
   private loadQuestion(): void {
-    console.log("loadQuestion");
     this.loading.set(true);
     this.error.set(null);
     this.quizService.retrieveSession(this.quiz_id).subscribe({
@@ -130,27 +183,27 @@ export class QuizQuestionView implements OnInit {
         const id = this.quizNavItems()[index].id;
 
         this.questionService.retrieve(id).subscribe({
-      next: q => {
-        const items = this.quizNavItems();
-        const existing = items.find(item => item.id === q.id);
+          next: q => {
+            const items = this.quizNavItems();
+            const existing = items.find(item => item.id === q.id);
 
-        const navItem: QuizNavItem = existing
-          ? {...existing, question: q} // on garde answered/flagged
-          : {
-            index: items.length + 1,
-            id: q.id,
-            answered: false,
-            flagged: false,
-            question: q,
-          };
+            const navItem: QuizNavItem = existing
+              ? {...existing, question: q} // on garde answered/flagged
+              : {
+                index: items.length + 1,
+                id: q.id,
+                answered: false,
+                flagged: false,
+                question: q,
+              };
 
-        this.quizNavItem.set(navItem);
-      },
-      error: err => {
-        console.error('Erreur chargement question', err);
-        this.error.set("Impossible de charger cette question.");
-      }
-    });
+            this.quizNavItem.set(navItem);
+          },
+          error: err => {
+            console.error('Erreur chargement question', err);
+            this.error.set("Impossible de charger cette question.");
+          }
+        });
       },
       error: (err) => {
         console.error('Erreur chargement quizSession', err);

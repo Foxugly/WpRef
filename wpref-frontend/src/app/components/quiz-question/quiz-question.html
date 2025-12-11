@@ -16,7 +16,7 @@
 
         <!-- Centre : label -->
         <div class="header-center">
-          Question
+          Question {{ quizNavItem.index }}
         </div>
 
         <!-- Droite : icône fixe -->
@@ -80,23 +80,23 @@
           @if (allowMultiple) {
             <!-- MULTI → checkbox -->
             <p-checkbox
-              (ngModelChange)="onToggleMulti(i, $event)"
+              (onChange)="onToggleCheckbox(opt.id, $event.checked)"
               [binary]="true"
-              [ngModel]="isMultiChecked(i)"
-              inputId="answer-{{ i }}"
+              [inputId]="'opt' + opt.id"
+              [ngModel]="isChecked(opt.id)"
             ></p-checkbox>
           } @else {
             <!-- SINGLE → radio -->
-            <p-radiobutton
-              (ngModelChange)="onSelectSingle(opt)"
-              [ngModel]="singleSelected"
-              [value]="opt"
-              inputId="answer-{{ i }}"
-              name="question-{{ quizNavItem.id }}"
-            ></p-radiobutton>
+            <p-radioButton
+              (ngModelChange)="onSelectRadio($event)"
+              [(ngModel)]="selectedRadioId"
+              [inputId]="'opt' + opt.id"
+              [value]="opt.id"
+              name="q{{ question.id }}"
+            ></p-radioButton>
           }
 
-          <label [for]="'answer-' + i" class="answer-label">
+          <label [for]="'opt' + opt.id" class="answer-label">
             <div [innerHTML]="stripOuterP(opt.content)"></div>
           </label>
         </div>
@@ -111,8 +111,29 @@
     </div>
     <ng-template pTemplate="footer">
       <div class="card-footer">
+        <p-button
+          (onClick)="onPreviousClick()"
+          [disabled]="!hasPrevious"
+          icon="pi pi-chevron-left"
+          label="Précédent"
+          severity="secondary"
+          styleClass="p-button-text"
+        ></p-button>
+
+        <span class="spacer"></span>
+
+        <p-button
+          (onClick)="onNextClick()"
+          [disabled]="!hasNext"
+          icon="pi pi-chevron-right"
+          iconPos="right"
+          label="Suivant"
+          severity="secondary"
+          styleClass="p-button-text"
+        ></p-button>
       </div>
     </ng-template>
+
   </p-card>
   <!-- Réponses -->
 </div>

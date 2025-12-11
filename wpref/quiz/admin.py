@@ -77,22 +77,20 @@ class QuizAdmin(admin.ModelAdmin):
 @admin.register(QuizSession)
 class QuizSessionAdmin(admin.ModelAdmin):
     list_display = (
-        "id",
         "quiz",
         "user",
         "created_at",
         "started_at",
         "expired_at",
         "is_closed",
-        #"is_expired_admin",
     )
     list_filter = ("quiz", "user", "is_closed")
-    search_fields = ("id", "quiz__title", "user__username", "user__email")
-    #readonly_fields = ("started_at", "expires_at_admin")
+    search_fields = ("quiz__title", "user__username", "user__email")
+    readonly_fields = ("created_at",)
 
     fieldsets = (
         (None, {
-            "fields": ("id", "quiz", "user"),
+            "fields": ("quiz", "user"),
         }),
         ("État", {
             "fields": ("created_at", "started_at", "expired_at", "is_closed"),

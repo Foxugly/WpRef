@@ -35,6 +35,7 @@ export class QuizNav {
 
   /** Couleur de fond selon l'état de la question */
   getBackgroundColor(item: QuizNavItem): string {
+    //console.log(item);
     /*if (item.flagged) {
       // Question marquée : fond clair
       return '#fff7f7';

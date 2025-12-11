@@ -90,7 +90,7 @@ class QuizOptionStateSerializer(serializers.Serializer):
 
 
 class QuizAttemptDetailSerializer(serializers.Serializer):
-    quiz_id = serializers.UUIDField()
+    quiz_id = serializers.IntegerField()
     quiz_title = serializers.CharField()
     question_id = serializers.IntegerField()
     question_order = serializers.IntegerField()
