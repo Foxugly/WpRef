@@ -1,5 +1,5 @@
 // src/app/components/quiz-question/quiz-question.ts
-import {Component, inject, Input, OnChanges, SimpleChanges,} from '@angular/core';
+import {Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges,} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {DomSanitizer, SafeResourceUrl,} from '@angular/platform-browser';
 
@@ -12,6 +12,8 @@ import {RadioButtonModule} from 'primeng/radiobutton';
 import {ImageModule} from 'primeng/image';
 import {ButtonModule} from 'primeng/button';
 import {FormsModule} from '@angular/forms';
+import {ToggleButtonModule} from 'primeng/togglebutton';
+import {QuizNavItem} from '../quiz-nav/quiz-nav';
 
 @Component({
   standalone: true,
@@ -27,12 +29,14 @@ import {FormsModule} from '@angular/forms';
     RadioButtonModule,
     ImageModule,
     ButtonModule,
+    ToggleButtonModule,
   ],
 })
 export class QuizQuestionComponent implements OnChanges {
-  @Input({required: true}) question!: Question;
+  @Input({required: true}) quizNavItem!: QuizNavItem;
   @Input() showCorrectAnswers = false;
   @Input() displayMode: 'preview' | 'exam' = 'preview';
+  @Output() answeredToggled = new EventEmitter<void>();
 
   singleSelected: any = null;
   multiSelected: Record<number, boolean> = {};
@@ -41,9 +45,12 @@ export class QuizQuestionComponent implements OnChanges {
   singleSelectionIndex: number | null = null;
   private sanitizer = inject(DomSanitizer);
 
+  get question(): Question {
+    return this.quizNavItem.question;
+  }
 
   get allowMultiple(): boolean {
-    return !!this.question?.allow_multiple_correct;
+    return !!this.quizNavItem.question.allow_multiple_correct;
   }
 
   isMultiChecked(i: number): boolean {
@@ -51,8 +58,8 @@ export class QuizQuestionComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['question'] && this.question) {
-      const len = this.question.answer_options?.length ?? 0;
+    if (changes['quizNavItem'] && this.quizNavItem) {
+      const len = this.quizNavItem.question.answer_options?.length ?? 0;
       this.multipleSelection = Array(len).fill(false);
       this.singleSelectionIndex = null;
     }

@@ -18,12 +18,12 @@ import {QuizNav, QuizNavItem} from '../../../components/quiz-nav/quiz-nav';
 export class QuizQuestionView implements OnInit {
   quiz_id!: number;
   question_id!: number;
-  index:number=0;
+  index: number = 1;
   loading = signal(false);
   error = signal<string | null>(null);
   quizSession = signal<QuizSession | null>(null);
-  question = signal<Question | null>(null);
-  questionNavItems = signal<QuizNavItem[]>([]);
+  quizNavItem = signal<QuizNavItem | null>(null);
+  quizNavItems = signal<QuizNavItem[]>([]);
   protected showCorrect: boolean = false;
   private route = inject(ActivatedRoute);
   private quizService = inject(QuizService);
@@ -66,39 +66,36 @@ export class QuizQuestionView implements OnInit {
   }
 
   onQuestionSelected(index: number): void {
-    console.log("onQuestionSelected");
-    console.log(index);
-    // charger la question, etc.
+    console.log("onQuestionselected", index);
+    const item = this.quizNavItems().find(q => q.index === index);
+    if (!item) {
+      console.warn("QuestionNavItem introuvable pour index", index);
+      return;
+    }
+    this.quizNavItem.set(item);
   }
+
 
   markAnswered(index: number): void {
-    console.log('markAnswered', index);
-
-    const i = this.questionNavItems().findIndex((q) => q.index === index);
-    if (i === -1) return;
-
-    const old = this.questionNavItems()[i];
-    const updated: QuizNavItem = {
-      ...old,
-      answered: true,
-      flagged: old.flagged, // si tu veux enlever le flag quand répondu
-    };
+    this.quizNavItems.update(items =>
+      items.map(item =>
+        item.index === index
+          ? {...item, answered: true}
+          : item
+      )
+    );
   }
 
-  toggleFlag(index: number): void {
-    console.log('toggleFlag', index);
-
-    const i = this.questionNavItems().findIndex((q) => q.index === index);
-    if (i === -1) return;
-
-    const old = this.questionNavItems()[i];
-    const updated: QuizNavItem = {
-      ...old,
-      flagged: !old.flagged,
-      // éventuel comportement : une question flaggée peut être non répondue
-      answered: old.answered,
-    };
+  toggleFlag(): void {
+    this.quizNavItems.update(items =>
+      items.map(item =>
+        item.index === this.index
+          ? {...item, flagged: !item.flagged}
+          : item
+      )
+    );
   }
+
 
   private buildQuestionNavItems(questions: Question[]): void {
     const navItems: QuizNavItem[] = questions.map((q, idx) => ({
@@ -109,42 +106,51 @@ export class QuizQuestionView implements OnInit {
       question: q,
     }));
 
-    this.questionNavItems.set(navItems);
+    this.quizNavItems.set(navItems);
   }
 
   private loadQuestion(): void {
+    console.log("loadQuestion");
     this.loading.set(true);
     this.error.set(null);
     this.quizService.retrieveSession(this.quiz_id).subscribe({
       next: (session) => {
-        console.log('Session reçue', session);
         this.quizSession.set(session);
 
         // Récupérer l'index de la question dans la session
         const index = this.question_id - 1;
         this.buildQuestionNavItems(session.questions);
-        if (index < 0 || index >= this.questionNavItems().length) {
+        if (index < 0 || index >= this.quizNavItems().length) {
           console.error('Index de question invalide', index);
           this.error.set("Cette question n'existe pas dans ce quiz.");
           this.loading.set(false);
           return;
         }
 
-        const id = this.questionNavItems()[index].id;
-        console.log('ID question :', id);
+        const id = this.quizNavItems()[index].id;
 
         this.questionService.retrieve(id).subscribe({
-          next: (q: Question) => {
-            console.log('Question reçue', q);
-            this.question.set(q);
-            this.loading.set(false);
-          },
-          error: (err) => {
-            console.error('Erreur chargement question', err);
-            this.error.set("Impossible de charger cette question.");
-            this.loading.set(false);
-          },
-        });
+      next: q => {
+        const items = this.quizNavItems();
+        const existing = items.find(item => item.id === q.id);
+
+        const navItem: QuizNavItem = existing
+          ? {...existing, question: q} // on garde answered/flagged
+          : {
+            index: items.length + 1,
+            id: q.id,
+            answered: false,
+            flagged: false,
+            question: q,
+          };
+
+        this.quizNavItem.set(navItem);
+      },
+      error: err => {
+        console.error('Erreur chargement question', err);
+        this.error.set("Impossible de charger cette question.");
+      }
+    });
       },
       error: (err) => {
         console.error('Erreur chargement quizSession', err);

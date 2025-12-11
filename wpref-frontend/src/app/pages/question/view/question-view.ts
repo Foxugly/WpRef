@@ -8,6 +8,7 @@ import {ButtonModule} from 'primeng/button';
 import {ToggleButtonModule} from 'primeng/togglebutton';
 import {FormsModule} from '@angular/forms';
 import {UserService} from '../../../services/user/user';
+import {QuizNavItem} from '../../../components/quiz-nav/quiz-nav';
 
 @Component({
   standalone: true,
@@ -20,7 +21,7 @@ export class QuestionView implements OnInit {
   id!: number;
   loading = signal(false);
   error = signal<string | null>(null);
-  question = signal<Question | null>(null);
+  quizNavItem = signal<QuizNavItem | null>(null);
   /** Flag pour dire au composant enfant d'afficher les bonnes réponses en vert */
   showCorrect: boolean = false;
   /** À adapter à ton système d’authentification réel */
@@ -49,9 +50,9 @@ export class QuestionView implements OnInit {
 
   /** true si l'utilisateur PEUT voir les réponses (admin ou mode practice) */
   canRevealCorrect(): boolean {
-    const q = this.question();
+    const q = this.quizNavItem();
     if (!q) return false;
-    return this.isAdmin || q.is_mode_practice;
+    return this.isAdmin || q.question.is_mode_practice;
   }
 
   private loadQuestion(): void {
@@ -60,7 +61,15 @@ export class QuestionView implements OnInit {
 
     this.questionService.retrieve(this.id).subscribe({
       next: (q) => {
-        this.question.set(q);
+        const navItem: QuizNavItem = {
+          index: 1,           // ou ce que tu veux
+          id: q.id,
+          answered: false,
+          flagged: false,
+          question: q,
+        };
+
+        this.quizNavItem.set(navItem);
         this.loading.set(false);
       },
       error: (err) => {

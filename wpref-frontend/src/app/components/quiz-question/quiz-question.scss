@@ -26,10 +26,14 @@
   font-weight: 600;
 }
 
-.header-left,
-.header-right {
+.header-left{
   width: 32px;   /* pour garder le centre parfaitement centré */
   text-align: center;
+}
+
+.header-right {
+  width: 90px;   /* pour garder le centre parfaitement centré */
+  text-align: left;
 }
 
 .header-center {

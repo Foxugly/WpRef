@@ -1,5 +1,25 @@
 import {Component} from '@angular/core';
 import {QuizNav, QuizNavItem} from '../quiz-nav/quiz-nav';
+import {AnswerOption, Question} from '../../services/question/question';
+import {Subject} from '../../services/subject/subject';
+import {MediaSelectorValue} from '../media-selector/media-selector';
+
+function createEmptyQuestion(id: number, title: string = ""): Question {
+  return {
+    id: id,
+    title: title,
+    description: "question",
+    explanation: "parce que",
+    allow_multiple_correct: true,
+    active: true,
+    is_mode_practice: true,
+    is_mode_exam: false,
+    subjects: [],
+    media: [],
+    answer_options: [],
+    created_at: new Date().toISOString()
+  };
+}
 
 @Component({
   selector: 'app-quiz-play',
@@ -9,11 +29,15 @@ import {QuizNav, QuizNavItem} from '../quiz-nav/quiz-nav';
   styleUrl: './quiz-play.scss',
 })
 export class QuizPlay {
-  questions: QuizNavItem[] = Array.from({length: 23}).map((_, i) => ({
-    index: i + 1,
-    answered: false,
-    flagged: false,
-  }));
+  questionNavItems: QuizNavItem[] = Array.from({length: 23}).map(
+    (_, i): QuizNavItem => ({
+      index: i + 1,
+      id: i + 1,                // ← identifiant interne fictif
+      answered: false,
+      flagged: false,
+      question: createEmptyQuestion(i + 1, `Question ${i + 1}`)
+    })
+  );
 
   currentQuestionIndex = 1;
 
@@ -25,10 +49,10 @@ export class QuizPlay {
   markAnswered(index: number): void {
     console.log('markAnswered', index);
 
-    const i = this.questions.findIndex((q) => q.index === index);
+    const i = this.questionNavItems.findIndex((q) => q.index === index);
     if (i === -1) return;
 
-    const old = this.questions[i];
+    const old = this.questionNavItems[i];
     const updated: QuizNavItem = {
       ...old,
       answered: true,
@@ -36,20 +60,20 @@ export class QuizPlay {
     };
 
     // ⚠️ recréer un nouveau tableau pour déclencher le change detection
-    this.questions = [
-      ...this.questions.slice(0, i),
+    this.questionNavItems = [
+      ...this.questionNavItems.slice(0, i),
       updated,
-      ...this.questions.slice(i + 1),
+      ...this.questionNavItems.slice(i + 1),
     ];
   }
 
   toggleFlag(index: number): void {
     console.log('toggleFlag', index);
 
-    const i = this.questions.findIndex((q) => q.index === index);
+    const i = this.questionNavItems.findIndex((q) => q.index === index);
     if (i === -1) return;
 
-    const old = this.questions[i];
+    const old = this.questionNavItems[i];
     const updated: QuizNavItem = {
       ...old,
       flagged: !old.flagged,
@@ -57,10 +81,10 @@ export class QuizPlay {
       answered: old.answered,
     };
 
-    this.questions = [
-      ...this.questions.slice(0, i),
+    this.questionNavItems = [
+      ...this.questionNavItems.slice(0, i),
       updated,
-      ...this.questions.slice(i + 1),
+      ...this.questionNavItems.slice(i + 1),
     ];
   }
 }

@@ -21,9 +21,12 @@
 
         <!-- Droite : icône fixe -->
         <div class="header-right">
-          @if (displayMode === 'exam') {
-            <i class="pi pi-bookmark"></i>
-          }
+          <p-togglebutton
+            (onChange)="answeredToggled.emit()"
+            [(ngModel)]="quizNavItem.answered"
+            class="w-36"
+            offIcon="pi pi-bookmark"
+            onIcon="pi pi-bookmark-fill"></p-togglebutton>
         </div>
       </div>
     </ng-template>
@@ -72,7 +75,7 @@
       ></div>
     }
     <div class="quiz-question__answers">
-      @for (opt of question.answer_options; track opt; let i = $index) {
+      @for (opt of question.answer_options; track opt.id; let i = $index) {
         <div [ngClass]="{ 'answer-line--correct': showCorrectAnswers && opt.is_correct}" class="answer-line">
           @if (allowMultiple) {
             <!-- MULTI → checkbox -->
@@ -89,7 +92,7 @@
               [ngModel]="singleSelected"
               [value]="opt"
               inputId="answer-{{ i }}"
-              name="question-{{ question.id }}"
+              name="question-{{ quizNavItem.id }}"
             ></p-radiobutton>
           }
 

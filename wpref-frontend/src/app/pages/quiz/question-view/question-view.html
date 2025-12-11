@@ -3,23 +3,24 @@
     <app-quiz-nav
       (questionSelected)="onQuestionSelected($event)"
       [columns]="5"
-      [items]="questionNavItems()">
+      [items]="quizNavItems()">
 
     </app-quiz-nav>
   </aside>
 
   <main class="layout__right">
-    @if (question()) {
+    @if (quizNavItem()) {
       <app-quiz-question
-        [question]="question()!"
+        [quizNavItem]="quizNavItem()!"
         [showCorrectAnswers]="showCorrect"
         displayMode="preview"
+        (answeredToggled)="toggleFlag()"
       ></app-quiz-question>
     } @else {
       <!-- optionnel : loader, message, etc. -->
       <p>Chargement de la question…</p>
     }
     <button (click)="markAnswered(index)">Marquer comme répondue</button>
-    <button (click)="toggleFlag(index)">Basculer flag</button>
+    <!--<button (click)="toggleFlag(index)">Basculer flag</button>-->
   </main>
 </div>

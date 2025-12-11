@@ -29,9 +29,9 @@
     <div class="question-detail__status question-detail__status--error">
       {{ error() }}
     </div>
-  } @else if (question()) {
+  } @else if (quizNavItem()) {
     <app-quiz-question
-      [question]="question()!"
+      [quizNavItem]="quizNavItem()!"
       [showCorrectAnswers]="showCorrect"
       displayMode="preview"
     ></app-quiz-question>

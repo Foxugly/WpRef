@@ -6,10 +6,10 @@ import {Question} from '../../services/question/question';
 
 export interface QuizNavItem {
   index: number;
-  id?: number;
-  answered?: boolean;
-  flagged?: boolean;
-  question? : Question;
+  id: number;
+  answered: boolean;
+  flagged: boolean;
+  question : Question;
 }
 
 @Component({
