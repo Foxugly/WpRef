@@ -1,0 +1,12 @@
+Django
+django-schema-viewer
+djangorestframework
+django-cors-headers
+djangorestframework-simplejwt
+drf-spectacular
+django-extensions
+pillow
+django-filter
+requests
+drf-nested-routers
+coverage

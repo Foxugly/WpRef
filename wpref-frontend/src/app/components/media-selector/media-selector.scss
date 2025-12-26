@@ -56,9 +56,8 @@
     cursor: pointer;
     border: 1px dashed #cbd5e1;
     border-radius: 0.75rem;
-    transition:
-      border-color 0.15s ease,
-      background-color 0.15s ease;
+    transition: border-color 0.15s ease,
+    background-color 0.15s ease;
 
     input[type='file'] {
       display: none;

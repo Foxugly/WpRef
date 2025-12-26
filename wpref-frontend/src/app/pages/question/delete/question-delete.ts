@@ -22,7 +22,7 @@ export class QuestionDelete implements OnInit {
     this.questionService.retrieve(this.id).subscribe(s => this.question.set(s));
   }
 
-  goBack():void{
+  goBack(): void {
     this.questionService.goBack();
   }
 

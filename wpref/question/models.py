@@ -5,6 +5,11 @@ from subject.models import Subject
 
 
 class Question(models.Model):
+    domain = models.ForeignKey(
+        "domain.Domain",
+        on_delete=models.PROTECT,
+        related_name="questions", blank=True, null=True
+    )
     title = models.CharField("Titre", max_length=255)
     description = models.TextField("Description", blank=True)  # rich text
     explanation = models.TextField("Explication", blank=True)  # rich text
@@ -18,7 +23,7 @@ class Question(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-pk"]
 
     def __str__(self):
         return self.title
@@ -43,7 +48,7 @@ class QuestionSubject(models.Model):
 
     class Meta:
         unique_together = [("question", "subject")]
-        ordering = ["subject__name", "sort_order", "id"]
+        ordering = ["-pk"]
 
     def __str__(self):
         return f"Q{self.question_id}↔{self.subject.name}(ord:{self.sort_order},w:{self.weight})"

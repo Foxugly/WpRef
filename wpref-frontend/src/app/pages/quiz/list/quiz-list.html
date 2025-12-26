@@ -48,9 +48,9 @@
       <td class="center-cell">{{ q.started_at| date : 'short' }}</td>
       <td class="center-cell">{{ q.expired_at| date : 'short' }}</td>
       <td class="row-actions">
-        @if (!q.started_at){
-        <p-button (click)="goView(q.id)" icon="pi pi-play" id="btn_start_quiz" severity="primary"
-                  size="small"></p-button>
+        @if (!q.started_at) {
+          <p-button (click)="goView(q.id)" icon="pi pi-play" id="btn_start_quiz" severity="primary"
+                    size="small"></p-button>
         }
         <p-button (click)="goView(q.id)" icon="pi pi-eye" id="btn_add_question" severity="secondary"
                   size="small"></p-button><!--

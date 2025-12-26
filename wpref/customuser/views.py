@@ -1,4 +1,4 @@
-# customuser/api/views.py
+import logging
 
 from django.conf import settings
 from django.contrib.auth.forms import PasswordResetForm
@@ -6,57 +6,160 @@ from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+)
 from quiz.models import Quiz
-from rest_framework import status
-from rest_framework.generics import GenericAPIView, RetrieveUpdateAPIView, ListCreateAPIView
+from rest_framework import status, mixins, viewsets
+from rest_framework.decorators import action
+from rest_framework.generics import GenericAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from wpref.tools import ErrorDetailSerializer
 
 from .permissions import IsSelfOrStaffOrSuperuser
 from .serializers import *
+from customuser.serializers import SetCurrentDomainSerializer
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class CustomUserListCreateView(ListCreateAPIView):
-    """
-    Créer un nouvel utilisateur.
-    POST /api/user/
-    """
+# ---------------------------------------------------------------------
+# /api/user/  (GET admin-only, POST public)
+# ---------------------------------------------------------------------
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=["User"],
+        summary="Lister les utilisateurs",
+        description="Admin/staff uniquement.",
+        responses={
+            200: CustomUserReadSerializer(many=True),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
+        },
+    ),
+    create=extend_schema(
+        tags=["User"],
+        summary="Créer un utilisateur",
+        description="Création ouverte (AllowAny).",
+        request=CustomUserCreateSerializer,
+        responses={
+            201: CustomUserReadSerializer,
+            400: OpenApiResponse(description="Validation error"),
+        },
+    ),
+    retrieve=extend_schema(
+        tags=["User"],
+        summary="Récupérer un utilisateur",
+        responses={
+            200: CustomUserReadSerializer,
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
+        },
+    ),
+    update=extend_schema(
+        tags=["User"],
+        summary="Mettre à jour un utilisateur (PUT)",
+        request=CustomUserUpdateSerializer,
+        responses={200: CustomUserReadSerializer},
+    ),
+    partial_update=extend_schema(
+        tags=["User"],
+        summary="Mettre à jour un utilisateur (PATCH)",
+        request=CustomUserUpdateSerializer,
+        responses={200: CustomUserReadSerializer},
+    ),
+)
+class CustomUserViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
     queryset = CustomUser.objects.all().order_by("id")
-    serializer_class = CustomUserSerializer
-    permission_classes = [AllowAny]
+    lookup_value_regex = r"\d+"  # ✅ empêche 'me' d'être capturé comme pk
 
     def get_permissions(self):
-        """
-        - POST /api/user/  -> AllowAny (création ouverte)
-        - GET  /api/user/  -> IsAdminUser (seulement staff/admin)
-        """
-        if self.request.method == "POST":
+        if self.action == "create":
             return [AllowAny()]
-        return [IsAdminUser()]
+        if self.action == "list":
+            return [IsAdminUser()]
+        # retrieve/update/partial_update
+        return [IsSelfOrStaffOrSuperuser()]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return CustomUserCreateSerializer
+        if self.action in ["update", "partial_update"]:
+            return CustomUserUpdateSerializer
+        if self.action in ["me", "set_current_domain"]:
+            return MeSerializer
+        return CustomUserReadSerializer
+
+    @action(detail=False, methods=["get"], url_path="me")
+    def me(self, request):
+        serializer = MeSerializer(request.user, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # ✅ /users/me/current-domain/
+    @action(detail=False, methods=["post"], url_path="me/current-domain")
+    def set_current_domain(self, request):
+        serializer = SetCurrentDomainSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()  # met à jour request.user.current_domain
+
+        # renvoyer le profil à jour
+        out = MeSerializer(request.user, context={"request": request})
+        return Response(out.data, status=status.HTTP_200_OK)
 
 
-class CustomUserDetailUpdateView(RetrieveUpdateAPIView):
-    """
-    Récupérer / modifier un utilisateur.
-    GET /api/user/<id>/
-    PUT/PATCH /api/user/<id>/
-    """
-    queryset = CustomUser.objects.all()
-    serializer_class = CustomUserSerializer
-    permission_classes = [IsSelfOrStaffOrSuperuser]
+# ---------------------------------------------------------------------
+# /api/users/<id>/quizzes/   (GET)
+# ---------------------------------------------------------------------
 
-
+@extend_schema_view(
+    get=extend_schema(
+        tags=["User"],
+        summary="Lister les quizzes d’un utilisateur",
+        description=(
+                "Retourne la liste des quiz liés à un utilisateur.\n"
+                "Accès: soi-même ou staff/superuser."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="pk",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="ID utilisateur (pk).",
+            )
+        ],
+        responses={
+            200: QuizSimpleSerializer(many=True),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
+        },
+    ),
+)
 class UserQuizListView(GenericAPIView):
-    """
-    Liste les quiz liés à un utilisateur donné, via ses sessions de quiz.
-
-    GET /api/users/<id>/quizzes/
-    """
     permission_classes = [IsSelfOrStaffOrSuperuser]
     serializer_class = QuizSimpleSerializer
+    queryset = CustomUser.objects.none()
 
+    @extend_schema(
+        operation_id="user_quiz_list",
+        description="Liste les quiz liés à un utilisateur donné.",
+        responses={200: QuizSimpleSerializer(many=True)},
+    )
     def get(self, request, pk):
         user = get_object_or_404(CustomUser, pk=pk)
 
@@ -65,19 +168,32 @@ class UserQuizListView(GenericAPIView):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Vous ne pouvez voir que vos propres quiz.")
 
-        quizzes = Quiz.objects.filter(sessions__user=user).distinct()
+        quiz = Quiz.objects.filter(sessions__user=user).distinct()
 
-        serializer = QuizSimpleSerializer(quizzes, many=True)
+        serializer = QuizSimpleSerializer(quiz, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class PasswordResetRequestView(GenericAPIView):
-    """
-    POST /api/user/password/reset/
-    Body: { "email": "user@example.com" }
+# ---------------------------------------------------------------------
+# /api/user/password/reset/  (POST)
+# ---------------------------------------------------------------------
 
-    -> Envoie un email avec un lien de reset (frontend).
-    """
+@extend_schema_view(
+    post=extend_schema(
+        tags=["Auth"],
+        summary="Demander un reset de mot de passe",
+        description=(
+                "Envoie un email avec un lien de réinitialisation.\n"
+                "⚠️ Répond toujours 200 pour ne pas révéler si l'email existe."
+        ),
+        request=PasswordResetRequestSerializer,
+        responses={
+            200: PasswordResetOKSerializer,
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
+        },
+    ),
+)
+class PasswordResetRequestView(GenericAPIView):
     authentication_classes = []
     permission_classes = [AllowAny]
     serializer_class = PasswordResetRequestSerializer
@@ -103,13 +219,22 @@ class PasswordResetRequestView(GenericAPIView):
                         status=status.HTTP_200_OK)
 
 
-class PasswordResetConfirmView(GenericAPIView):
-    """
-    POST /api/user/password/reset/confirm/
-    Body: { "uid": "<uid_b64>", "token": "<token>", "new_password": "xxx" }
+# ---------------------------------------------------------------------
+# /api/user/password/reset/confirm/  (POST)
+# ---------------------------------------------------------------------
 
-    -> Vérifie le uid + token, puis change le mot de passe.
-    """
+@extend_schema_view(
+    post=extend_schema(
+        tags=["Auth"],
+        summary="Confirmer un reset de mot de passe",
+        request=PasswordResetConfirmSerializer,
+        responses={
+            200: PasswordResetOKSerializer,
+            400: OpenApiResponse(response=ErrorDetailSerializer, description="Lien invalide / token invalide"),
+        },
+    ),
+)
+class PasswordResetConfirmView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = PasswordResetConfirmSerializer
 
@@ -119,7 +244,7 @@ class PasswordResetConfirmView(GenericAPIView):
 
         uid = serializer.validated_data["uid"]
         token = serializer.validated_data["token"]
-        new_password = serializer.validated_data["new_password"]
+        new_password = serializer.validated_data["new_password1"]
 
         try:
             uid_int = force_str(urlsafe_base64_decode(uid))
@@ -139,13 +264,25 @@ class PasswordResetConfirmView(GenericAPIView):
                         status=status.HTTP_200_OK)
 
 
-class PasswordChangeView(GenericAPIView):
-    """
-    POST /api/user/password/change/
-    Body: { "old_password": "xxx", "new_password": "yyy" }
+# ---------------------------------------------------------------------
+# /api/user/password/change/  (POST)
+# ---------------------------------------------------------------------
 
-    -> Utilisateur authentifié change son mot de passe.
-    """
+@extend_schema_view(
+    post=extend_schema(
+        tags=["Auth"],
+        summary="Changer son mot de passe",
+        description="Utilisateur authentifié uniquement.",
+        request=PasswordChangeSerializer,
+        responses={
+            200: PasswordResetOKSerializer,
+            400: OpenApiResponse(response=ErrorDetailSerializer,
+                                 description="Ancien mot de passe incorrect / validation"),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+        },
+    ),
+)
+class PasswordChangeView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = PasswordChangeSerializer
 
@@ -169,13 +306,46 @@ class PasswordChangeView(GenericAPIView):
                         status=status.HTTP_200_OK)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=["User"],
+        summary="Profil courant",
+        responses={
+            200: MeSerializer,
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+        },
+    ),
+    put=extend_schema(
+        tags=["User"],
+        summary="Mettre à jour mon profil (PUT)",
+        request=MeSerializer,
+        responses={
+            200: MeSerializer,
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+        },
+    ),
+    patch=extend_schema(
+        tags=["User"],
+        summary="Mettre à jour mon profil (PATCH)",
+        request=MeSerializer,
+        responses={
+            200: MeSerializer,
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+        },
+    ),
+)
 class MeView(RetrieveUpdateAPIView):
-    """
-    GET /api/user/me/  -> infos utilisateur
-    PUT/PATCH /api/user/me/ -> update profil
-    """
     permission_classes = [IsAuthenticated]
     serializer_class = MeSerializer
 
     def get_object(self):
         return self.request.user
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        kwargs["partial"] = True  # ✅ accepte PUT partiel
+        return super().update(request, *args, **kwargs)

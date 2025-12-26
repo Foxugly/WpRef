@@ -6,7 +6,7 @@ $color-primary: #2563eb;
 $color-secondary: #000000;
 $color-primary-hover: #2563eb;
 $radius: 8px;
-$shadow: 0 2px 8px rgba(0,0,0,0.05);
+$shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
 .page {
   max-width: 960px;
@@ -21,6 +21,7 @@ $shadow: 0 2px 8px rgba(0,0,0,0.05);
     color: $color-secondary;
   }
 }
+
 .actions {
   display: flex;
   justify-content: flex-end;

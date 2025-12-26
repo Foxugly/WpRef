@@ -108,6 +108,8 @@ export class QuizQuestionView implements OnInit {
   }
 
   protected changeQuestion(index: number): void {
+    console.log("ChangeQuestion", index);
+    console.log(this.quizNavItems());
     const item = this.quizNavItems().find(q => q.index === index);
     if (!item) {
       console.warn("QuestionNavItem introuvable pour index", index);
@@ -124,8 +126,34 @@ export class QuizQuestionView implements OnInit {
       next: (response) => {
         // on marque la question comme répondue
         if (response.status === 200 || response.status === 201) {
-        this.markAnswered(payload.index);
-      }
+          this.markAnswered(payload.index);
+          // 2) stocker les réponses de l'utilisateur dans QuizNavItems
+          this.quizNavItems.update(items =>
+            items.map(item => {
+              if (item.index === payload.index) {
+                return {
+                  ...item,
+                  answered: true,
+                  // ⚠️ adapter 'selectedOptionIds' au nom réel du champ dans payload si besoin
+                  selectedOptionIds: payload.selectedOptionIds ?? [],
+                };
+              }
+              return item;
+            })
+          );
+
+          // 3) garder quizNavItem courant en phase
+          this.quizNavItem.update(current => {
+            if (!current || current.index !== payload.index) {
+              return current;
+            }
+            return {
+              ...current,
+              answered: true,
+              selectedOptionIds: payload.selectedOptionIds ?? [],
+            };
+          });
+        }
         if (afterSave) {
           afterSave();
         }
@@ -137,13 +165,74 @@ export class QuizQuestionView implements OnInit {
     });
   }
 
+  /**
+   * Interroge le backend pour chaque question (par question_order = index)
+   * et met à jour quizNavItems avec les réponses déjà sauvegardées.
+   */
+  private hydrateNavItemsFromBackend(): void {
+    const quizId = this.quiz_id;
+    const items = this.quizNavItems();
+
+    items.forEach(item => {
+      this.quizService.getAnswer(quizId, item.index).subscribe({
+        next: (attempt) => {
+          // attempt.options vient de QuizAttemptDetailView (backend)
+          console.log("attempt");
+          console.log(attempt);
+          const selectedIds = attempt.options
+            .filter(o => o.is_selected)
+            .map(o => o.id);
+
+          if (selectedIds.length === 0) {
+            // rien de coché pour cette question → on ne touche pas
+            return;
+          }
+
+          // Met à jour la liste complète
+          this.quizNavItems.update(current =>
+            current.map(navItem =>
+              navItem.index === item.index
+                ? {
+                  ...navItem,
+                  answered: true,
+                  selectedOptionIds: selectedIds,
+                }
+                : navItem
+            )
+          );
+
+          // Si la question actuelle est celle-ci, on aligne aussi quizNavItem
+          this.quizNavItem.update(current => {
+            if (!current || current.index !== item.index) {
+              return current;
+            }
+            return {
+              ...current,
+              answered: true,
+              selectedOptionIds: selectedIds,
+            };
+          });
+        },
+        error: (err) => {
+          console.error(
+            `Erreur lors de la récupération de la réponse pour la question ${item.index}`,
+            err
+          );
+        }
+      });
+    });
+  }
+
+
   private buildQuestionNavItems(questions: Question[]): void {
+    console.log("buildQuestionNavItems");
     const navItems: QuizNavItem[] = questions.map((q, idx) => ({
-      index: idx + 1,
+      index: q.index,
       id: q.id,
       answered: false,
       flagged: false,
       question: q,
+      selectedOptionIds: [],
     }));
 
     this.quizNavItems.set(navItems);
@@ -159,6 +248,7 @@ export class QuizQuestionView implements OnInit {
         // Récupérer l'index de la question dans la session
         const index = this.question_id - 1;
         this.buildQuestionNavItems(session.questions);
+        this.hydrateNavItemsFromBackend();
         if (index < 0 || index >= this.quizNavItems().length) {
           console.error('Index de question invalide', index);
           this.error.set("Cette question n'existe pas dans ce quiz.");

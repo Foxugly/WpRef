@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { QuizView } from './quiz-view';
+import {QuizView} from './quiz-view';
 
 describe('View', () => {
   let component: QuizView;
@@ -10,7 +10,7 @@ describe('View', () => {
     await TestBed.configureTestingModule({
       imports: [QuizView]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(QuizView);
     component = fixture.componentInstance;

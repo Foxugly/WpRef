@@ -1,6 +1,7 @@
 # wpref/schema.py
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
 
+
 class SimpleJWTScheme(OpenApiAuthenticationExtension):
     target_class = 'rest_framework_simplejwt.authentication.JWTAuthentication'
     name = 'jwtAuth'  # <- le nom qui apparaîtra dans /api/docs/ (Authorize)

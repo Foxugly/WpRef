@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { Topmenu } from './topmenu';
+import {Topmenu} from './topmenu';
 
 describe('Topmenu', () => {
   let component: Topmenu;
@@ -10,7 +10,7 @@ describe('Topmenu', () => {
     await TestBed.configureTestingModule({
       imports: [Topmenu]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(Topmenu);
     component = fixture.componentInstance;

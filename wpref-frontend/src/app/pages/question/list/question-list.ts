@@ -47,7 +47,7 @@ export class QuestionList implements OnInit {
     this.load();
   }
 
-   // 👉 QUESTIONS POUR LA PAGE COURANTE
+  // 👉 QUESTIONS POUR LA PAGE COURANTE
   get pagedQuestions(): Question[] {
     const all = this.questions() || [];
     return all.slice(this.first, this.first + this.rows);
@@ -59,23 +59,23 @@ export class QuestionList implements OnInit {
     this.rows = event.rows;     // nb d’items par page
   }
 
-  goNew():void {
+  goNew(): void {
     this.questionService.goNew();
   }
 
-  goView(id: number):void {
+  goView(id: number): void {
     this.questionService.goView(id);
   }
 
-  goEdit(id: number):void {
+  goEdit(id: number): void {
     this.questionService.goEdit(id);
   }
 
-  goDelete(id: number):void {
+  goDelete(id: number): void {
     this.questionService.goDelete(id);
   }
 
-  goSubject(id: number):void {
+  goSubject(id: number): void {
     this.questionService.goSubjectEdit(id);
   }
 }

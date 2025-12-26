@@ -1,15 +1,15 @@
 import pathlib
 from typing import Dict, Any, List, Optional
+
 import requests
 import yaml
-
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-BASE_URL = "http://localhost:8000"        # ou "http://127.0.0.1:8000"
-OPENAPI_PATH = "WpRef API.yaml"           # chemin vers ton fichier YAML
+BASE_URL = "http://localhost:8000"  # ou "http://127.0.0.1:8000"
+OPENAPI_PATH = "openapi.yaml"  # chemin vers ton fichier YAML
 
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "SuperPassword123"
@@ -18,27 +18,41 @@ U2_USERNAME = "user2"
 U2_EMAIL = "user2@example.com"
 U2_PASSWORD = "SuperPassword123"
 
-
 # ============================================================
 # DONNÉES À CRÉER
 # ============================================================
+
+DOMAIN_DEF: List[Dict[str, str]] = [
+    {
+        "name": "Scrum",
+        "description": "Plein de questions sur Scrum.",
+    },
+    {
+        "name": "Django",
+        "description": "Plein de question sur Django",
+    },
+]
 
 SUBJECTS_DEF: List[Dict[str, str]] = [
     {
         "name": "Scrum – Bases",
         "description": "Fondamentaux du framework Scrum (événements, artefacts, piliers…).",
+        "domain": "Scrum"
     },
     {
         "name": "Scrum – Rôles",
         "description": "Rôles Scrum : Scrum Master, Product Owner et Developers.",
+        "domain": "Scrum"
     },
     {
         "name": "Django – Modèles & ORM",
         "description": "Modèles Django, ORM, migrations, relations.",
+        "domain": "Django"
     },
     {
         "name": "Django – API REST",
         "description": "API REST avec Django REST Framework, sérialisation, vues, statuts HTTP.",
+        "domain": "Django"
     },
 ]
 
@@ -58,6 +72,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "Adaptation", "is_correct": True, "sort_order": 3},
             {"content": "Commandement", "is_correct": False, "sort_order": 4},
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Quelles sont les valeurs de Scrum ?",
@@ -73,6 +88,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "Ouverture", "is_correct": True, "sort_order": 5},
             {"content": "Courage", "is_correct": True, "sort_order": 6},
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Combien de rôles Scrum officiels le framework définit-il ?",
@@ -85,6 +101,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "3", "is_correct": True, "sort_order": 2},
             {"content": "4", "is_correct": False, "sort_order": 3},
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Lesquels sont des rôles définis par Scrum ?",
@@ -98,6 +115,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "Developers", "is_correct": True, "sort_order": 3},
             {"content": "Project Manager", "is_correct": False, "sort_order": 4},
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Qui est responsable de maximiser la valeur du produit ?",
@@ -110,6 +128,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "Le Product Owner", "is_correct": True, "sort_order": 2},
             {"content": "Les Developers uniquement", "is_correct": False, "sort_order": 3},
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Laquelle de ces affirmations sur le Sprint Backlog est correcte ?",
@@ -134,6 +153,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
                 "sort_order": 3,
             },
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Durée maximale recommandée pour la Daily Scrum ?",
@@ -146,6 +166,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "30 minutes", "is_correct": False, "sort_order": 2},
             {"content": "1 heure", "is_correct": False, "sort_order": 3},
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Quand considère-t-on qu’un Sprint est terminé ?",
@@ -170,6 +191,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
                 "sort_order": 3,
             },
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Quel artefact contient l’Objectif de Produit (Product Goal) ?",
@@ -182,6 +204,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "Le Product Backlog", "is_correct": True, "sort_order": 2},
             {"content": "L’Incrément", "is_correct": False, "sort_order": 3},
         ],
+        "domain": "Scrum"
     },
     {
         "title": "Lesquels de ces événements sont time-boxés dans Scrum ?",
@@ -195,6 +218,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "Sprint Review", "is_correct": True, "sort_order": 3},
             {"content": "Sprint Retrospective", "is_correct": True, "sort_order": 4},
         ],
+        "domain": "Scrum"
     },
 
     # --- DJANGO (10 questions) ---
@@ -221,6 +245,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
                 "sort_order": 3,
             },
         ],
+        "domain": "Django"
     },
     {
         "title": "Quel type de champ Django utiliser pour stocker un texte long ?",
@@ -233,6 +258,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "TextField", "is_correct": True, "sort_order": 2},
             {"content": "IntegerField", "is_correct": False, "sort_order": 3},
         ],
+        "domain": "Django"
     },
     {
         "title": "Quelles instructions créent et sauvegardent un objet Django en base ?",
@@ -257,6 +283,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
                 "sort_order": 3,
             },
         ],
+        "domain": "Django"
     },
     {
         "title": "Quelle commande applique les migrations en Django ?",
@@ -269,6 +296,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "python manage.py migrate", "is_correct": True, "sort_order": 2},
             {"content": "python manage.py runserver", "is_correct": False, "sort_order": 3},
         ],
+        "domain": "Django"
     },
     {
         "title": "Quels éléments sont typiquement impliqués dans une relation ManyToMany ?",
@@ -293,6 +321,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
                 "sort_order": 3,
             },
         ],
+        "domain": "Django"
     },
     {
         "title": "Quel est le rôle principal d’un serializer dans Django REST Framework ?",
@@ -317,6 +346,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
                 "sort_order": 3,
             },
         ],
+        "domain": "Django"
     },
     {
         "title": "Quelles méthodes HTTP sont considérées comme 'safe' par DRF ?",
@@ -331,6 +361,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "POST", "is_correct": False, "sort_order": 4},
             {"content": "DELETE", "is_correct": False, "sort_order": 5},
         ],
+        "domain": "Django"
     },
     {
         "title": "Quel code de statut HTTP correspond à 'Created' ?",
@@ -343,6 +374,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "201", "is_correct": True, "sort_order": 2},
             {"content": "204", "is_correct": False, "sort_order": 3},
         ],
+        "domain": "Django"
     },
     {
         "title": "Pour s’authentifier via JWT, quelles informations sont envoyées au endpoint de login ?",
@@ -359,6 +391,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
                 "sort_order": 3,
             },
         ],
+        "domain": "Django"
     },
     {
         "title": "Sur un endpoint detail d’un ModelViewSet DRF, quels verbes HTTP sont typiquement permis ?",
@@ -373,6 +406,7 @@ QUESTIONS_DEF: List[Dict[str, Any]] = [
             {"content": "DELETE", "is_correct": True, "sort_order": 4},
             {"content": "CONNECT", "is_correct": False, "sort_order": 5},
         ],
+        "domain": "Django"
     },
 ]
 
@@ -384,30 +418,35 @@ QUIZZES_DEF: List[Dict[str, Any]] = [
         "description": "Quiz d’entraînement sur les bases de Scrum.",
         "mode": "practice",
         "question_indexes": [0, 1, 2, 3, 4],
+        "domain":"Scrum",
     },
     {
         "title": "Django Practice 1",
         "description": "Quiz d’entraînement sur Django (modèles et API).",
         "mode": "practice",
         "question_indexes": [10, 11, 12, 13, 14],
+        "domain":"Django",
     },
     {
         "title": "Scrum Exam 1",
         "description": "Quiz d’examen sur Scrum.",
         "mode": "exam",
         "question_indexes": [5, 6, 7, 8, 9],
+        "domain":"Scrum",
     },
     {
         "title": "Django Exam 1",
         "description": "Quiz d’examen sur Django.",
         "mode": "exam",
         "question_indexes": [15, 16, 17, 18, 19],
+        "domain":"Django",
     },
 ]
 
 
 def get_url(base_url, path):
     return base_url.rstrip("/") + path
+
 
 # ============================================================
 # UTILITAIRE : LIRE LES ENDPOINTS DANS LE YAML
@@ -435,6 +474,7 @@ def load_openapi_paths(openapi_path: str) -> Dict[str, str]:
         "token": None,
         "subject": None,
         "question": None,
+        "domain":None,
         "quiz": None,
         "user": None,
     }
@@ -446,6 +486,8 @@ def load_openapi_paths(openapi_path: str) -> Dict[str, str]:
             result["subject"] = p
         if "/question" in p and result["question"] is None:
             result["question"] = p
+        if "/domain" in p and result["domain"] is None:
+            result["domain"] = p
         if "/quiz" in p and result["quiz"] is None:
             result["quiz"] = p
         if "/user" in p and result["user"] is None:
@@ -494,10 +536,10 @@ def auth_headers(token: str) -> Dict[str, str]:
 # ============================================================
 
 def find_subject_by_name(
-    base_url: str,
-    subject_path: str,
-    token: str,
-    name: str,
+        base_url: str,
+        subject_path: str,
+        token: str,
+        name: str,
 ) -> Optional[Dict[str, Any]]:
     """
     Cherche un Subject par name via l'API :
@@ -535,11 +577,11 @@ def find_subject_by_name(
 
     return None
 
-
 def create_subjects(
-    base_url: str,
-    subject_path: str,
-    token: str,
+        base_url: str,
+        subject_path: str,
+        token: str,
+        domain_by_name: Dict[str, Any],
 ) -> Dict[str, Dict[str, Any]]:
     """
     Crée les 4 Subject via l'API, en évitant les doublons.
@@ -552,11 +594,11 @@ def create_subjects(
     for subj in SUBJECTS_DEF:
         name = subj["name"]
         description = subj.get("description", "")
-
+        domain = domain_by_name[subj.get("domain")]
         # 1) On regarde s'il existe déjà
         existing = find_subject_by_name(base_url, subject_path, token, name)
         if existing:
-            print(f" - Subject déjà existant: {existing['id']} {existing['name']} (slug={existing.get('slug')})")
+            print(f" - Subject déjà existant: {existing['id']} {existing['name']}")
             result[name] = existing
             continue
 
@@ -564,6 +606,7 @@ def create_subjects(
         payload = {
             "name": name,
             "description": description,
+            "domain":domain["id"],
         }
         url = get_url(base_url, subject_path)
         resp = requests.post(url, json=payload, headers=headers)
@@ -573,7 +616,92 @@ def create_subjects(
             )
         data = resp.json()
         result[name] = data
-        print(f" - Subject créé: {data['id']} {data['name']} (slug={data.get('slug')})")
+        print(f" - Subject créé: {data['id']} {data['name']}")
+
+    return result
+
+
+
+# ============================================================
+# DOMAINS
+# ============================================================
+
+def find_domain_by_name(
+        base_url: str,
+        domain_path: str,
+        token: str,
+        name: str,
+) -> Optional[Dict[str, Any]]:
+    """
+    Cherche un Subject par name via l'API :
+      GET /api/subject/
+
+    Compatible pagination (results / next).
+    """
+    headers = auth_headers(token)
+    url = base_url.rstrip("/") + domain_path
+    params = {}
+
+    while url:
+        resp = requests.get(url, headers=headers, params=params)
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"Erreur lors de la recherche du Domain {name!r} "
+                f"({resp.status_code}): {resp.text}"
+            )
+
+        data = resp.json()
+
+        # DRF paginé ou non
+        if isinstance(data, dict) and "results" in data:
+            items = data["results"]
+            next_url = data.get("next")
+        else:
+            items = data
+            next_url = None
+
+        for item in items:
+            if item.get("name") == name:
+                return item
+
+        url = next_url
+
+    return None
+
+
+def create_domains(
+base_url: str,
+        domain_path: str,
+        token: str,
+) -> Dict[str, Dict[str, Any]]:
+    headers = auth_headers(token)
+    result: Dict[str, Dict[str, Any]] = {}
+
+    print("=== Création des domain ===")
+    for subj in DOMAIN_DEF:
+        name = subj["name"]
+        description = subj.get("description", "")
+        # 1) On regarde s'il existe déjà
+        existing = find_domain_by_name(base_url, domain_path, token, name)
+        if existing:
+            print(f" - Domain déjà existant: {existing['id']} {existing['name']}")
+            result[name] = existing
+            continue
+
+        # 2) Sinon on le crée
+        payload = {
+            "name": name,
+            "description": description,
+        }
+        url = get_url(base_url, domain_path)
+        resp = requests.post(url, json=payload, headers=headers)
+        if resp.status_code not in (200, 201):
+            raise RuntimeError(
+                f"Erreur création Domain {name!r} ({resp.status_code}): {resp.text}"
+            )
+        data = resp.json()
+        result[name] = data
+        print(f" - Domain créé: {data['id']} {data['name']}")
 
     return result
 
@@ -583,11 +711,11 @@ def create_subjects(
 # ============================================================
 
 def find_question_by_title_and_subjects(
-    base_url: str,
-    question_path: str,
-    token: str,
-    title: str,
-    subject_ids: List[int],
+        base_url: str,
+        question_path: str,
+        token: str,
+        title: str,
+        subject_ids: List[int],
 ) -> Optional[Dict[str, Any]]:
     """
     Cherche une Question existante ayant le même title ET exactement le même set de subjects.
@@ -628,10 +756,11 @@ def find_question_by_title_and_subjects(
 
 
 def create_questions(
-    base_url: str,
-    question_path: str,
-    token: str,
-    subjects_by_name: Dict[str, Dict[str, Any]],
+        base_url: str,
+        question_path: str,
+        token: str,
+        subjects_by_name: Dict[str, Dict[str, Any]],
+        domain_by_name: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     """
     Crée les 20 Question via l'API, en utilisant subject_ids et answer_options.
@@ -649,7 +778,7 @@ def create_questions(
             if not subj:
                 raise RuntimeError(f"Sujet {name!r} introuvable lors de la création des questions.")
             subject_ids.append(subj["id"])
-
+        domain = domain_by_name[qdef.get("domain")]
         title = qdef["title"]
 
         # 1) Chercher si la question existe déjà
@@ -673,6 +802,7 @@ def create_questions(
             "allow_multiple_correct": qdef["allow_multiple_correct"],
             "subject_ids": subject_ids,
             "answer_options": qdef["answer_options"],
+            "domain": domain["id"],
         }
         url = base_url.rstrip("/") + question_path
         resp = requests.post(url, json=payload, headers=headers)
@@ -687,16 +817,35 @@ def create_questions(
     return created_questions
 
 
+def get_questions(
+        base_url: str,
+        question_path: str,
+        token: str,
+) -> List[Dict[str, Any]]:
+    headers = auth_headers(token)
+    questions: List[Dict[str, Any]] = []
+    url = base_url.rstrip("/") + question_path
+    resp = requests.get(url, headers=headers)
+    if resp.status_code not in (200, 201):
+        raise RuntimeError(
+            f"Erreur récupération Question ({resp.status_code}): {resp.text}"
+        )
+    data = resp.json()
+    for i in data:
+        questions.append(i)
+    return questions
+
+
 # ============================================================
 # QUIZZES
 # ============================================================
 
 def find_quiz_by_title_and_mode(
-    base_url: str,
-    quiz_path: str,
-    token: str,
-    title: str,
-    mode: str,
+        base_url: str,
+        quiz_path: str,
+        token: str,
+        title: str,
+        mode: str,
 ) -> Optional[Dict[str, Any]]:
     """
     Cherche un Quiz existant ayant le même title et le même mode.
@@ -730,17 +879,19 @@ def find_quiz_by_title_and_mode(
 
 
 def create_quiz(
-    base_url: str,
-    quiz_path: str,
-    token: str,
-    title: str,
-    description: str,
-    mode: str,
-    max_questions: int = 5,
+        base_url: str,
+        quiz_path: str,
+        token: str,
+        title: str,
+        description: str,
+        mode: str,
+        domain:str,
+        max_questions: int = 5,
 ) -> Dict[str, Any]:
     """
     Crée un Quiz via l'API si nécessaire (title + mode).
     """
+    print("CREATE_QUIZ")
     headers = auth_headers(token)
 
     # 1) Chercher si le quiz existe déjà
@@ -758,10 +909,11 @@ def create_quiz(
     # 2) Sinon, on le crée
     payload = {
         "title": title,
-        "description": description,
+        "description": title,
         "max_questions": max_questions,
-        "is_active": True,
+        "active": True,
         "mode": mode,
+        "domain": domain,
     }
     url = get_url(base_url, quiz_path)
     resp = requests.post(url, json=payload, headers=headers)
@@ -775,45 +927,50 @@ def create_quiz(
 
 
 def add_question_to_quiz(
-    base_url: str,
-    quiz_path: str,
-    token: str,
-    quiz_slug: str,
-    question_id: int,
-    sort_order: int,
-    weight: int = 1,
+        base_url: str,
+        quiz_path: str,
+        token: str,
+        quiz_id: int,
+        question_id: int,
+        sort_order: int,
+        weight: int = 1,
 ) -> Dict[str, Any]:
     """
     Ajoute ou met à jour une question dans un quiz :
     POST /api/quiz/{slug}/add-question/
     (quiz_path est normalement le prefixe /api/quiz/)
     """
+    print("ADD_QUESTION_TO_QUIZ")
     headers = auth_headers(token)
-    url = f"{base_url.rstrip('/')}{quiz_path}{quiz_slug}/add-question/"
+    url = f"{base_url.rstrip('/')}{quiz_path}{quiz_id}/question/"
     payload = {
         "question_id": question_id,
         "sort_order": sort_order,
         "weight": weight,
     }
+    print(url)
+    print(payload)
     resp = requests.post(url, json=payload, headers=headers)
+    print(resp.status_code)
     if resp.status_code not in (200, 201):
         raise RuntimeError(
-            f"Erreur add-question quiz={quiz_slug!r}, question={question_id} "
+            f"Erreur add-question quiz={quiz_id!r}, question={question_id} "
             f"({resp.status_code}): {resp.text}"
         )
     data = resp.json()
     print(
-        f"   -> Question {question_id} ajoutée au quiz {quiz_slug} "
+        f"   -> Question {question_id} ajoutée au quiz {quiz_id} "
         f"(sort_order={sort_order}, weight={weight})"
     )
     return data
 
 
 def create_quizzes_and_attach_questions(
-    base_url: str,
-    quiz_path: str,
-    token: str,
-    created_questions: List[Dict[str, Any]],
+        base_url: str,
+        quiz_path: str,
+        token: str,
+        created_questions: List[Dict[str, Any]],
+        domain_by_name: List[Dict[str, Any]],
 ):
     """
     Crée les 4 quiz (2 practice, 2 exam) et ajoute 5 questions dans chacun.
@@ -827,6 +984,7 @@ def create_quizzes_and_attach_questions(
         description = quiz_def["description"]
         mode = quiz_def["mode"]
         question_indexes = quiz_def["question_indexes"]
+        domain = domain_by_name[quiz_def["domain"]]["id"]
 
         quiz = create_quiz(
             base_url,
@@ -835,9 +993,11 @@ def create_quizzes_and_attach_questions(
             title,
             description,
             mode,
+            domain,
             max_questions=len(question_indexes),
         )
         quiz_slug = quiz["slug"]
+        quiz_id = quiz["id"]
 
         for i, q_idx in enumerate(question_indexes, start=1):
             question_id = q_ids[q_idx]
@@ -845,14 +1005,14 @@ def create_quizzes_and_attach_questions(
                 base_url,
                 quiz_path,
                 token,
-                quiz_slug,
+                quiz_id,
                 question_id,
                 sort_order=i,
                 weight=1,
             )
 
 
-def create_user(base_url: str, quiz_user: str, username:str, password:str, email:str):
+def create_user(base_url: str, quiz_user: str, username: str, password: str, email: str):
     url = f"{base_url.rstrip('/')}{quiz_user}"
     payload = {
         "username": username,
@@ -869,6 +1029,8 @@ def create_user(base_url: str, quiz_user: str, username:str, password:str, email
     data = resp.json()
     print(f" - Quiz créé: id={data['id']} username={data['username']}")
     return data
+
+
 # ============================================================
 # MAIN
 # ============================================================
@@ -879,14 +1041,16 @@ def main():
     paths = load_openapi_paths(OPENAPI_PATH)
     token_path = paths["token"]
     subject_path = paths["subject"]
+    domain_path = paths["domain"]
     question_path = paths["question"]
     quiz_path = paths["quiz"]
+    quiz_template_path = "/api/quiz/template/"
     quiz_user = paths["user"]
 
     # 1) Créer Superuser et users
     print("\n=== Création user2 ===")
     # --------------------------- CREATE USER 2 -----------------------------------
-    data = create_user(BASE_URL, quiz_user, U2_USERNAME, U2_PASSWORD, U2_EMAIL)
+    # create_user(BASE_URL, quiz_user, U2_USERNAME, U2_PASSWORD, U2_EMAIL)
     print("utilisateur créé.\n")
 
     # 2) Authentification
@@ -895,31 +1059,26 @@ def main():
     print("Token obtenu.\n")
 
     # 3) Subjects
-    subjects_by_name = create_subjects(BASE_URL, subject_path, token)
+    domains_by_name = create_domains(BASE_URL, domain_path, token)
+    subjects_by_name = create_subjects(BASE_URL, subject_path, token, domains_by_name)
 
     # 4) Questions
-    created_questions = create_questions(
-        BASE_URL,
-        question_path,
-        token,
-        subjects_by_name,
-    )
+    created_questions = create_questions(BASE_URL, question_path, token, subjects_by_name, domains_by_name)
 
     # 5) Quiz + mapping questions
-    create_quizzes_and_attach_questions(
-        BASE_URL,
-        quiz_path,
-        token,
-        created_questions,
-    )
+    created_questions = get_questions(BASE_URL, question_path, token)
+    if not len(created_questions):
+        print("Pas de questions")
+        return None
+    create_quizzes_and_attach_questions(BASE_URL, quiz_template_path, token, created_questions, domains_by_name)
 
     # 6) user1 crée un QuizSession
-    #qs = create_quizzsession(
+    # qs = create_quizzsession(
     #    BASE_URL,
     #    quizsession_path,
     #    U2_USERNAME,
     #    U2_PASSWORD)
-    #)
+    # )
     print("\n✅ Import terminé : 4 subjects, 20 questions, 4 quiz créés.")
 
 

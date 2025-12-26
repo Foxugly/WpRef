@@ -1,20 +1,40 @@
 # quiz/models.py
-from django.db import models
-from django.utils.text import slugify
-import uuid
-from django.utils import timezone
-from question.models import Question, AnswerOption
-from django.conf import settings
 from datetime import timedelta
 
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
+from django.utils.text import slugify
+from question.models import Question, AnswerOption
 
-class Quiz(models.Model):
+from .constants import (
+    VISIBILITY_IMMEDIATE,
+    VISIBILITY_NEVER,
+    VISIBILITY_SCHEDULED,
+    VISIBILITY_CHOICES
+)
+
+
+class QuizTemplate(models.Model):
+    """
+    Modèle de configuration de quiz (template).
+    Définit le mode, le pool de questions, la durée, etc.
+    """
     MODE_PRACTICE = "practice"
     MODE_EXAM = "exam"
     MODE_CHOICES = [
         (MODE_PRACTICE, "Practice"),
         (MODE_EXAM, "Examen"),
     ]
+
+    domain = models.ForeignKey(
+        "domain.Domain",
+        on_delete=models.PROTECT,
+        related_name="quiz_templates",
+        blank=True,
+        null=True,
+    )
 
     title = models.CharField("Titre du quiz", max_length=200, unique=True)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
@@ -31,19 +51,46 @@ class Quiz(models.Model):
         default=10,
         help_text="Nombre de questions à poser parmi le pool lié."
     )
+    permanent = models.BooleanField("Permanent ?", default=True)
 
-    is_active = models.BooleanField("Actif ?", default=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
     with_duration = models.BooleanField("Avec Timer ?", default=True)
-    duration = models.PositiveIntegerField("temps (en minutes)",default=10)
-
-    # Pool de questions possibles pour ce quiz
-    questions = models.ManyToManyField(
-        Question,
-        through="QuizQuestion",
-        related_name="quizzes",
-        verbose_name="Pool de questions"
+    duration = models.PositiveIntegerField("temps (en minutes)", default=10)
+    questions = models.ManyToManyField(Question,
+                                       through="QuizQuestion",
+                                       related_name="question",
+                                       verbose_name="Pool de quizquestions"
+                                       )
+    result_visibility = models.CharField(
+        "Visibilité du résultat global",
+        max_length=10,
+        choices=VISIBILITY_CHOICES,
+        default=VISIBILITY_IMMEDIATE,
+        help_text="Quand le score global du quiz peut être affiché à l'utilisateur.",
+    )
+    result_available_at = models.DateTimeField(
+        "Résultat global visible à partir de",
+        null=True,
+        blank=True,
+        help_text="Utilisé uniquement si la visibilité est 'À partir d'une date'.",
     )
 
+    # 🔹 visibilité du détail des réponses
+    detail_visibility = models.CharField(
+        "Visibilité du détail des réponses",
+        max_length=10,
+        choices=VISIBILITY_CHOICES,
+        default=VISIBILITY_IMMEDIATE,
+        help_text="Quand les réponses détaillées (réponses de l'utilisateur et bonnes réponses) peuvent être affichées.",
+    )
+    detail_available_at = models.DateTimeField(
+        "Détail visible à partir de",
+        null=True,
+        blank=True,
+        help_text="Utilisé uniquement si la visibilité est 'À partir d'une date'.",
+    )
+    active = models.BooleanField("Actif ?", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -52,17 +99,36 @@ class Quiz(models.Model):
     def __str__(self):
         return self.title
 
+    def _make_unique_title(self):
+        """Rend self.title unique en ajoutant un suffixe ' (n)' si nécessaire."""
+        base = (self.title or "").strip() or "Quiz"
+        title = base
+        counter = 1
+
+        # exclure self.pk (update)
+        qs = QuizTemplate.objects.all()
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+
+        while qs.filter(title=title).exists():
+            title = f"{base} ({counter})"
+            counter += 1
+
+        self.title = title
+
     def save(self, *args, **kwargs):
+        creating = self.pk is None
+        if creating:
+            self._make_unique_title()
         if not self.slug:
             base_slug = slugify(self.title) or "quiz"
             slug = base_slug
             counter = 1
 
             # Boucle tant qu'un quiz avec ce slug existe déjà
-            while Quiz.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            while QuizTemplate.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 slug = f"{base_slug}-{counter}"
                 counter += 1
-
             self.slug = slug
         super().save(*args, **kwargs)
 
@@ -71,19 +137,72 @@ class Quiz(models.Model):
         """Nombre total de questions attachées au quiz (le pool)."""
         return self.questions.count()
 
+    @property
+    def can_answer(self) -> bool:
+
+        if not self.active:
+            return False
+        if self.permanent:
+            return True
+        if self.started_at is None:
+            return False
+        if self.ended_at is None:
+            return True
+        return self.started_at <= timezone.now() <= self.ended_at
+
+    def get_ordered_qquestions(self):
+        return self.quiz_questions.select_related("question").order_by("sort_order")
+
     def get_ordered_questions(self):
-        """
-        Retourne les questions du quiz dans l'ordre,
-        limité à `max_questions`.
-        """
-        qs = (
-            self.questions
-            .all()
-            .order_by("quizquestion__sort_order", "quizquestion__id")
-        )
-        if self.max_questions and qs.count() > self.max_questions:
+        qs = self.questions.all().order_by("quiz_questions__sort_order")
+        if self.max_questions:
             return qs[: self.max_questions]
         return qs
+
+    def can_show_result(self, when=None) -> bool:
+        """
+        True si on peut afficher le score global à ce moment.
+        """
+        if self.mode == self.MODE_PRACTICE:
+            return True
+
+        if when is None:
+            when = timezone.now()
+
+        if self.result_visibility == VISIBILITY_NEVER:
+            return False
+
+        if self.result_visibility == VISIBILITY_IMMEDIATE:
+            return True
+
+        if self.result_visibility == VISIBILITY_SCHEDULED:
+            if self.result_available_at is None:
+                return False
+            return when >= self.result_available_at
+
+    # 🔹 Helpers visibilité détail réponses
+
+    def can_show_details(self, when=None) -> bool:
+        """
+        True si on peut afficher le détail des réponses
+        (réponses utilisateur + bonnes réponses).
+        """
+        if self.mode == self.MODE_PRACTICE:
+            return True
+
+        if when is None:
+            when = timezone.now()
+
+        if self.detail_visibility == VISIBILITY_NEVER:
+            return False
+
+        if self.detail_visibility == VISIBILITY_IMMEDIATE:
+            return True
+
+        if self.detail_visibility == VISIBILITY_SCHEDULED:
+            if self.detail_available_at is None:
+                return False
+            return when >= self.detail_available_at
 
 
 class QuizQuestion(models.Model):
@@ -91,7 +210,7 @@ class QuizQuestion(models.Model):
     Table de jointure Quiz <-> Question
     avec ordre et éventuellement un poids.
     """
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="quiz_questions")
+    quiz = models.ForeignKey(QuizTemplate, on_delete=models.CASCADE, related_name="quiz_questions")
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="quiz_questions")
     sort_order = models.PositiveIntegerField(default=0)
     weight = models.PositiveIntegerField(
@@ -100,175 +219,149 @@ class QuizQuestion(models.Model):
     )
 
     class Meta:
-        unique_together = [("quiz", "question")]
-        ordering = ["sort_order", "id"]
+        unique_together = [("quiz", "question"), ("quiz", "sort_order")]
+        ordering = ["sort_order", ]
 
     def __str__(self):
-        return f"Quiz {self.quiz_id} ↔ Q{self.question_id} (ord:{self.sort_order}, w:{self.weight})"
+        return f"Q{self.question_id} (ord:{self.sort_order}, w:{self.weight})"
 
-class QuizSession(models.Model):
+
+class Quiz(models.Model):
     """
-    Une instance de quiz pour un utilisateur (ou anonyme).
+    Une instance de quiz pour un utilisateur.
     C'est ce 'quiz_id' que tu renvoies 1à /quiz/<slug>/start/.
     """
-    #id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="sessions")
+    domain = models.ForeignKey(
+        "domain.Domain",
+        on_delete=models.PROTECT,
+        related_name="quiz",
+        blank=True,
+        null=True
+    )
+
+    quiz_template = models.ForeignKey(
+        "quiz.quizTemplate",
+        on_delete=models.CASCADE,
+        related_name="quiz",
+    )
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="quiz_sessions",
+        related_name="quiz_user",
     )
-    # ✅ date de début du quiz (stocke la date actuelle)
     created_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
-    expired_at = models.DateTimeField(null=True, blank=True)
-    # ✅ booléen pour savoir si le quiz est clôturé
-    is_closed = models.BooleanField(default=False)
-    # ✅ durée maximale du quiz (par défaut 10 minutes)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    active = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Session {self.user} - {self.quiz}"
+        return f"Quiz {self.user} - {self.quiz_template}"
 
     @property
-    def expires_at(self):
-        return self.expired_at if self.expired_at else None
-
-    @property
-    def is_expired(self):
-        if self.expired_at :
-            return timezone.now() > self.expires_at
-        return None
-
-    @property
-    def is_done(self):
-        return self.is_expired or self.is_closed
-
     def can_answer(self):
-        """Petit helper pratique dans les vues."""
-        return not self.is_closed and not self.is_expired
+        if not self.active:
+            return False
+        if not self.started_at:
+            return False
+        if not self.quiz_template.can_answer:
+            return False
+        if self.ended_at is None:
+            return True
+        return self.started_at <= timezone.now() <= self.ended_at
+
+    def start(self):
+        self.active = True
+        self.started_at = timezone.now()
+        self.save()
 
     def save(self, *args, **kwargs):
-        if self.started_at and not self.expired_at and self.quiz.with_duration:
-            self.expired_at = self.started_at + timedelta(minutes=self.quiz.duration)
+        if self.started_at and not self.ended_at and self.quiz_template.with_duration:
+            if self.quiz_template.ended_at:
+                self.ended_at = min(self.quiz_template.ended_at,
+                                    self.started_at + timedelta(minutes=self.quiz_template.duration))
+            else:
+                self.ended_at = self.started_at + timedelta(minutes=self.quiz_template.duration)
         super().save(*args, **kwargs)
 
-class QuizAttempt(models.Model):
-    """
-    Réponse à une question dans une session de quiz.
 
-    C'est ce modèle qui est utilisé par :
-      - QuizAttemptSerializer
-      - QuizAttemptView (/quiz/<quiz_id>/attempt/<question_order>/)
-
-    → 1 ligne = 1 question répondue pour une session donnée.
-    """
-    session = models.ForeignKey(
-        QuizSession,
+class QuizQuestionAnswer(models.Model):
+    quiz = models.ForeignKey(
+        Quiz,
         on_delete=models.CASCADE,
-        related_name="attempts",
+        related_name="answers",
     )
-    question = models.ForeignKey(
-        Question,
+    quizquestion = models.ForeignKey(
+        QuizQuestion,
         on_delete=models.CASCADE,
-        related_name="quiz_attempts",
+        related_name="answers",
     )
     question_order = models.PositiveIntegerField()
 
-    # Réponse donnée (à adapter selon ton type de questions :
-    # lettre "A/B/C", id d'option, texte libre, etc.)
-    given_answer = models.CharField(max_length=255, blank=True, null=True)
-
-    # Calculé éventuellement (True/False)
-    is_correct = models.BooleanField(null=True, blank=True)
-
-    answered_at = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def quiz(self):
-        return self.session.quiz
-    
-    class Meta:
-        unique_together = [("session", "question_order")]
-        ordering = ["session", "question_order"]
-
-    def __str__(self):
-        return f"Session {self.session_id} - Q{self.question_order} ({self.question_id})"
-
-
-class QuizAnswer(models.Model):
-    """
-    Réponse d'un utilisateur à une question dans une tentative de quiz.
-    Possibilité de cocher plusieurs options (car Question.allow_multiple_correct).
-    """
-    attempt = models.ForeignKey(
-        QuizAttempt,
-        related_name="answers",
-        on_delete=models.CASCADE,
-    )
-    question = models.ForeignKey(
-        Question,
-        related_name="quiz_answers",
-        on_delete=models.CASCADE,
-    )
-
-    # Ce que l'utilisateur a sélectionné
     selected_options = models.ManyToManyField(
         AnswerOption,
         related_name="quiz_answers",
         blank=True,
     )
 
-    # Cache de scoring par question (optionnel mais pratique)
+    given_answer = models.CharField(max_length=255, blank=True, null=True)
+    is_correct = models.BooleanField(null=True, blank=True)
     earned_score = models.FloatField(default=0)
     max_score = models.FloatField(default=0)
+    answered_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = [("attempt", "question")]
-
-    def __str__(self):
-        return f"Attempt {self.attempt_id} - Q{self.question_id}"
-
-    def compute_score(self, save: bool = True):
-        """
-        Compare les options sélectionnées aux bonnes réponses.
-        Si l'utilisateur a exactement le même set de bonnes réponses,
-        il gagne `weight` points, sinon 0.
-        """
-        # 1. Récupérer les bonnes réponses pour cette question
-        correct_opts = set(
-            self.question.answer_options.filter(is_correct=True).values_list("id", flat=True)
-        )
-        # 2. Récupérer ce que l'utilisateur a coché
-        selected = set(
-            self.selected_options.values_list("id", flat=True)
-        )
-
-        # 3. Poids de la question dans le quiz
-        try:
-            quiz_question = QuizQuestion.objects.get(
-                quiz=self.attempt.quiz,
-                question=self.question,
+        constraints = [
+            models.UniqueConstraint(
+                fields=["quiz", "quizquestion"],
+                name="uniq_answer_per_quiz_question",
             )
-            weight = quiz_question.weight
-        except QuizQuestion.DoesNotExist:
-            # fallback si pas de QuizQuestion (par sécurité)
-            weight = 1
+        ]
+        unique_together = [("quiz", "question_order")]
+        ordering = ["quiz", "question_order"]
 
-        # max_score pour cette question
+    def clean(self):
+        """
+        Validation métier :
+        - on ne peut créer/enregistrer une réponse
+          que si la session de quiz peut encore être répondue.
+        """
+        super().clean()
+        if not self.quiz_id:
+            return
+
+        if not self.quiz.can_answer:
+            raise ValidationError("Ce quiz n'est plus disponible pour répondre.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def index(self):
+        return self.quizquestion.sort_order
+
+    @property
+    def quiz_template(self):
+        return self.quiz.quiz_template
+
+    def compute_score(self, save=True):
+        correct_opts = set(
+            self.quizquestion.question.answer_options.filter(is_correct=True).values_list("id", flat=True)
+        )
+        selected = set(self.selected_options.values_list("id", flat=True))
+        weight = self.quizquestion.weight
         max_score = float(weight)
-
-        # scoring : tout ou rien pour l’instant
         if selected == correct_opts and len(correct_opts) > 0:
             earned = max_score
+            self.is_correct = True
         else:
             earned = 0.0
-
+            self.is_correct = False
         self.earned_score = earned
         self.max_score = max_score
-
         if save:
-            self.save(update_fields=["earned_score", "max_score"])
-
+            super().save(update_fields=["earned_score", "max_score", "is_correct"])
         return earned, max_score

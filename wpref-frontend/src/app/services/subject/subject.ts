@@ -1,75 +1,74 @@
 import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
 import {Router} from '@angular/router';
-import {Observable} from 'rxjs';
-import {environment} from '../../../environments/environment';
-import {Question} from '../question/question'
+import {map, Observable} from 'rxjs';
 
-export interface Subject {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  questions?: Question[];
-}
+import {
+  SubjectApi, SubjectCreateRequestParams, SubjectPartialUpdateRequestParams,
+  SubjectUpdateRequestParams
+} from '../../api/generated/api/subject.service';
+import { SubjectDto } from '../../api/generated/model/subject';
+import {ROUTES} from '../../app.routes-paths'
 
+export type SubjectWritePayload = Pick<SubjectDto, 'name' | 'slug' | 'description'>;
+type SubjectUpdateBody = Omit<SubjectUpdateRequestParams, 'subjectId'>;
+type SubjectPartialBody = Omit<SubjectPartialUpdateRequestParams, 'subjectId'>;
 
 @Injectable({
   providedIn: 'root',
 })
 export class SubjectService {
-  private base = environment.apiBaseUrl;
-  private subjectPath = environment.apiSubjectPath;
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(private api: SubjectApi, private router: Router) {
   }
 
-  list(params?: { search?: string }): Observable<Subject[]> {
-    return this.http.get<Subject[]>(
-      `${this.base}${this.subjectPath}`,
-      {
-        params: params?.search ? {search: params.search} : {}
-      }
-    );
+  list(params?: { search?: string }): Observable<SubjectDto[]> {
+    return this.api.subjectList({search: params?.search,});
   }
 
-  retrieve(id: number): Observable<Subject> {
-    return this.http.get<Subject>(`${this.base}${this.subjectPath}${id}/`);
+  retrieve(subjectId: number): Observable<SubjectDto> {
+    return this.api.subjectRetrieve({subjectId});
   }
 
-  create(data: Partial<Subject>): Observable<Subject> {
-    return this.http.post<Subject>(`${this.base}${this.subjectPath}`, data);
+  create(payload: SubjectWritePayload): Observable<SubjectDto> {
+    const req: SubjectCreateRequestParams = { subjectDto: payload as any };
+    return this.api.subjectCreate(req);
   }
 
-  update(id: number, data: Partial<Subject>): Observable<Subject> {
-    return this.http.put<Subject>(`${this.base}${this.subjectPath}${id}/`, data);
+  update(subjectId: number, payload: SubjectWritePayload): Observable<SubjectDto> {
+    const body: SubjectUpdateBody = { subjectDto: payload as any };
+    return this.api.subjectUpdate({ subjectId, ...body });
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}${this.subjectPath}${id}/`);
+  updatePartial(subjectId: number, payload: SubjectPartialBody): Observable<SubjectDto> {
+    const body: SubjectPartialBody = payload;
+    return this.api.subjectPartialUpdate({ subjectId, ...body });
+  }
+
+  delete(subjectId: number): Observable<void> {
+    return this.api.subjectDestroy({ subjectId }).pipe(map(() => void 0));
   }
 
   goQuestionNew(): void {
-    this.router.navigate(['/question/add']);
+    this.router.navigate(ROUTES.question.add());
   }
 
   goNew(): void {
-    this.router.navigate(['/subject/add']);
+    this.router.navigate(ROUTES.subject.add());
   }
 
   goList(): void {
-    this.router.navigate(['/subject/list']);
+    this.router.navigate(ROUTES.subject.list());
   }
 
   goBack(): void {
-    this.router.navigate(['/subject/list']);
+    this.router.navigate(ROUTES.subject.list());
   }
 
-  goEdit(id: number): void {
-    this.router.navigate(['/subject', id, 'edit']);
+  goEdit(subjectId: number): void {
+    this.router.navigate(ROUTES.question.edit(subjectId));
   }
 
-  goDelete(id: number): void {
-    this.router.navigate(['/subject', id, 'delete']);
+  goDelete(subjectId: number): void {
+    this.router.navigate(ROUTES.question.delete(subjectId));
   }
 }

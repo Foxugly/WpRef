@@ -1,10 +1,10 @@
 // src/app/auth-interceptor.ts
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { catchError, switchMap, throwError } from 'rxjs';
+import {HttpErrorResponse, HttpInterceptorFn} from '@angular/common/http';
+import {inject} from '@angular/core';
+import {catchError, switchMap, throwError} from 'rxjs';
 
-import { AuthService } from './services/auth/auth';
-import { environment } from '../environments/environment';
+import {AuthService} from './services/auth/auth';
+import {environment} from '../environments/environment';
 
 // Petit helper pour savoir si l’URL vise notre backend API
 function isApiUrl(url: string): boolean {
@@ -74,10 +74,10 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
 
           const retryReq = newAccessToken
             ? authReq.clone({
-                setHeaders: {
-                  Authorization: `Bearer ${newAccessToken}`,
-                },
-              })
+              setHeaders: {
+                Authorization: `Bearer ${newAccessToken}`,
+              },
+            })
             : authReq;
 
           return next(retryReq);

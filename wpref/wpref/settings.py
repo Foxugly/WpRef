@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+
 from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -35,15 +36,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "rest_framework",
-    "corsheaders",
-    "drf_spectacular",
-    "django_filters",
+    'rest_framework',
+    'schema_viewer',
+    'corsheaders',
+    'drf_spectacular',
+    'django_filters',
     'django_extensions',
-    "customuser.apps.CustomuserConfig",
-    "subject.apps.SubjectConfig",
-    "question.apps.QuestionConfig",
-    "quiz.apps.QuizConfig",
+
+    'customuser.apps.CustomuserConfig',
+    'subject.apps.SubjectConfig',
+    'question.apps.QuestionConfig',
+    'quiz.apps.QuizConfig',
+    'domain.apps.DomainConfig',
 ]
 
 MIDDLEWARE = [
@@ -107,8 +111,10 @@ AUTH_PASSWORD_VALIDATORS = []
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 LANGUAGES = (
     ('en', _('English')),
-    ('fr', _('Français')),
-    ('nl', _('Nederlands')),
+    ('fr', _('French')),
+    ('nl', _('Dutch')),
+    ('it', _('Italy')),
+    ('es', _('Spain')),
 )
 
 LANGUAGE_CODE = 'en'
@@ -121,6 +127,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
@@ -138,6 +145,9 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_SETTINGS": {"persistAuthorization": True},
     # Appliquer le schéma de sécu par défaut à tous les endpoints
     "SECURITY": [{"jwtAuth": []}],
+    "ENUM_NAME_OVERRIDES": {
+        "VisibilityEnum": "quiz.constants.VISIBILITY_CHOICES",
+    }
 }
 
 CKEDITOR_UPLOAD_PATH = "uploads/"
@@ -157,3 +167,28 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@monapp.com"
+
+SENSITIVE_FIELDS = {
+    "password",
+    "password1",
+    "password2",
+    "old_password",
+    "new_password",
+    "token",
+    "access",
+    "refresh",
+    "api_key",
+    "secret",
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+}

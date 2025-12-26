@@ -1,0 +1,8 @@
+VISIBILITY_IMMEDIATE = "immediate"
+VISIBILITY_SCHEDULED = "scheduled"
+VISIBILITY_NEVER = "never"
+VISIBILITY_CHOICES = [
+    (VISIBILITY_IMMEDIATE, "Immédiat"),
+    (VISIBILITY_SCHEDULED, "À partir d'une date"),
+    (VISIBILITY_NEVER, "Jamais"),
+]

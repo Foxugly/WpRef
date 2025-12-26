@@ -12,7 +12,7 @@
 
 .quiz-question--card {
   background: #eef2ff;
-  padding-top:  1.4rem;
+  padding-top: 1.4rem;
 
 }
 
@@ -26,13 +26,13 @@
   font-weight: 600;
 }
 
-.header-left{
-  width: 32px;   /* pour garder le centre parfaitement centré */
+.header-left {
+  width: 32px; /* pour garder le centre parfaitement centré */
   text-align: center;
 }
 
 .header-right {
-  width: 90px;   /* pour garder le centre parfaitement centré */
+  width: 90px; /* pour garder le centre parfaitement centré */
   text-align: left;
 }
 
@@ -43,11 +43,11 @@
 
 /* Icônes ON/OFF */
 .active-icon {
-  color: #2e7d32;  // vert
+  color: #2e7d32; // vert
 }
 
 .inactive-icon {
-  color: #b71c1c;  // rouge
+  color: #b71c1c; // rouge
 }
 
 
@@ -102,17 +102,17 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding-top : 1rem;
+  padding-top: 1rem;
 
 }
 
 /* Une ligne de réponse */
 .answer-line {
   display: flex;
-  align-items: center;   /* ✅ centrage vertical */
+  align-items: center; /* ✅ centrage vertical */
   gap: 0.5rem;
   //padding: 0.25rem 0;
-  padding-top:0.6rem;
+  padding-top: 0.6rem;
   padding-bottom: 0.6rem;
   padding-left: 0.6rem;
   background: #ffffff;
@@ -121,8 +121,8 @@
 }
 
 .answer-line--correct {
-  background: #e3f9e5;      // vert très clair
-  border-color: #2e7d32;    // vert plus soutenu
+  background: #e3f9e5; // vert très clair
+  border-color: #2e7d32; // vert plus soutenu
 }
 
 /* Label de la réponse */
@@ -172,11 +172,11 @@
 .youtube-wrapper {
   width: 60%;
   //max-width: 900px;         /* limite optionnelle */
-  margin: 1rem auto;        /* centre horizontalement */
+  margin: 1rem auto; /* centre horizontalement */
   position: relative;
 
   /* Conserve le ratio 16:9 */
-  padding-bottom: 56.25%;   /* 9 / 16 * 100 */
+  padding-bottom: 56.25%; /* 9 / 16 * 100 */
   height: 0;
   overflow: hidden;
   border-radius: 12px;

@@ -153,11 +153,11 @@
                 </a>
               }
             </div>
-            @if (getMediaTag(m); as tag){
-            <div class="media-list__meta">
-              <i class="pi {{ tag.icon }} media-type-icon"></i>
-              <p-tag [value]="tag.label" [severity]="tag.severity"></p-tag>
-            </div>
+            @if (getMediaTag(m); as tag) {
+              <div class="media-list__meta">
+                <i class="pi {{ tag.icon }} media-type-icon"></i>
+                <p-tag [value]="tag.label" [severity]="tag.severity"></p-tag>
+              </div>
             }
           </div>
 

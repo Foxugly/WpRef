@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { LangSelect } from './lang-select';
+import {LangSelect} from './lang-select';
 
 describe('LangSelect', () => {
   let component: LangSelect;
@@ -10,7 +10,7 @@ describe('LangSelect', () => {
     await TestBed.configureTestingModule({
       imports: [LangSelect]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(LangSelect);
     component = fixture.componentInstance;

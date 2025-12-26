@@ -1,0 +1,1 @@
+npx openapi-generator-cli generate -i openapi.yaml -g typescript-angular -o src/app/api/generatedv1/ --additional-properties=ngVersion21.0.0,providedIn=root,serviceSuffix=Api,modelSuffix=Dto,stringEnums=true,useSingleRequestParameter=true,fileNaming=kebab-case

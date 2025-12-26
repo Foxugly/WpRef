@@ -7,7 +7,7 @@ from .models import CustomUser
 
 
 class CustomUserAdmin(UserAdmin):
-    model=CustomUser
+    model = CustomUser
     list_display = (
         'username', 'email', 'first_name', 'last_name', 'language', 'is_active', 'is_superuser',)
     list_filter = ('is_staff', 'is_superuser', 'is_active',)
@@ -25,6 +25,7 @@ class CustomUserAdmin(UserAdmin):
     )
     search_fields = ('username', 'first_name', 'last_name', 'email')
     ordering = ('username',)
+
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.unregister(Group)

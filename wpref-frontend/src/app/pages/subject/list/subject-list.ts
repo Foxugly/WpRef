@@ -1,9 +1,9 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import { SubjectService, Subject } from '../../../services/subject/subject';
+import {Subject, SubjectService} from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
-import { PaginatorModule } from 'primeng/paginator';
+import {PaginatorModule} from 'primeng/paginator';
 import {TableModule} from 'primeng/table';
 
 @Component({
@@ -29,7 +29,7 @@ export class SubjectList implements OnInit {
 
   load() {
     this.subjectService
-      .list({ search: this.q() || undefined })
+      .list({search: this.q() || undefined})
       .subscribe({
         next: (subs: Subject[]) => {
           this.subjects.set(subs);

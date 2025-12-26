@@ -1,5 +1,5 @@
-.p-selectbutton{
-    margin-right: 10px;
+.p-selectbutton {
+  margin-right: 10px;
 }
 
 /* wrapper */
@@ -15,13 +15,13 @@
 
 /* style général des boutons */
 .lang-select .p-button {
-  background: #d0e7ff;               /* bleu clair */
-  border: 1px solid #000;            /* bord noir */
+  background: #d0e7ff; /* bleu clair */
+  border: 1px solid #000; /* bord noir */
   color: #000;
   font-weight: 600;
   padding: 0.35rem 0.75rem;
   height: 32px;
-  border-radius: 0;                  /* par défaut, on annule */
+  border-radius: 0; /* par défaut, on annule */
 }
 
 /* coin arrondi GAUCHE (FR) */
@@ -36,14 +36,14 @@
 
 /* ACTIVE (langue sélectionnée) */
 .lang-select .p-button.p-highlight {
-  background: #0056b3 !important;     /* bleu foncé */
+  background: #0056b3 !important; /* bleu foncé */
   border-color: #003f87 !important;
   color: white !important;
 }
 
 /* HOVER */
 .lang-select .p-button:not(.p-highlight):hover {
-  background: #bcd9ff;                /* bleu clair légèrement foncé */
+  background: #bcd9ff; /* bleu clair légèrement foncé */
   border-color: #000;
 }
 

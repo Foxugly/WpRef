@@ -85,7 +85,8 @@
           <div [formGroupName]="i" class="answer">
             <div class="field field--inline">
               <label for="answer-{{ i }}-order">Ordre :</label>
-              <p-inputnumber [showButtons]="true" formControlName="sort_order" id="answer-{{ i }}-order"></p-inputnumber>
+              <p-inputnumber [showButtons]="true" formControlName="sort_order"
+                             id="answer-{{ i }}-order"></p-inputnumber>
             </div>
 
             <div class="field">
@@ -130,7 +131,8 @@
       </div>
 
       <div class="actions">
-        <p-button icon="pi pi-save" (onClick)="save()" icon="pi pi-save" id="btn_save" label="Enregistrer" severity="primary"></p-button>
+        <p-button icon="pi pi-save" (onClick)="save()" icon="pi pi-save" id="btn_save" label="Enregistrer"
+                  severity="primary"></p-button>
         <p-button id="btn_back" label="Annuler" (onClick)="goBack()" severity="secondary"></p-button>
       </div>
     </form>

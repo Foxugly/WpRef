@@ -2,7 +2,6 @@ import {Component} from '@angular/core';
 
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {AuthService} from '../../../services/auth/auth';
-import {RouterLink} from '@angular/router';
 import {InputTextModule} from 'primeng/inputtext';
 import {PasswordModule} from 'primeng/password';
 

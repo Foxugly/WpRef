@@ -1,13 +1,23 @@
 import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {Router} from '@angular/router';
-import {Observable} from 'rxjs';
-import {environment} from '../../../environments/environment';
-import {Subject} from '../subject/subject'
+import {map, Observable} from 'rxjs';
 import {MediaSelectorValue} from '../../components/media-selector/media-selector';
+import {
+  QuestionApi,
+  QuestionCreateRequestParams,
+  QuestionPartialUpdateRequestParams,
+  QuestionUpdateRequestParams
+} from '../../api/generated/api/question.service';
+import {QuestionDto} from '../../api/generated/model/question';
+import {ROUTES} from '../../app.routes-paths'
+import {Router} from '@angular/router';
+import {QuestionAnswerOptionDto} from '../../api/generated';
 
-export interface Question {
-  id: number;
+type QuestionUpdateBodyParams = Omit<QuestionUpdateRequestParams, 'questionId'>;
+type QuestionPartialBodyParams = Omit<QuestionPartialUpdateRequestParams, 'questionId'>;
+
+
+
+export interface QuestionFormValue {
   title: string;
   description: string;
   explanation: string;
@@ -15,150 +25,192 @@ export interface Question {
   active: boolean;
   is_mode_practice: boolean;
   is_mode_exam: boolean;
-  subjects: Subject[];
-  media: MediaSelectorValue[];
-  answer_options: AnswerOption[];
-  created_at: string;
+
+  subjectIds: number[];
+
+  answerOptions: QuestionAnswerOptionDto[];
+
+  media: MediaSelectorValue[]; // inclut File éventuel
 }
 
-export interface AnswerOption {
-  id: number;
-  content: string;
-  is_correct: boolean;
-  sort_order: number;
-}
+export type QuestionCreatePayload = QuestionFormValue;
+export type QuestionUpdatePayload = Partial<QuestionFormValue>;
 
-export interface QuestionCreatePayload {
-  title: string;
-  description: string;
-  explanation: string;
-  allow_multiple_correct: boolean;
-  active: boolean;
-  is_mode_practice: boolean;
-  is_mode_exam: boolean;
-  subject_ids: number[];
-  answer_options: AnswerOption[];
-  media: MediaSelectorValue[];
-}
 
-/** Ce qu'on envoie en PUT/PATCH (ici on garde le même) */
-export type QuestionUpdatePayload = QuestionCreatePayload;
-
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({providedIn: 'root',})
 export class QuestionService {
-  private base = environment.apiBaseUrl;
-  private questionPath = environment.apiQuestionPath;
-
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(private api: QuestionApi, private router: Router) {
   }
 
-  list(params?: { search?: string }): Observable<Question[]> {
-    return this.http.get<Question[]>(
-      `${this.base}${this.questionPath}`,
-      {
-        params: params?.search ? {search: params.search} : {}
-      }
-    );
+  // LIST
+  list(params?: { search?: string }): Observable<Array<QuestionDto>> {
+    return this.api.questionList({search: params?.search});
   }
 
-  create(payload: QuestionCreatePayload): Observable<Question> {
-    const formData = this.buildFormData(payload);
-    return this.http.post<Question>(`${this.base}${this.questionPath}`, formData);
+  // CREATE (multipart / form)
+  create(payload: QuestionCreatePayload): Observable<QuestionDto> {
+    const req: QuestionCreateRequestParams = this.toRequestParams(payload);
+    return this.api.questionCreate(req);
   }
 
-  update(id: number | undefined, payload: QuestionUpdatePayload): Observable<Question> {
-    const formData = this.buildFormData(payload);
-    return this.http.put<Question>(`${this.base}${this.questionPath}${id}/`, formData);
+  // UPDATE (PUT)
+  update(questionId: number, payload: QuestionCreatePayload): Observable<QuestionDto> {
+    const req: QuestionUpdateBodyParams = this.toRequestParams(payload);
+    return this.api.questionUpdate({questionId, ...req});
   }
 
-  retrieve(id: number | undefined): Observable<Question> {
-    return this.http.get<Question>(`${this.base}${this.questionPath}${id}/`);
+  // UPDATE (PATCH)
+  updatePartial(questionId: number, payload: QuestionUpdatePayload): Observable<QuestionDto> {
+    const req: QuestionPartialBodyParams = this.toRequestParamsPartial(payload);
+    return this.api.questionPartialUpdate({questionId, ...req});
   }
 
-  delete(id: number | undefined): Observable<void> {
-    return this.http.delete<void>(`${this.base}${this.questionPath}${id}/`);
+  // RETRIEVE
+  retrieve(questionId: number): Observable<QuestionDto> {
+    return this.api.questionRetrieve({questionId});
   }
 
+  // DELETE
+  delete(questionId: number): Observable<void> {
+    // l'API générée retourne "any" sur delete ; on caste proprement
+    return this.api.questionDestroy({questionId}).pipe(map(() => void 0));
+  }
+
+  // --------------------------
+  // Navigation (UI only)
+  // --------------------------
   goBack(): void {
-    this.router.navigate(['/question/list']);
+    this.router.navigate(ROUTES.question.list());
   }
 
   goList(): void {
-    this.router.navigate(['/question/list']);
-  }
-  goView(id: number) {
-    this.router.navigate(['/question', id, 'view']);
-  }
-  goNew():void{
-    this.router.navigate(['/question/add']);
-  }
-  goEdit(id: number):void {
-    this.router.navigate(['/question', id, 'edit']);
-  }
-  goDelete(id: number):void {
-    this.router.navigate(['/question', id, 'delete']);
-  }
-  goSubjectEdit(id:number):void{
-    this.router.navigate(['/subject', id, 'edit']);
+    this.router.navigate(ROUTES.question.list());
   }
 
+  goView(questionId: number): void {
+    this.router.navigate(ROUTES.question.view(questionId));
+  }
 
-  private buildFormData(payload: QuestionCreatePayload | QuestionUpdatePayload): FormData {
-    const formData = new FormData();
+  goNew(): void {
+    this.router.navigate(ROUTES.question.add());
+  }
 
-    // ---- subject_ids → nombres propres ----
-    const subjectIds: number[] = Array.isArray(payload.subject_ids)
-      ? payload.subject_ids
-        .filter((id: any) => id !== null && id !== undefined && id !== '')
-        .map((id: any) => Number(id))
-        .filter((id: number) => Number.isFinite(id))
+  goEdit(questionId: number): void {
+    this.router.navigate(ROUTES.question.edit(questionId));
+  }
+
+  goDelete(questionId: number): void {
+    this.router.navigate(ROUTES.question.delete(questionId));
+  }
+
+  goSubjectEdit(subjectId: number): void {
+    this.router.navigate(ROUTES.subject.edit(subjectId));
+  }
+
+  private cleanIds(ids: any): number[] {
+    return Array.isArray(ids)
+      ? ids
+        .filter((id) => id !== null && id !== undefined && id !== '')
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id))
       : [];
+  }
 
-    // ---- réponses ----
-    const answerOptions: AnswerOption[] = payload.answer_options ?? [];
-
-    const answerOptionsPayload = answerOptions.map((opt, index) => ({
+  private mapAnswerOptions(answerOptions: QuestionAnswerOptionDto[] | undefined) {
+    return (answerOptions ?? []).map((opt, index) => ({
       content: opt.content,
       is_correct: !!opt.is_correct,
       sort_order: opt.sort_order ?? index + 1,
     }));
-
-    // ---- médias ----
-    const mediaItems: MediaSelectorValue[] = Array.isArray(payload.media)
-      ? payload.media
-      : [];
-
-    const mediaPayload = mediaItems.map((m, index) => ({
-      id: m.id ?? null,
-      kind: m.kind,
-      external_url: m.external_url ?? null,
-      sort_order: m.sort_order ?? index + 1,
-      has_file: m.file instanceof File,
-    }));
-    // ---- champs simples ----
-    formData.append('title', payload.title ?? '');
-    formData.append('description', payload.description ?? '');
-    formData.append('explanation', payload.explanation ?? '');
-    formData.append('allow_multiple_correct', String(!!payload.allow_multiple_correct));
-    formData.append('active', String(!!payload.active));
-    formData.append('is_mode_practice', String(!!payload.is_mode_practice));
-    formData.append('is_mode_exam', String(!!payload.is_mode_exam));
-    // subject_ids : plusieurs valeurs
-    subjectIds.forEach((id: number) => {
-      formData.append('subject_ids', String(id));
-    });
-    // réponses & médias en JSON
-    formData.append('answer_options', JSON.stringify(answerOptionsPayload));
-    formData.append('media', JSON.stringify(mediaPayload));
-
-    // fichiers
-    mediaItems.forEach((m) => {
-      if ((m.kind === 'image' || m.kind === 'video') && m.file instanceof File) {
-        formData.append('media_files', m.file, m.file.name);
-      }
-    });
-    return formData;
   }
+
+  /**
+   * Construit :
+   * - mediaMeta: liste JSON (externals + fichiers)
+   * - mediaFiles: File[] dans le même ordre que les entrées "fichier"
+   *
+   * Variante simple : on ajoute les fichiers comme items kind=image/video sans external_url
+   * et on garde l'ordre UI via sort_order.
+   *
+   * Si tu veux un mapping exact meta ↔ fichier, on peut ajouter file_index dans le JSON.
+   */
+  private mapMedia(mediaItems: MediaSelectorValue[] | undefined): { mediaMeta: any[]; mediaFiles: File[] } {
+    const items = Array.isArray(mediaItems) ? mediaItems : [];
+
+    const mediaFiles: File[] = [];
+    const mediaMeta = items.map((m, index) => {
+      const sort_order = m.sort_order ?? index + 1;
+
+      if (m.kind === 'external') {
+        return {
+          kind: 'external',
+          external_url: m.external_url ?? null,
+          sort_order,
+        };
+      }
+
+      // image/video
+      if (m.file instanceof File) {
+        const file_index = mediaFiles.push(m.file) - 1;
+        return {
+          kind: m.kind,          // 'image' | 'video'
+          sort_order,
+          file_index,            // ✅ optionnel mais très pratique côté backend
+        };
+      }
+
+      // image/video sans nouveau fichier (ex: déjà existant côté backend)
+      // garde un placeholder sans file_index
+      return {
+        kind: m.kind,
+        sort_order,
+      };
+    });
+
+    return {mediaMeta, mediaFiles};
+  }
+
+  private toRequestParams(payload: QuestionCreatePayload): QuestionCreateRequestParams {
+    const subjectIds = this.cleanIds(payload.subjectIds);
+
+    const answerOptionsPayload = this.mapAnswerOptions(payload.answerOptions);
+
+    const {mediaMeta, mediaFiles} = this.mapMedia(payload.media);
+
+    return {
+      title: payload.title ?? '',
+      description: payload.description ?? '',
+      // explanation: payload.explanation ?? '', // ajoute si ton RequestParams le supporte
+      subjectIds, // ou subject_ids selon ton généré
+      answerOptions: JSON.stringify(answerOptionsPayload),
+      media: JSON.stringify(mediaMeta),
+
+      // ✅ N fichiers (selon le nom généré)
+      mediaFiles, // <— si ton generated RequestParams expose un champ array de fichiers
+    };
+  }
+
+  private toRequestParamsPartial(payload: QuestionUpdatePayload): QuestionPartialBodyParams {
+    const out: QuestionPartialBodyParams = {};
+
+    if (payload.title !== undefined) out.title = payload.title;
+    if (payload.description !== undefined) out.description = payload.description;
+    // if (payload.explanation !== undefined) out.explanation = payload.explanation;
+    if (payload.subjectIds !== undefined) {
+      out.subjectIds = this.cleanIds(payload.subjectIds);
+    }
+
+    if (payload.answerOptions !== undefined) {
+      out.answerOptions = JSON.stringify(this.mapAnswerOptions(payload.answerOptions));
+    }
+
+    if (payload.media !== undefined) {
+      const {mediaMeta, mediaFiles} = this.mapMedia(payload.media);
+      out.media = JSON.stringify(mediaMeta);
+      out.mediaFiles = mediaFiles; // ✅ si supporté par le client généré
+    }
+
+    return out;
+  }
+
 }

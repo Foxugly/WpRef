@@ -31,6 +31,24 @@ export interface QuizSession {
   expired_at: string;
 }
 
+export interface QuizAttemptOptionDto {
+  id: number;
+  content: string;
+  is_selected: boolean;
+  is_correct?: boolean;
+}
+
+export interface QuizAttemptDetailDto {
+  quiz_id: string;
+  quiz_title: string;
+  question_id: number;
+  question_order: number;
+  title: string;
+  description: string;
+  options: QuizAttemptOptionDto[];
+}
+
+
 @Injectable({
   providedIn: 'root',
 })
@@ -100,5 +118,11 @@ export class QuizService {
       "selected_option_ids": payload.selectedOptionIds
     }
     return this.http.post<any>(url, mypayload, {observe: 'response'});
+  }
+
+
+  getAnswer(quiz_id: number, questionOrder: number) {
+    const url = `${this.base}${this.quizPath}${quiz_id}/attempt/${questionOrder}/`;
+    return this.http.get<QuizAttemptDetailDto>(url);
   }
 }

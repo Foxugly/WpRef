@@ -80,10 +80,10 @@
           @if (allowMultiple) {
             <!-- MULTI → checkbox -->
             <p-checkbox
-              (onChange)="onToggleCheckbox(opt.id, $event.checked)"
               [binary]="true"
-              [inputId]="'opt' + opt.id"
               [ngModel]="isChecked(opt.id)"
+              [inputId]="'opt' + opt.id"
+              (onChange)="onToggleCheckbox(opt.id, $event.checked)"
             ></p-checkbox>
           } @else {
             <!-- SINGLE → radio -->
@@ -97,6 +97,7 @@
           }
 
           <label [for]="'opt' + opt.id" class="answer-label">
+            {{ opt.id }}
             <div [innerHTML]="stripOuterP(opt.content)"></div>
           </label>
         </div>

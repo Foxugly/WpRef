@@ -34,8 +34,8 @@
 .quiz-summary-grid {
   display: grid;
   gap: 1rem 2rem;
-  grid-template-columns: 1fr;   // mobile : une seule colonne
-  grid-auto-flow: row;          // on remplit ligne par ligne en mobile
+  grid-template-columns: 1fr; // mobile : une seule colonne
+  grid-auto-flow: row; // on remplit ligne par ligne en mobile
 }
 
 .quiz-summary-item {
@@ -81,7 +81,7 @@
 @media (min-width: 768px) {
   .quiz-summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(3, auto);  // 3 lignes
-    grid-auto-flow: column;               // ⚠️ remplissage colonne par colonne
+    grid-template-rows: repeat(3, auto); // 3 lignes
+    grid-auto-flow: column; // ⚠️ remplissage colonne par colonne
   }
 }

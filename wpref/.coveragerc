@@ -1,0 +1,18 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */tests/*
+    */__init__.py
+    manage.py
+    */settings/*
+    */asgi.py
+    */wsgi.py
+    */admin.py
+    */apps.py
+    customuser/scripts/create_users.py
+    data.py
+    quiz.py
+    quiz/old*
+    wpref/schema.py
+    test_quiz.py

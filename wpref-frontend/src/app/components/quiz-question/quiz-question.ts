@@ -18,7 +18,7 @@ import {QuizNavItem} from '../quiz-nav/quiz-nav';
 
 export interface AnswerPayload {
   questionId: number;
-  index:number;
+  index: number;
   selectedOptionIds: number[];
 }
 
@@ -50,6 +50,7 @@ export class QuizQuestionComponent implements OnChanges {
   // ➜ nouveaux events pour laisser le parent gérer la navigation
   @Output() goNext = new EventEmitter<AnswerPayload>();
   @Output() goPrevious = new EventEmitter<AnswerPayload>();
+
   selectedOptionIds: number[] = [];
   // Pour le radio uniquement (choix unique)
   selectedRadioId: number | null = null;
@@ -85,7 +86,7 @@ export class QuizQuestionComponent implements OnChanges {
     }
     if (checked) {
       if (!this.selectedOptionIds.includes(optionId)) {
-        this.selectedOptionIds.push(optionId);
+        this.selectedOptionIds = [...this.selectedOptionIds, optionId];
       }
     } else {
       this.selectedOptionIds = this.selectedOptionIds.filter(id => id !== optionId);
@@ -99,9 +100,18 @@ export class QuizQuestionComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['quizNavItem'] && this.quizNavItem) {
       // on reset la sélection quand on change de question
-      this.selectedOptionIds = [];
-      this.selectedRadioId = null;
+      const ids = this.quizNavItem.selectedOptionIds ?? [];
+
+      // On met à jour l'état interne du composant
+      this.selectedOptionIds = [...ids];
+
+      if (!this.allowMultiple) {
+        // Cas choix unique : on synchronise aussi le radio
+        this.selectedRadioId = ids.length ? ids[0] : null;
+      }
     }
+    console.log('ngOnChanges', this.quizNavItem.index, this.quizNavItem.selectedOptionIds, this.selectedOptionIds);
+
   }
 
 
@@ -162,7 +172,7 @@ export class QuizQuestionComponent implements OnChanges {
     return {
       questionId: this.question.id,
       index: this.quizNavItem.index,
-      selectedOptionIds: [...this.selectedOptionIds], // copie
+      selectedOptionIds: this.selectedOptionIds, // copie
     };
   }
 

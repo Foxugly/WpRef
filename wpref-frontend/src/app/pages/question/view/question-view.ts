@@ -2,7 +2,7 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {ActivatedRoute} from '@angular/router';
-import {Question, QuestionService,} from '../../../services/question/question';
+import {QuestionService,} from '../../../services/question/question';
 import {QuizQuestionComponent} from '../../../components/quiz-question/quiz-question';
 import {ButtonModule} from 'primeng/button';
 import {ToggleButtonModule} from 'primeng/togglebutton';

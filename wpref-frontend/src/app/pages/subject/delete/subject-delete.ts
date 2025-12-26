@@ -1,7 +1,7 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 
-import { ActivatedRoute} from '@angular/router';
-import { SubjectService, Subject } from '../../../services/subject/subject';
+import {ActivatedRoute} from '@angular/router';
+import {Subject, SubjectService} from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
 
 @Component({
@@ -18,13 +18,14 @@ export class SubjectDelete implements OnInit {
   id!: number;
   subject = signal<Subject | null>(null);
 
-  goBack():void{
+  goBack(): void {
     this.subjectService.goBack();
   }
 
-  goList():void{
+  goList(): void {
     this.subjectService.goList();
   }
+
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     this.subjectService.retrieve(this.id).subscribe(s => this.subject.set(s));

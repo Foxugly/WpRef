@@ -1,69 +1,216 @@
-# question/views.py
 import json
+import logging
 
-from django.http import QueryDict  # ⬅️ AJOUT
+from django.http import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, status
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes, OpenApiRequest,
+)
+from rest_framework import status
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
+from wpref.tools import ErrorDetailSerializer
+from wpref.tools import MyModelViewSet
 
 from .models import Question, QuestionMedia
-from .serializers import QuestionSerializer
+from .serializers import QuestionSerializer, QuestionMultipartWriteSerializer
 
-TEST = True
+logger = logging.getLogger(__name__)
 
 
-class QuestionViewSet(viewsets.ModelViewSet):
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Question"],
+        summary="Lister les questions",
+        description=(
+                "Liste paginée des questions.\n\n"
+                "Supporte :\n"
+                "- `search` (filtre title__icontains)\n"
+                "- `title`, `description` via DjangoFilterBackend (si activé)\n"
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="search",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Recherche simple (title__icontains).",
+            ),
+            OpenApiParameter(
+                name="title",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filtre exact (via DjangoFilterBackend).",
+            ),
+            OpenApiParameter(
+                name="description",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filtre exact (via DjangoFilterBackend).",
+            ),
+        ],
+        responses={
+            200: QuestionSerializer(many=True),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
+        },
+    ),
+    retrieve=extend_schema(
+        tags=["Question"],
+        summary="Récupérer une question",
+        parameters=[
+            OpenApiParameter(
+                name="question_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="ID de la question (question_id).",
+            )
+        ],
+        responses={
+            200: QuestionSerializer,
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
+        },
+    ),
+    create=extend_schema(
+        tags=["Question"],
+        summary="Créer une question (multipart ou JSON)",
+        description=(
+                "Crée une question. Supporte multipart/form-data (recommandé pour upload médias) ou JSON.\n\n"
+                "**Convention**:\n"
+                "- `subject_ids`: envoyé comme liste multipart (subject_ids=1&subject_ids=2)\n"
+                "- `answer_options`: JSON string (liste)\n"
+                "- `media`: JSON string (liste) pour les external_url\n"
+                "- fichiers : `media[0][file]`, `media[1][file]`, ...\n"
+        ),
+        request=QuestionMultipartWriteSerializer,
+        responses={
+            201: QuestionSerializer,
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
+        },
+    ),
+    update=extend_schema(
+        tags=["Question"],
+        summary="Mettre à jour une question (PUT)",
+        description=(
+                "Mise à jour complète. Même payload que create.\n"
+                "Supporte multipart/form-data ou JSON."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="question_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="ID de la question (question_id).",
+            )
+        ],
+        request=QuestionMultipartWriteSerializer,
+        responses={
+            200: QuestionSerializer,
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
+        },
+    ),
+    partial_update=extend_schema(
+        tags=["Question"],
+        summary="Mettre à jour une question (PATCH)",
+        description=(
+                "Mise à jour partielle. Même payload que create.\n"
+                "Supporte multipart/form-data ou JSON."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="question_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="ID de la question (question_id).",
+            )
+        ],
+        request=QuestionMultipartWriteSerializer,
+        responses={
+            200: QuestionSerializer,
+            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
+        },
+    ),
+    destroy=extend_schema(
+        tags=["Question"],
+        summary="Supprimer une question",
+        parameters=[
+            OpenApiParameter(
+                name="question_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="ID de la question (question_id).",
+            )
+        ],
+        responses={
+            204: OpenApiResponse(description="No Content"),
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
+        },
+    ),
+)
+class QuestionViewSet(MyModelViewSet):
     queryset = Question.objects.prefetch_related("media", "answer_options", "subjects")
     serializer_class = QuestionSerializer
     permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["title", "description"]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    lookup_field = "pk"
+    lookup_url_kwarg = "question_id"
+
+    # ==========================================================
+    # Permissions (explicites même si redondantes)
+    # ==========================================================
 
     def get_permissions(self):
         return [IsAdminUser()]
 
+    # ==========================================================
+    # coercion JSON fields
+    # ==========================================================
     def _coerce_json_fields(self, data):
         """
         Transforme request.data (QueryDict) en dict normal pour le serializer,
         en gérant correctement :
-        - subject_ids  -> liste d'int
-        - answer_options -> liste de dicts (parse JSON)
+        - subject_ids     -> liste d'int
+        - answer_options  -> liste de dicts (parse JSON)
+        - media           -> liste de dicts (parse JSON) si envoyé en JSON
         """
 
         # 1) On sort de la QueryDict -> dict Python classique
         if isinstance(data, QueryDict):
             mutable = {}
-
             for key in data.keys():
                 if key == "subject_ids":
-                    # subject_ids peut apparaître plusieurs fois : getlist()
-                    # ex: ['3', '1', '2\n'] -> [3, 1, 2]
-                    mutable["subject_ids"] = [
-                        int(v) for v in data.getlist("subject_ids") if v.strip()
-                    ]
+                    mutable["subject_ids"] = [int(v) for v in data.getlist("subject_ids") if v.strip()]
                 else:
-                    # pour les autres champs (title, description, answer_options, …)
-                    # on prend la première valeur
                     mutable[key] = data.get(key)
         else:
             mutable = dict(data)
-
-        # 2) answer_options : string JSON -> liste de dicts
         raw_answer_options = mutable.get("answer_options")
         if isinstance(raw_answer_options, str):
             try:
                 parsed = json.loads(raw_answer_options)
                 if isinstance(parsed, list):
-                    # Là on a bien [{...}, {...}], pas [[{...}]]
                     mutable["answer_options"] = parsed
             except json.JSONDecodeError:
-                # si ce n'est pas du JSON valide, on laisse tomber
                 pass
-
-        # (optionnel) même traitement pour media si tu l'envoies en JSON
         raw_media = mutable.get("media")
         if isinstance(raw_media, str):
             try:
@@ -72,10 +219,18 @@ class QuestionViewSet(viewsets.ModelViewSet):
                     mutable["media"] = parsed_media
             except json.JSONDecodeError:
                 pass
-
         return mutable
 
+    # ==========================================================
+    # CRUD implicite : surcharges
+    # ==========================================================
     def list(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="list",
+            endpoint="GET /api/question/",
+            input_expected="query params (search?, title?, description?), body vide",
+            output="200 + [QuestionSerializer] (paginé)",
+        )
         qs = self.get_queryset()
         search = request.query_params.get("search")
         if search:
@@ -87,54 +242,149 @@ class QuestionViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
+    def retrieve(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="retrieve",
+            endpoint="GET /api/question/{id}/",
+            input_expected="path pk, body vide",
+            output="200 + QuestionSerializer | 404",
+        )
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        request=OpenApiRequest(
+            request=QuestionMultipartWriteSerializer,
+            encoding={
+                "media_files": {
+                    "style": "form",
+                    "explode": True
+                }
+            },
+        )
+    )
     def create(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="create",
+            endpoint="POST /api/question/",
+            input_expected="multipart/JSON (Question + subject_ids + answer_options + media)",
+            output="201 + QuestionSerializer | 400",
+        )
         data = self._coerce_json_fields(request.data)
         media_data = data.get("media", [])
-        serializer = self.get_serializer(data=data)
+        serializer = self.get_serializer(data=data, show_correct=True)
         if not serializer.is_valid():
-            print("CREATE errors:", serializer.errors)
+            logger.warning("CREATE errors: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         question = serializer.save()
         self._handle_media_upload(request, question, media_data=media_data)
-        return Response(self.get_serializer(question).data, status=status.HTTP_201_CREATED)
+        logger.info("Question created id=%s", question.id)
+        return Response(self.get_serializer(question, show_correct=True).data, status=status.HTTP_201_CREATED)
 
+    @extend_schema(
+        request=OpenApiRequest(
+            request=QuestionMultipartWriteSerializer,
+            encoding={"media_files": {"style": "form", "explode": True}},
+        )
+    )
     def update(self, request, *args, **kwargs):
-        partial = kwargs.get("partial", False)
+        self._log_call(
+            method_name="update",
+            endpoint="PUT /api/question/{id}/",
+            input_expected="path pk + body multipart/JSON complet",
+            output="200 + QuestionSerializer | 400 | 404",
+        )
+        instance = self.get_object()
+
+        data = self._coerce_json_fields(request.data)
+        media_data = data.get("media", [])
+
+        serializer = self.get_serializer(instance, data=data, partial=False, show_correct=True)
+        if not serializer.is_valid():
+            logger.warning("UPDATE errors: %s", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        question = serializer.save()
+
+        # Rebuild media (ta logique delete+recreate est dans _handle_media_upload)
+        self._handle_media_upload(request, question, media_data=media_data)
+
+        logger.info("Question updated id=%s partial=%s", question.id, False)
+        return Response(self.get_serializer(question, show_correct=True).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        request=OpenApiRequest(
+            request=QuestionMultipartWriteSerializer,
+            encoding={"media_files": {"style": "form", "explode": True}},
+        )
+    )
+    def partial_update(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="partial_update",
+            endpoint="PATCH /api/question/{queston_id}/",
+            input_expected="path question_id + body multipart/JSON partiel",
+            output="200 + QuestionSerializer | 400 | 404",
+        )
+        instance = self.get_object()
+
+        data = self._coerce_json_fields(request.data)
+        media_data = data.get("media", [])
+
+        serializer = self.get_serializer(instance, data=data, partial=True, show_correct=True)
+        if not serializer.is_valid():
+            logger.warning("PATCH errors: %s", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        question = serializer.save()
+
+        # Option de design:
+        # - Si tu veux que PATCH media remplace toujours tout: garde ce call tel quel
+        # - Si tu veux que PATCH media ne fasse rien quand "media" absent: conditionne ci-dessous
+        if "media" in data or request.FILES:
+            self._handle_media_upload(request, question, media_data=media_data)
+
+        logger.info("Question updated id=%s partial=%s", question.id, True)
+        return Response(self.get_serializer(question, show_correct=True).data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="destroy",
+            endpoint="DELETE /api/question/{question_id}/",
+            input_expected="path question_id, body vide",
+            output="204 | 404",
+        )
+        return super().destroy(request, *args, **kwargs)
+
+    # ==========================================================
+    # Factorisation update / partial_update (propre)
+    # ==========================================================
+    def _update_internal(self, request, *, partial: bool):
         instance = self.get_object()
         data = self._coerce_json_fields(request.data)
         media_data = data.get("media", [])
+
         serializer = self.get_serializer(instance, data=data, partial=partial)
         if not serializer.is_valid():
-            print("UPDATE errors:", serializer.errors)
+            logger.warning("UPDATE errors: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         question = serializer.save()
         self._handle_media_upload(request, question, media_data=media_data)
+
+        logger.info("Question updated id=%s partial=%s", question.id, partial)
         return Response(self.get_serializer(question).data, status=status.HTTP_200_OK)
+
+    # ==========================================================
+    # Ton code : gestion media
+    # ==========================================================
 
     # ---------------------------
     # Gestion des médias
     # ---------------------------
     def _handle_media_upload(self, request, question: Question, media_data=None) -> None:
-        """
-        Reconstruit entièrement les médias d'une question à partir de :
-        - request.FILES (images / vidéos)
-        - request.data (liens externes, ex: YouTube)
 
-        Convention côté frontend (Angular) :
-        - fichiers envoyés en multipart sous des clés du style:
-            media[0][file], media[1][file], ...
-        - liens externes envoyés sous des clés:
-            media[0][external_url], media[1][external_url], ...
-          ou éventuellement un champ global "youtube_url".
-        """
-
-        # 1) On nettoie les anciens médias
         question.media.all().delete()
-
         sort_index = 1
         media_data = media_data or []
-        # 2) Fichiers uploadés (image / vidéo)
-        #    On parcourt toutes les clés de FILES (peu importe leur nom exact)
         for key in request.FILES:
             for f in request.FILES.getlist(key):
                 content_type = (getattr(f, "content_type", "") or "").lower()
@@ -143,7 +393,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 elif content_type.startswith("video/"):
                     kind = QuestionMedia.VIDEO
                 else:
-                    # on ignore les MIME non supportés
                     continue
 
                 QuestionMedia.objects.create(
@@ -154,9 +403,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 )
                 sort_index += 1
 
-        # 3) Liens externes : on utilise media_data PARSÉ, pas request.data['media']
         for item in media_data:
-            # sécurité : on ignore les trucs qui ne sont pas des dicts
             if not isinstance(item, dict):
                 continue
 

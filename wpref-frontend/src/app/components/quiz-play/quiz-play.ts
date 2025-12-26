@@ -1,12 +1,11 @@
 import {Component} from '@angular/core';
 import {QuizNav, QuizNavItem} from '../quiz-nav/quiz-nav';
-import {AnswerOption, Question} from '../../services/question/question';
-import {Subject} from '../../services/subject/subject';
-import {MediaSelectorValue} from '../media-selector/media-selector';
+import {Question} from '../../services/question/question';
 
 function createEmptyQuestion(id: number, title: string = ""): Question {
   return {
     id: id,
+    index: 0,
     title: title,
     description: "question",
     explanation: "parce que",

@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { MediaSelector } from './media-selector';
+import {MediaSelector} from './media-selector';
 
 describe('MediaSelector', () => {
   let component: MediaSelector;
@@ -10,7 +10,7 @@ describe('MediaSelector', () => {
     await TestBed.configureTestingModule({
       imports: [MediaSelector]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(MediaSelector);
     component = fixture.componentInstance;

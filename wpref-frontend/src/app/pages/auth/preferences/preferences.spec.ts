@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { Preferences } from './preferences';
+import {Preferences} from './preferences';
 
 describe('Preferences', () => {
   let component: Preferences;
@@ -10,7 +10,7 @@ describe('Preferences', () => {
     await TestBed.configureTestingModule({
       imports: [Preferences]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(Preferences);
     component = fixture.componentInstance;

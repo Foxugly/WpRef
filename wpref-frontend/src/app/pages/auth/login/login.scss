@@ -63,7 +63,9 @@
 
 .field label {
   font-weight: 600;
-}/*
+}
+
+/*
 .field .p-password,
 .field .p-password-input{
   //width: 100%;
@@ -134,7 +136,7 @@
 }
 
 .btn--primary,
-.btn--primary :hover{
+.btn--primary :hover {
   background: var(--brand, #0056b3);
   color: var(--brand-contrast, #fff);
 }

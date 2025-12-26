@@ -1,8 +1,8 @@
-import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
+import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
 
-import { FormsModule } from '@angular/forms';
-import { SelectButtonModule } from 'primeng/selectbutton';
-import { LangCode } from '../../../environments/environment'; // adapte le chemin si besoin
+import {FormsModule} from '@angular/forms';
+import {SelectButtonModule} from 'primeng/selectbutton';
+import {LangCode} from '../../../environments/environment'; // adapte le chemin si besoin
 
 @Component({
   selector: 'app-lang-select',
@@ -23,9 +23,9 @@ export class LangSelectComponent implements OnChanges {
 
   /** Options du p-selectbutton */
   langOptions = [
-    { label: 'FR', value: 'fr' },
-    { label: 'NL', value: 'nl' },
-    { label: 'EN', value: 'en' },
+    {label: 'FR', value: 'fr'},
+    {label: 'NL', value: 'nl'},
+    {label: 'EN', value: 'en'},
   ];
 
   ngOnChanges(changes: SimpleChanges): void {

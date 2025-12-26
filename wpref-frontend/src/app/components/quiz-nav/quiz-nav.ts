@@ -10,6 +10,7 @@ export interface QuizNavItem {
   answered: boolean;
   flagged: boolean;
   question: Question;
+  selectedOptionIds?: number[];
 }
 
 @Component({

@@ -4,7 +4,7 @@ import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {CommonModule} from '@angular/common';
 import {PaginatorModule} from 'primeng/paginator';
-import {QuizService, QuizSession, QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
+import {QuizService, QuizSession} from '../../../services/quiz/quiz';
 import {DialogModule} from 'primeng/dialog';
 import {QuizSubjectForm} from '../subject-form/subject-form'
 import {TableModule} from 'primeng/table';
@@ -89,10 +89,12 @@ export class QuizList implements OnInit {
     this.success.set(null);
     this.visible = true;
   }
+
   goList(): void {
     this.quizService.goList();
   }
-   goView(id: number): void {
+
+  goView(id: number): void {
     this.quizService.goView(id);
   }
 

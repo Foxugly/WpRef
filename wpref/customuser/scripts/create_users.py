@@ -8,6 +8,7 @@ U1_USERNAME = "user1"
 U1_EMAIL = "user1@example.com"
 U1_PASSWORD = "SuperPassword123"
 
+
 def run():
     # ----------------------   CREATE SUPERUSER ----------------------------
     print("\nCREATE SUPERUSER")
@@ -25,8 +26,8 @@ def run():
     if not User.objects.filter(username=U1_USERNAME).exists():
         u1 = User.objects.create_user(
             username=U1_USERNAME,
-            first_name = U1_USERNAME,
-            last_name = U1_USERNAME,
+            first_name=U1_USERNAME,
+            last_name=U1_USERNAME,
             email=U1_EMAIL,
             password=U1_PASSWORD
         )

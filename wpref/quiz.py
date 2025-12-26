@@ -1,252 +1,189 @@
 import random
-from typing import Dict, Any
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 import requests
 
-BASE_URL = "http://localhost:8000"  # ou "http://127.0.0.1:8000"
+
+@dataclass(frozen=True)
+class ApiPaths:
+    token: str = "/api/token/"
+    quiz_create_from_template: str = "/api/quiz/"
+    quiz_start: str = "/api/quiz/{quiz_id}/start/"
+    quiz_close: str = "/api/quiz/{quiz_id}/close/"
+    quiz_details: str = "/api/quiz/{quiz_id}/"  # retrieve quiz + questions (si ton serializer les renvoie)
+    quiz_answer: str = "/api/quiz/{quiz_id}/answer/"  # nested answers list/create
 
 
-SU_USERNAME = "admin"
-SU_PASSWORD = "SuperPassword123"
+class ApiClient:
+    def __init__(self, base_url: str, timeout: float = 10.0):
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.session = requests.Session()
+        self.session.headers.update({"Content-Type": "application/json"})
+        self.paths = ApiPaths()
 
-U2_USERNAME = "user2"
-U2_EMAIL = "user2@example.com"
-U2_PASSWORD = "SuperPassword123"
+    def set_bearer(self, token: str) -> None:
+        self.session.headers.update({"Authorization": f"Bearer {token}"})
 
-path_token = "/api/token/"
-path_quiz_creation = "/api/quiz/<SLUG>/create/"
-path_quiz_start = "/api/quiz/<QUIZ_ID>/start/"
-# On utilise maintenant /attempt/ aussi bien pour GET (question + état) que pour POST (réponse)
-path_quiz_attempt = "/api/quiz/<QUIZ_ID>/attempt/<QUESTION_ORDER>/"
-path_quiz_close = "/api/quiz/<QUIZ_ID>/close/"
-path_quiz_summary = "/api/quiz/<QUIZ_ID>/summary/"
+    def url(self, path: str, **kwargs) -> str:
+        return f"{self.base_url}{path.format(**kwargs)}"
 
-def get_json_credential(username, password):
-    return {"username": username, "password": password}
+    def request_json(self, method: str, path: str, *, json: Optional[dict] = None, **kwargs) -> Dict[str, Any]:
+        url = self.url(path, **kwargs)
+        resp = self.session.request(method, url, json=json, timeout=self.timeout)
 
-def get_url(base_url, path):
-    return base_url.rstrip("/") + path
+        # gestion d’erreur robuste
+        if resp.status_code >= 400:
+            # essayer de récupérer un message DRF
+            try:
+                detail = resp.json()
+            except Exception:
+                detail = resp.text
+            raise RuntimeError(f"{method} {url} -> {resp.status_code}: {detail}")
 
-def get_access_token(base_url: str, token_path: str, username:str, password:str) -> str:
-    """Récupère un token JWT (SimpleJWT) du user2."""
-    url = get_url(base_url, token_path)
-    resp = requests.post(url, json=get_json_credential(username, password))
-    if resp.status_code != 200:
-        raise RuntimeError(
-            f"Échec de l'authentification ({resp.status_code}): {resp.text}"
-        )
-    data = resp.json()
-    access = data.get("access") or data.get("access_token")
-    if not access:
-        raise RuntimeError("Réponse token sans champ 'access': " + str(data))
-    return access
+        # certaines routes peuvent renvoyer 204
+        if resp.status_code == 204 or not resp.content:
+            return {}
 
-def get_admin_token(base_url: str, token_path: str) -> str:
-    return get_access_token(base_url, token_path, U2_USERNAME, U2_PASSWORD)
+        return resp.json()
 
-def get_user_token(base_url: str, token_path: str) -> str:
-    return get_access_token(base_url, token_path, U2_USERNAME, U2_PASSWORD)
+    # -------------------------
+    # AUTH
+    # -------------------------
+    def login(self, username: str, password: str) -> str:
+        data = self.request_json("POST", self.paths.token, json={"username": username, "password": password})
+        access = data.get("access") or data.get("access_token")
+        if not access:
+            raise RuntimeError(f"Token response missing 'access': {data}")
+        return access
+
+    # -------------------------
+    # QUIZ
+    # -------------------------
+    def create_quiz(self, quiz_template_id: int) -> Dict[str, Any]:
+        return self.request_json("POST", self.paths.quiz_create_from_template,
+                                 json={"quiz_template_id": quiz_template_id})
+
+    def start_quiz(self, quiz_id: str) -> Dict[str, Any]:
+        return self.request_json("POST", self.paths.quiz_start, quiz={})
+
+    def close_quiz(self, quiz_id: str) -> Dict[str, Any]:
+        return self.request_json("POST", self.paths.quiz_close, quiz_id=quiz_id)
+
+    def quiz_details(self, quiz_id: str) -> Dict[str, Any]:
+        return self.request_json("GET", self.paths.quiz_details, quiz_id=quiz_id)
+
+    # -------------------------
+    # ANSWERS
+    # -------------------------
+    def post_answer(self, quiz_id: str, *, question_order: int = None, question_id: int = None,
+                    selected_options=None) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"selected_options": selected_options or []}
+
+        # tu acceptes question_order et/ou question_id (cohérence gérée serveur)
+        if question_order is not None:
+            payload["question_order"] = question_order
+        if question_id is not None:
+            payload["question_id"] = question_id
+
+        return self.request_json("POST", self.paths.quiz_answer, json=payload, quiz_id=quiz_id)
+
+    def list_answers(self, quiz_id: str) -> Dict[str, Any]:
+        return self.request_json("GET", self.paths.quiz_answer, quiz_id=quiz_id)
 
 
-def auth_headers(token: str) -> Dict[str, str]:
-    return {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-
-
-# ============================================================
-# CREATE QUIZ
-# ============================================================
-
-def create_quiz_session(base_url: str, token: str, quiz_slug: str) -> Dict[str, Any]:
-    headers = auth_headers(token)
-    print("=== Création du quiz ===")
-    url = base_url.rstrip("/") + path_quiz_creation.replace("<SLUG>", quiz_slug)
-    json_dict = {}
-    print(url)
-    resp = requests.post(url, json=json_dict, headers=headers)
-    if resp.status_code not in (200, 201):
-        raise RuntimeError(
-            f"Erreur création quiz {quiz_slug!r} ({resp.status_code}): {resp.text}"
-        )
-    data = resp.json()
-    print(f" - quiz créé: {data['id']})")
-    return data
-
-# ============================================================
-# START QUIZ
-# ============================================================
-
-def start_quiz_session(base_url: str, token: str, quiz_id: int) -> Dict[str, Any]:
-    headers = auth_headers(token)
-    print("=== Création du quiz ===")
-    url = base_url.rstrip("/") + path_quiz_start.replace("<QUIZ_ID>", quiz_id)
-    json_dict = {}
-    resp = requests.post(url, json=json_dict, headers=headers)
-    if resp.status_code not in (200, 201):
-        raise RuntimeError(
-            f"Erreur démarrage quiz {quiz_id!r} ({resp.status_code}): {resp.text}"
-        )
-    data = resp.json()
-    print(f" - quiz démarré: {data['id']})")
-    return data
-
-# ============================================================
-# QUESTIONS (GET via /attempt/)
-# ============================================================
-
-def get_quiz_question(base_url: str, token: str, quiz_id: str, question_i: int) -> Dict[str, Any]:
+def answer_quiz_randomly(api: ApiClient, quiz_id: str) -> None:
     """
-    Récupère la question + options + is_selected (+ is_correct si applicable)
-    via GET /api/quiz/<QUIZ_ID>/attempt/<QUESTION_ORDER>/
+    Exemple: récupère le quiz (qui contient 'questions'), choisit une option random par question,
+    et poste la réponse via question_order (plus naturel pour ton UI).
     """
-    headers = auth_headers(token)
-    url = base_url.rstrip("/") + path_quiz_attempt.replace("<QUIZ_ID>", quiz_id).replace(
-        "<QUESTION_ORDER>", str(question_i)
-    )
-    resp = requests.get(url, headers=headers)
-    if resp.status_code not in (200, 201):
-        raise RuntimeError(
-            f"Erreur réception question {quiz_id!r}/{question_i}/  ({resp.status_code}): {resp.text}"
-        )
-    return resp.json()
+    details = api.quiz_details(quiz_id)
+    questions = details.get("questions", [])
 
-def get_quiz_session_question(base_url: str, token: str, quiz_id: str,question_i: int):
-    data = get_quiz_question(base_url, token, quiz_id, question_i)
-    print(f"{data['title']}")
-    for a in data["options"]:
-        print(a)
-        line = f"[{a['id']}] {a['content']}"
-        if "is_correct" in a and a["is_correct"]:
-            line += "  (CORRECT)"
-        if a.get("is_selected"):
-            line += "  [YOU]"
-        print(line)
+    if not questions:
+        raise RuntimeError("Le endpoint quiz_details ne renvoie pas de champ 'questions'. Vérifie ton QuizSerializer.")
 
+    for qq in questions:
+        q = qq.get("question") or {}
+        title = q.get("title", "Sans titre")
+        options = q.get("answer_options", [])
 
-def set_quiz_question_response(base_url: str, token: str, quiz_id: str, question_i: int, option_id: int) -> Dict[str, Any]:
-    """
-    Envoie la réponse pour une question via POST /attempt/,
-    en respectant ton API : { "selected_option_ids": [<id>] }
-    """
-    headers = auth_headers(token)
-    url = base_url.rstrip("/") + path_quiz_attempt.replace("<QUIZ_ID>", quiz_id).replace(
-        "<QUESTION_ORDER>", str(question_i)
-    )
-    print(url)
-    payload = {
-        "selected_option_ids": [option_id]
-    }
-    resp = requests.post(url, json=payload, headers=headers)
-    if resp.status_code not in (200, 201):
-        raise RuntimeError(
-            f"Erreur réponse question {quiz_id!r}/{question_i}/  ({resp.status_code}): {resp.text}"
-        )
-    return resp.json()
+        if not options:
+            print(f" - {title}: pas d'options → skip")
+            continue
 
+        option_id = random.choice([o["id"] for o in options])
+        order = qq.get("sort_order") or qq.get("question_order")  # selon ton serializer
+        if not order:
+            raise RuntimeError(f"Impossible de trouver sort_order/question_order pour {qq}")
 
-def answer_to_quiz_session_questions(base_url: str, token: str, quiz_id: str, n_questions: int) -> bool:
-    """
-    Pour chaque question, on récupère la question + options,
-    on choisit une réponse aléatoire et on la poste.
-    """
-    print("answer_to_quiz_session_questions")
-    print(base_url)
-    print(token)
-    print(quiz_id)
-    print(n_questions)
-    for i in range(n_questions):
-        data = get_quiz_question(base_url, token, quiz_id, i + 1)
-        print(f"Question {i + 1}/{n_questions} : {data['title']}")
-        answers = []
-        for a in data["options"]:
-            print(f"[{a['id']}] {a['content']}")
-            answers.append(a["id"])
-        option_id = random.choice(answers)
-        set_quiz_question_response(base_url, token, quiz_id, i + 1, option_id)
-        get_quiz_session_question(base_url, token, quiz_id, i + 1)
-    return True
+        api.post_answer(quiz_id, question_order=order, selected_options=[option_id])
+        print(f"✅ Answered order={order} ({title}) with option={option_id}")
 
-
-# ============================================================
-# CLOSE + SUMMARY + REVIEW
-# ============================================================
-
-def close_quiz_session(base_url: str, token: str, quiz_id: str) -> Dict[str, Any]:
-    headers = auth_headers(token)
-    url = base_url.rstrip("/") + path_quiz_close.replace("<QUIZ_ID>", quiz_id)
-    print(url)
-    resp = requests.post(url, headers=headers)
-    if resp.status_code not in (200, 201):
-        raise RuntimeError(
-            f"Erreur close question {quiz_id!r}  ({resp.status_code}): {resp.text}"
-        )
-    return resp.json()
-
-
-def get_summary_quiz_session(base_url: str, token: str, quiz_id: str) -> Dict[str, Any]:
-    headers = auth_headers(token)
-    url = base_url.rstrip("/") + path_quiz_summary.replace("<QUIZ_ID>", quiz_id)
-    print(url)
-    resp = requests.get(url, headers=headers)
-    if resp.status_code not in (200, 201):
-        raise RuntimeError(
-            f"Erreur summary question {quiz_id!r}  ({resp.status_code}): {resp.text}"
-        )
-    return resp.json()
-
-
-def get_quiz_session_questions(base_url: str, token: str, quiz_id: str, n_questions: int):
-    """
-    Relit toutes les questions (après clôture par exemple),
-    pour afficher aussi les bonnes réponses (is_correct) si dispo.
-    """
-    for i in range(n_questions):
-        print(f"Question {i + 1}/{n_questions}")
-        get_quiz_session_question(base_url, token, quiz_id, i+1)
-
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main():
-    # 1) Authentification
-    print("\n=== Création quiz ===")
-    token_admin = get_admin_token(BASE_URL, path_token)
-    print("Token:", token_admin)
-    token = get_user_token(BASE_URL, path_token)
-    # 2) Créer une session de quiz pour le slug donné
-    data = create_quiz_session(BASE_URL, token, "django-exam-1")
-    quiz_session_id = data["id"]
-    n_questions = data["n_questions"]
-    print(data)
-    print("quiz créé.\n")
-    # 2bis) Démarrer une session de quiz
-    #token = get_user_token(BASE_URL, path_token)
-    print("Token:", token)
-    data = start_quiz_session(BASE_URL, token, quiz_session_id)
-    #quiz_session_id = data["id"]
-    #n_questions = data["n_questions"]
-    print(data)
-    print("quiz démaré.\n")
+    BASE_URL = "http://localhost:8000"
+    SU_USERNAME = "admin"
+    SU_PASSWORD = "SuperPassword123"
+    U2_USERNAME = "user2"
+    U2_PASSWORD = "SuperPassword123"
 
-    # 3) Répondre aux questions
-    answer_to_quiz_session_questions(BASE_URL, token, quiz_session_id, n_questions)
+    api = ApiClient(BASE_URL, timeout=10.0)
 
-    # 4) Clôturer
-    data = close_quiz_session(BASE_URL, token, quiz_session_id)
-    print("Close:", data)
+    # login user (tu n’utilises pas admin ensuite, donc je le laisse optionnel)
+    token_user = api.login(U2_USERNAME, U2_PASSWORD)
+    api.set_bearer(token_user)
 
-    # 5) Résumé
-    data = get_summary_quiz_session(BASE_URL, token, quiz_session_id)
-    print("Summary:", data)
+    # create quiz
+    quiz = api.create_quiz(quiz_template_id=1)
+    quiz_id = str(quiz["id"])
+    print(f"🎯 Quiz created: id={quiz_id}")
 
-    # 6) Relire les questions + réponses + corrections
-    get_quiz_session_questions(BASE_URL, token, quiz_session_id, n_questions)
+    # start quiz
+    started = api.request_json("POST", api.paths.quiz_start, quiz_id=quiz_id, json={})
+    print(f"▶️ Quiz started: id={started['id']} max_questions={started.get('max_questions')}")
 
-    print("\n✅ terminé.")
+    # answer
+    answer_quiz_randomly(api, quiz_id)
+
+    # close
+    closed = api.close_quiz(quiz_id)
+    print("⏹️ Quiz closed: ")
+    for k, v in closed.items():
+        if k == "questions":
+            print("questions")
+            print(i for i in v)
+        else:
+            print(k, v)
+
+    # details
+    details = api.quiz_details(quiz_id)
+    print(f"📊 details:")
+    for k, v in details.items():
+        if k == "questions":
+            print("questions :")
+            for dict_qquestion in v:
+                for k_qquestion, v_qquestion in dict_qquestion.items():
+                    if k_qquestion == "question":
+                        print("\tquestion :")
+                        for k_question, v_question in v_qquestion.items():
+                            if k_question == "answer_options":
+                                print("\t\tanswer_options :")
+                                for answer in v_question:
+                                    print(f"\t\t\t{answer}")
+                            else:
+                                print(f"\t\t{k_question} : {v_question}")
+                    else:
+                        print(f"\t{k_qquestion} : {v_qquestion}")
+        else:
+            print(f"{k} : {v}")
+
+    # list answers
+    answers = api.list_answers(quiz_id)
+    print(f"🧾 Answers: {answers}")
+
+    print("✅ terminé.")
 
 
 if __name__ == "__main__":

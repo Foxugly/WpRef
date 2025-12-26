@@ -1,10 +1,10 @@
-import { Component } from '@angular/core';
+import {Component} from '@angular/core';
 
-import { UserService } from '../../../services/user/user';
+import {UserService} from '../../../services/user/user';
 import {InputTextModule} from 'primeng/inputtext';
 import {PasswordModule} from 'primeng/password';
 
-import {  FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl,} from '@angular/forms';
+import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 
 @Component({
   selector: 'app-change-password',
@@ -42,7 +42,7 @@ export class ChangePassword {
     const confirm = group.get('confirm_new_password')?.value;
 
     if (newPwd && confirm && newPwd !== confirm) {
-      group.get('confirm_new_password')?.setErrors({ passwordMismatch: true });
+      group.get('confirm_new_password')?.setErrors({passwordMismatch: true});
     } else {
       const ctrl = group.get('confirm_new_password');
       if (!ctrl) return null;
@@ -75,7 +75,7 @@ export class ChangePassword {
 
     // 🔴 AVANT : const { old_password, new_password1, new_password2 } = ...
     // ✅ MAINTENANT : on récupère les vrais noms des contrôles
-    const { old_password, new_password  } = this.form.getRawValue();
+    const {old_password, new_password} = this.form.getRawValue();
 
 
     this.userService.requestPasswordChange(
