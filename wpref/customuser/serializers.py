@@ -113,7 +113,7 @@ class MeSerializer(serializers.ModelSerializer):
     managed_domain_ids = serializers.SerializerMethodField()
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = [
             "id",
             "username",
@@ -136,6 +136,15 @@ class MeSerializer(serializers.ModelSerializer):
     def get_managed_domain_ids(self, obj) -> List[int]:
         return list(obj.managed_domains.values_list("id", flat=True))
 
+class MeUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+            "language",
+        ]
 
 class SetCurrentDomainSerializer(serializers.Serializer):
     domain_id = serializers.IntegerField(required=False, allow_null=True)

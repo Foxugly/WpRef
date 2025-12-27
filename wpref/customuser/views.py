@@ -21,7 +21,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from wpref.tools import ErrorDetailSerializer
 
-from .permissions import IsSelfOrStaffOrSuperuser
+from .permissions import IsSelfOrStaffOrSuperuser, IsSelf
 from .serializers import *
 from customuser.serializers import SetCurrentDomainSerializer
 
@@ -76,6 +76,46 @@ User = get_user_model()
         request=CustomUserUpdateSerializer,
         responses={200: CustomUserReadSerializer},
     ),
+    # -------------------------
+    # custom actions
+    # -------------------------
+    me=extend_schema(
+        tags=["User"],
+        summary="Récupérer mon profil",
+        description="Retourne le profil de l'utilisateur authentifié.",
+        responses={
+            200: MeSerializer,
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+        },
+    ),
+    me_update=extend_schema(
+        tags=["User"],
+        summary="Mettre à jour mon profil",
+        description=(
+            "Met à jour partiellement le profil de l'utilisateur connecté.\n\n"
+            "Champs typiquement autorisés : `first_name`, `last_name`, `email`, `language`."
+        ),
+        request=MeUpdateSerializer,
+        responses={
+            200: MeSerializer,
+            400: OpenApiResponse(response=ErrorDetailSerializer, description="Validation error"),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+        },
+    ),
+    set_current_domain=extend_schema(
+        tags=["User"],
+        summary="Définir mon domaine courant",
+        description="Met à jour `current_domain` sur l'utilisateur authentifié, puis renvoie le profil mis à jour.",
+        request=SetCurrentDomainSerializer,
+        responses={
+            200: MeSerializer,
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+        },
+    ),
 )
 class CustomUserViewSet(
     mixins.ListModelMixin,
@@ -93,6 +133,8 @@ class CustomUserViewSet(
         if self.action == "list":
             return [IsAdminUser()]
         # retrieve/update/partial_update
+        if self.action in ("me" , "set_current_domain"):
+            return [IsSelf]
         return [IsSelfOrStaffOrSuperuser()]
 
     def get_serializer_class(self):
@@ -109,7 +151,18 @@ class CustomUserViewSet(
         serializer = MeSerializer(request.user, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # ✅ /users/me/current-domain/
+    @action(detail=False, methods=["patch"], url_path="me")
+    def me_update(self, request):
+        serializer = MeUpdateSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(MeSerializer(request.user, context={"request": request}).data)
+
     @action(detail=False, methods=["post"], url_path="me/current-domain")
     def set_current_domain(self, request):
         serializer = SetCurrentDomainSerializer(data=request.data, context={"request": request})
@@ -305,47 +358,3 @@ class PasswordChangeView(GenericAPIView):
         return Response({"detail": "Mot de passe modifié avec succès."},
                         status=status.HTTP_200_OK)
 
-
-@extend_schema_view(
-    get=extend_schema(
-        tags=["User"],
-        summary="Profil courant",
-        responses={
-            200: MeSerializer,
-            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
-        },
-    ),
-    put=extend_schema(
-        tags=["User"],
-        summary="Mettre à jour mon profil (PUT)",
-        request=MeSerializer,
-        responses={
-            200: MeSerializer,
-            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
-            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
-        },
-    ),
-    patch=extend_schema(
-        tags=["User"],
-        summary="Mettre à jour mon profil (PATCH)",
-        request=MeSerializer,
-        responses={
-            200: MeSerializer,
-            400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
-            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
-        },
-    ),
-)
-class MeView(RetrieveUpdateAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = MeSerializer
-
-    def get_object(self):
-        return self.request.user
-
-    def get_object(self):
-        return self.request.user
-
-    def update(self, request, *args, **kwargs):
-        kwargs["partial"] = True  # ✅ accepte PUT partiel
-        return super().update(request, *args, **kwargs)

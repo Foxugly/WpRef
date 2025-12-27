@@ -12,7 +12,6 @@ from drf_spectacular.utils import (
     OpenApiTypes,
 )
 from question.models import Question
-#from question.serializers import QuestionWriteSerializer, QuestionReadSerializer
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -506,6 +505,36 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
         summary="Supprimer un quiz",
         responses={204: OpenApiResponse(description="No Content")},
     ),
+    bulk_create_from_template=extend_schema(
+        tags=["Quiz"],
+        summary="Créer des quizzes depuis un template (bulk)",
+        request=BulkCreateFromTemplateInputSerializer,
+        responses={
+            201: QuizSerializer(many=True),
+            400: OpenApiResponse(description="Input invalide"),
+            404: OpenApiResponse(description="QuizTemplate introuvable"),
+        },
+    ),
+    start=extend_schema(
+        tags=["Quiz"],
+        summary="Créer un quiz pour l’utilisateur courant",
+        request=CreateQuizInputSerializer,
+        responses={
+            201: QuizSerializer,
+            400: OpenApiResponse(description="Input invalide / quiz non disponible"),
+            404: OpenApiResponse(description="QuizTemplate introuvable"),
+        },
+    ),
+    close=extend_schema(
+        tags=["Quiz"],
+        summary="Clôturer un quiz (calcule les scores)",
+        request=None,
+        responses={
+            200: QuizSerializer,
+            404: OpenApiResponse(description="Quiz introuvable"),
+            409: OpenApiResponse(description="Quiz jamais démarré ou déjà clôturé"),
+        },
+    )
 )
 class QuizViewSet(MyModelViewSet):
     serializer_class = QuizSerializer
@@ -636,19 +665,6 @@ class QuizViewSet(MyModelViewSet):
         )
         return super().destroy(request, *args, **kwargs)
 
-    # ==========================================================
-    # ACTIONS CUSTOM : avec endpoint/input/output/logging
-    # ==========================================================
-    @extend_schema(
-        tags=["Quiz"],
-        summary="Créer des quizzes depuis un template (bulk)",
-        request=BulkCreateFromTemplateInputSerializer,
-        responses={
-            201: QuizSerializer(many=True),
-            400: OpenApiResponse(description="Input invalide"),
-            404: OpenApiResponse(description="QuizTemplate introuvable"),
-        },
-    )
     @action(detail=False, methods=["post"], url_path="bulk-create-from-template",
             permission_classes=[IsAdminUser])
     def bulk_create_from_template(self, request, *args, **kwargs):
@@ -692,16 +708,6 @@ class QuizViewSet(MyModelViewSet):
         serializer = self.get_serializer(created, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(
-        tags=["Quiz"],
-        summary="Créer un quiz pour l’utilisateur courant",
-        request=CreateQuizInputSerializer,
-        responses={
-            201: QuizSerializer,
-            400: OpenApiResponse(description="Input invalide / quiz non disponible"),
-            404: OpenApiResponse(description="QuizTemplate introuvable"),
-        },
-    )
     @action(detail=True, methods=["post"], url_path="start", permission_classes=[IsOwnerOrStaff])
     def start(self, request, quiz_id=None, *args, **kwargs):
         self._log_call(
@@ -725,16 +731,6 @@ class QuizViewSet(MyModelViewSet):
         serializer = self.get_serializer(quiz)
         return Response(serializer.data)
 
-    @extend_schema(
-        tags=["Quiz"],
-        summary="Clôturer un quiz (calcule les scores)",
-        request=None,
-        responses={
-            200: QuizSerializer,
-            404: OpenApiResponse(description="Quiz introuvable"),
-            409: OpenApiResponse(description="Quiz jamais démarré ou déjà clôturé"),
-        },
-    )
     @action(detail=True, methods=["post"], url_path="close", permission_classes=[IsOwnerOrStaff])
     def close(self, request, quiz_id=None, *args, **kwargs):
         self._log_call(
