@@ -10,3 +10,4 @@ django-filter
 requests
 drf-nested-routers
 coverage
+django-parler

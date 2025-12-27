@@ -1,18 +1,21 @@
 # question/models.py
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.translation import gettext_lazy as _
+from parler.models import TranslatedFields, TranslatableModel
 from subject.models import Subject
 
 
-class Question(models.Model):
+class Question(TranslatableModel):
     domain = models.ForeignKey(
         "domain.Domain",
         on_delete=models.PROTECT,
-        related_name="questions", blank=True, null=True
+        related_name="questions", null=False)
+    translations = TranslatedFields(
+        title=models.CharField(_("title"), max_length=250),
+        description=models.TextField(_("Description"), blank=True),
+        explanation=models.TextField(_("Explanation"), blank=True)
     )
-    title = models.CharField("Titre", max_length=255)
-    description = models.TextField("Description", blank=True)  # rich text
-    explanation = models.TextField("Explication", blank=True)  # rich text
     allow_multiple_correct = models.BooleanField(
         "Plusieurs bonnes réponses ?", default=False
     )
@@ -26,18 +29,18 @@ class Question(models.Model):
         ordering = ["-pk"]
 
     def __str__(self):
-        return self.title
+        return self.safe_translation_getter("title", any_language=True) or f"Question#{self.pk}"
 
     def clean(self):
         # Règles métier sur les réponses
         opts = list(self.answer_options.all())
         if len(opts) < 2:
-            raise ValidationError("Une question doit avoir au moins 2 réponses possibles.")
+            raise ValidationError(_("A Question must have at least 2 possible answers."))
         correct_count = sum(1 for o in opts if o.is_correct)
         if correct_count == 0:
             raise ValidationError("Indique au moins une réponse correcte.")
         if not self.allow_multiple_correct and correct_count != 1:
-            raise ValidationError("Cette question n'autorise qu'une seule bonne réponse.")
+            raise ValidationError(_("Only ONE answer allowed."))
 
 
 class QuestionSubject(models.Model):
@@ -51,7 +54,8 @@ class QuestionSubject(models.Model):
         ordering = ["-pk"]
 
     def __str__(self):
-        return f"Q{self.question_id}↔{self.subject.name}(ord:{self.sort_order},w:{self.weight})"
+        subj = self.subject.safe_translation_getter("name", any_language=True) or f"Subject#{self.subject_id}"
+        return f"Q{self.question_id}↔{subj}(ord:{self.sort_order},w:{self.weight})"
 
 
 class QuestionMedia(models.Model):
@@ -73,13 +77,17 @@ class QuestionMedia(models.Model):
         return f"{self.kind} - {self.file or self.external_url}"
 
     def clean(self):
-        if not self.file and not self.external_url:
-            raise ValidationError("Fournis un fichier ou une URL externe.")
+        if self.kind == self.EXTERNAL:
+            if not self.external_url or self.file:
+                raise ValidationError("External media requires external_url only.")
+        else:
+            if not self.file or self.external_url:
+                raise ValidationError("File media requires file only.")
 
 
-class AnswerOption(models.Model):
+class AnswerOption(TranslatableModel):
     question = models.ForeignKey(Question, related_name="answer_options", on_delete=models.CASCADE)
-    content = models.TextField("Texte de la réponse")  # rich text
+    translations = TranslatedFields(content=models.TextField(_("possible answer")))  # rich text
     is_correct = models.BooleanField(default=False)
     sort_order = models.PositiveIntegerField(default=0)
 

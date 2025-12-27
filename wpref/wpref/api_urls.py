@@ -8,4 +8,5 @@ urlpatterns = [
     path("quiz/", include(("quiz.api_urls", "quiz"), namespace="quiz-api")),
     path("user/", include(("customuser.api_urls", "user"), namespace="user-api")),
     path("domain/", include(("domain.api_urls", "domain"), namespace="domain-api")),
+    path("lang/", include(("language.api_urls", "lang"), namespace="lang-api")),
 ]

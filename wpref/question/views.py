@@ -18,7 +18,7 @@ from wpref.tools import ErrorDetailSerializer
 from wpref.tools import MyModelViewSet
 
 from .models import Question, QuestionMedia
-from .serializers import QuestionSerializer, QuestionMultipartWriteSerializer
+from .serializers import QuestionReadSerializer, QuestionWriteSerializer, QuestionMultipartWriteSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
             ),
         ],
         responses={
-            200: QuestionSerializer(many=True),
+            200: QuestionReadSerializer(many=True),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
         },
     ),
@@ -74,7 +74,7 @@ logger = logging.getLogger(__name__)
             )
         ],
         responses={
-            200: QuestionSerializer,
+            200: QuestionReadSerializer,
             404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
         },
@@ -92,7 +92,7 @@ logger = logging.getLogger(__name__)
         ),
         request=QuestionMultipartWriteSerializer,
         responses={
-            201: QuestionSerializer,
+            201: QuestionReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
         },
@@ -115,7 +115,7 @@ logger = logging.getLogger(__name__)
         ],
         request=QuestionMultipartWriteSerializer,
         responses={
-            200: QuestionSerializer,
+            200: QuestionReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
             404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
@@ -139,7 +139,7 @@ logger = logging.getLogger(__name__)
         ],
         request=QuestionMultipartWriteSerializer,
         responses={
-            200: QuestionSerializer,
+            200: QuestionReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
             404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
@@ -165,14 +165,23 @@ logger = logging.getLogger(__name__)
     ),
 )
 class QuestionViewSet(MyModelViewSet):
-    queryset = Question.objects.prefetch_related("media", "answer_options", "subjects")
-    serializer_class = QuestionSerializer
+    queryset = (
+        Question.objects
+        .all()
+        .select_related("domain")
+        .prefetch_related("subjects", "translations", "answer_options__translations")
+    )
     permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["title", "description"]
+    filterset_fields = []
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     lookup_field = "pk"
     lookup_url_kwarg = "question_id"
+
+    def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return QuestionReadSerializer
+        return QuestionWriteSerializer
 
     # ==========================================================
     # Permissions (explicites même si redondantes)
@@ -203,6 +212,16 @@ class QuestionViewSet(MyModelViewSet):
                     mutable[key] = data.get(key)
         else:
             mutable = dict(data)
+
+        raw_trans = mutable.get("translations")
+        if isinstance(raw_trans, str):
+            try:
+                parsed_trans = json.loads(raw_trans)
+                if isinstance(parsed_trans, dict):
+                    mutable["translations"] = parsed_trans
+            except json.JSONDecodeError:
+                pass
+
         raw_answer_options = mutable.get("answer_options")
         if isinstance(raw_answer_options, str):
             try:
@@ -211,6 +230,7 @@ class QuestionViewSet(MyModelViewSet):
                     mutable["answer_options"] = parsed
             except json.JSONDecodeError:
                 pass
+
         raw_media = mutable.get("media")
         if isinstance(raw_media, str):
             try:
@@ -234,7 +254,7 @@ class QuestionViewSet(MyModelViewSet):
         qs = self.get_queryset()
         search = request.query_params.get("search")
         if search:
-            qs = qs.filter(title__icontains=search)
+            qs = qs.filter(translations__title__icontains=search).distinct()
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -254,12 +274,7 @@ class QuestionViewSet(MyModelViewSet):
     @extend_schema(
         request=OpenApiRequest(
             request=QuestionMultipartWriteSerializer,
-            encoding={
-                "media_files": {
-                    "style": "form",
-                    "explode": True
-                }
-            },
+            encoding={"media_files": {"style": "form", "explode": True}},
         )
     )
     def create(self, request, *args, **kwargs):
@@ -278,7 +293,8 @@ class QuestionViewSet(MyModelViewSet):
         question = serializer.save()
         self._handle_media_upload(request, question, media_data=media_data)
         logger.info("Question created id=%s", question.id)
-        return Response(self.get_serializer(question, show_correct=True).data, status=status.HTTP_201_CREATED)
+        return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
+                        status=status.HTTP_201_CREATED)
 
     @extend_schema(
         request=OpenApiRequest(
@@ -293,23 +309,25 @@ class QuestionViewSet(MyModelViewSet):
             input_expected="path pk + body multipart/JSON complet",
             output="200 + QuestionSerializer | 400 | 404",
         )
-        instance = self.get_object()
-
-        data = self._coerce_json_fields(request.data)
-        media_data = data.get("media", [])
-
-        serializer = self.get_serializer(instance, data=data, partial=False, show_correct=True)
-        if not serializer.is_valid():
-            logger.warning("UPDATE errors: %s", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        question = serializer.save()
-
-        # Rebuild media (ta logique delete+recreate est dans _handle_media_upload)
-        self._handle_media_upload(request, question, media_data=media_data)
-
-        logger.info("Question updated id=%s partial=%s", question.id, False)
-        return Response(self.get_serializer(question, show_correct=True).data, status=status.HTTP_200_OK)
+        return self._update_internal(request, partial=False)
+        # instance = self.get_object()
+        #
+        # data = self._coerce_json_fields(request.data)
+        # media_data = data.get("media", [])
+        #
+        # serializer = self.get_serializer(instance, data=data, partial=False, show_correct=True)
+        # if not serializer.is_valid():
+        #     logger.warning("UPDATE errors: %s", serializer.errors)
+        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        #
+        # question = serializer.save()
+        #
+        # # Rebuild media (ta logique delete+recreate est dans _handle_media_upload)
+        # self._handle_media_upload(request, question, media_data=media_data)
+        #
+        # logger.info("Question updated id=%s partial=%s", question.id, False)
+        # return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
+        #                 status=status.HTTP_200_OK)
 
     @extend_schema(
         request=OpenApiRequest(
@@ -324,26 +342,29 @@ class QuestionViewSet(MyModelViewSet):
             input_expected="path question_id + body multipart/JSON partiel",
             output="200 + QuestionSerializer | 400 | 404",
         )
-        instance = self.get_object()
-
-        data = self._coerce_json_fields(request.data)
-        media_data = data.get("media", [])
-
-        serializer = self.get_serializer(instance, data=data, partial=True, show_correct=True)
-        if not serializer.is_valid():
-            logger.warning("PATCH errors: %s", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        question = serializer.save()
-
-        # Option de design:
-        # - Si tu veux que PATCH media remplace toujours tout: garde ce call tel quel
-        # - Si tu veux que PATCH media ne fasse rien quand "media" absent: conditionne ci-dessous
-        if "media" in data or request.FILES:
-            self._handle_media_upload(request, question, media_data=media_data)
-
-        logger.info("Question updated id=%s partial=%s", question.id, True)
-        return Response(self.get_serializer(question, show_correct=True).data, status=status.HTTP_200_OK)
+        return self._update_internal(request, partial=True)
+        # instance = self.get_object()
+        #
+        # data = self._coerce_json_fields(request.data)
+        # media_data = data.get("media", [])
+        #
+        # serializer = QuestionWriteSerializer(instance, context=self.get_serializer_context(), data=data, partial=True,
+        #                                      show_correct=True)
+        # if not serializer.is_valid():
+        #     logger.warning("PATCH errors: %s", serializer.errors)
+        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        #
+        # question = serializer.save()
+        #
+        # # Option de design:
+        # # - Si tu veux que PATCH media remplace toujours tout: garde ce call tel quel
+        # # - Si tu veux que PATCH media ne fasse rien quand "media" absent: conditionne ci-dessous
+        # if "media" in data or request.FILES:
+        #     self._handle_media_upload(request, question, media_data=media_data)
+        #
+        # logger.info("Question updated id=%s partial=%s", question.id, True)
+        # return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
+        #                 status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
         self._log_call(
@@ -362,16 +383,19 @@ class QuestionViewSet(MyModelViewSet):
         data = self._coerce_json_fields(request.data)
         media_data = data.get("media", [])
 
-        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer = QuestionWriteSerializer(instance, data=data, partial=partial,
+                                             context=self.get_serializer_context(), show_correct=True, )
         if not serializer.is_valid():
             logger.warning("UPDATE errors: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         question = serializer.save()
-        self._handle_media_upload(request, question, media_data=media_data)
+        if (not partial) or ("media" in data) or request.FILES:
+            self._handle_media_upload(request, question, media_data=media_data)
 
         logger.info("Question updated id=%s partial=%s", question.id, partial)
-        return Response(self.get_serializer(question).data, status=status.HTTP_200_OK)
+        return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
+                        status=status.HTTP_200_OK)
 
     # ==========================================================
     # Ton code : gestion media

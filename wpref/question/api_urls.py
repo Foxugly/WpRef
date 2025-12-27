@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import QuestionViewSet
 
-app_name = "question_api"
+app_name = "question-api"
 
 router = DefaultRouter()
 router.register(r"", QuestionViewSet, basename="question")

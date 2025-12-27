@@ -9,7 +9,7 @@ class DomainAdmin(admin.ModelAdmin):
     list_display = ("name", "active", "owner", "languages_display", "created_at", "updated_at")
     list_filter = ("active",)
     search_fields = ("name", "description", "owner__username", "owner__email")
-    ordering = ("name",)
+    ordering = ("id",)
     filter_horizontal = ("staff",)  # M2M nice UI
 
     readonly_fields = ("created_at", "updated_at")

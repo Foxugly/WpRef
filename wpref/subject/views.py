@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from wpref.tools import MyModelViewSet, ErrorDetailSerializer
 
 from .models import Subject
-from .serializers import SubjectSerializer
+from .serializers import SubjectReadSerializer, SubjectWriteSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
             ),
         ],
         responses={
-            200: SubjectSerializer(many=True),
+            200: SubjectReadSerializer(many=True),
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
         },
@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
             )
         ],
         responses={
-            200: SubjectSerializer,
+            200: SubjectReadSerializer,
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
             404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
@@ -72,9 +72,9 @@ logger = logging.getLogger(__name__)
     create=extend_schema(
         tags=["Subject"],
         summary="Créer un sujet",
-        request=SubjectSerializer,
+        request=SubjectWriteSerializer,
         responses={
-            201: SubjectSerializer,
+            201: SubjectReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
@@ -92,9 +92,9 @@ logger = logging.getLogger(__name__)
                 description="ID du sujet.",
             )
         ],
-        request=SubjectSerializer,
+        request=SubjectWriteSerializer,
         responses={
-            200: SubjectSerializer,
+            200: SubjectReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
@@ -113,9 +113,9 @@ logger = logging.getLogger(__name__)
                 description="ID du sujet.",
             )
         ],
-        request=SubjectSerializer,
+        request=SubjectWriteSerializer,
         responses={
-            200: SubjectSerializer,
+            200: SubjectReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
@@ -144,11 +144,16 @@ logger = logging.getLogger(__name__)
 )
 class SubjectViewSet(MyModelViewSet):
     queryset = Subject.objects.all()
-    serializer_class = SubjectSerializer
+    serializer_class = SubjectReadSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["name"]
+    filterset_fields = []
     lookup_field = "pk"
     lookup_url_kwarg = "subject_id"
+
+    def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return SubjectReadSerializer
+        return SubjectWriteSerializer
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
@@ -191,7 +196,7 @@ class SubjectViewSet(MyModelViewSet):
         qs = self.filter_queryset(self.get_queryset())
         search = request.query_params.get("search")
         if search:
-            qs = qs.filter(name__icontains=search)
+            qs = qs.filter(translations__name__icontains=search).distinct()
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -215,7 +220,10 @@ class SubjectViewSet(MyModelViewSet):
             input_expected="body JSON: SubjectSerializer (write fields)",
             output="201 + SubjectSerializer | 400",
         )
-        return super().create(request, *args, **kwargs)
+        response = super().create(request, *args, **kwargs)
+        instance = Subject.objects.get(pk=response.data["id"])
+        response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(),).data
+        return response
 
     def update(self, request, *args, **kwargs):
         self._log_call(
@@ -224,7 +232,11 @@ class SubjectViewSet(MyModelViewSet):
             input_expected="path subject_id + body JSON complet (SubjectSerializer)",
             output="200 + SubjectSerializer | 400 | 404",
         )
-        return super().update(request, *args, **kwargs)
+        response = super().update(request, *args, **kwargs)
+        instance = Subject.objects.get(pk=response.data["id"])
+        response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(), ).data
+        return response
+
 
     def partial_update(self, request, *args, **kwargs):
         self._log_call(
@@ -233,7 +245,10 @@ class SubjectViewSet(MyModelViewSet):
             input_expected="path subject_id + body JSON partiel (SubjectSerializer)",
             output="200 + SubjectSerializer | 400 | 404",
         )
-        return super().partial_update(request, *args, **kwargs)
+        response =  super().partial_update(request, *args, **kwargs)
+        instance = Subject.objects.get(pk=response.data["id"])
+        response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(), ).data
+        return response
 
     def destroy(self, request, *args, **kwargs):
         self._log_call(

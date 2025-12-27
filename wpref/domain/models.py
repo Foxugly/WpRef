@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import models
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+from parler.models import TranslatableModel, TranslatedFields
 
 User = get_user_model()
 
@@ -10,11 +12,17 @@ def settings_language_codes() -> set[str]:
     return {code for code, _ in getattr(settings, "LANGUAGES", [])}
 
 
-class Domain(models.Model):
-    name = models.CharField(max_length=120, unique=True)
-    description = models.TextField(blank=True)
+class Domain(TranslatableModel):
+    translations = TranslatedFields(
+        name=models.CharField(_("name"), max_length=120),
+        description=models.TextField(_("description"), blank=True),
+    )
 
-    allowed_languages = models.JSONField(default=list, blank=True)
+    allowed_languages = models.ManyToManyField(
+        "language.Language",
+        related_name="domains",
+        blank=True,
+    )
     active = models.BooleanField(default=True, db_index=True)
 
     owner = models.ForeignKey(
@@ -34,15 +42,17 @@ class Domain(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["id"]
 
     def __str__(self) -> str:
-        return self.name
+        return self.safe_translation_getter("name", any_language=True) or f"Domain#{self.pk}"
 
     def clean(self):
         valid = settings_language_codes()
-        invalid = [c for c in (self.allowed_languages or []) if c not in valid]
+        codes = set(self.allowed_languages.values_list("code", flat=True))
+
+        invalid = sorted([c for c in codes if c not in valid])
         if invalid:
             raise ValidationError(
-                {"allowed_languages": f"Invalid language code(s): {', '.join(invalid)}"}
+                {"allowed_languages": [f"Invalid language code(s): {', '.join(invalid)}"]}
             )

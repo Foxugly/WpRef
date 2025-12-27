@@ -3,10 +3,11 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import Domain
 from .permissions import IsDomainOwnerOrStaff
-from .serializers import DomainSerializer
+from .serializers import DomainReadSerializer, DomainWriteSerializer
 
 
 @extend_schema_view(
@@ -18,7 +19,7 @@ from .serializers import DomainSerializer
                 "- **Superuser / staff global** : voit tous les domaines\n"
                 "- **Utilisateur normal** : voit uniquement les domaines dont il est `owner` ou membre de `staff`"
         ),
-        responses={status.HTTP_200_OK: DomainSerializer(many=True)},
+        responses={status.HTTP_200_OK: DomainReadSerializer(many=True)},
     ),
     retrieve=extend_schema(
         tags=["Domain"],
@@ -38,7 +39,7 @@ from .serializers import DomainSerializer
             ),
         ],
         responses={
-            status.HTTP_200_OK: DomainSerializer,
+            status.HTTP_200_OK: DomainReadSerializer,
             status.HTTP_404_NOT_FOUND: OpenApiResponse(description="Not found (domain non visible ou inexistant)."),
         },
     ),
@@ -51,9 +52,9 @@ from .serializers import DomainSerializer
                 "- Le user courant est ajouté à `staff` automatiquement.\n"
                 "- `allowed_languages` doit être un sous-ensemble de `settings.LANGUAGES`."
         ),
-        request=DomainSerializer,
+        request=DomainWriteSerializer,
         responses={
-            status.HTTP_201_CREATED: DomainSerializer,
+            status.HTTP_201_CREATED: DomainReadSerializer,
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error."),
             status.HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Authentication required."),
         },
@@ -66,7 +67,7 @@ from .serializers import DomainSerializer
                 "- Réservé à : superuser / staff global / owner / staff du domaine.\n"
                 "- `owner` est **read-only** (ne peut pas être modifié via l'API)."
         ),
-        request=DomainSerializer,
+        request=DomainWriteSerializer,
         parameters=[
             OpenApiParameter(
                 name="domain_id",
@@ -77,7 +78,7 @@ from .serializers import DomainSerializer
             ),
         ],
         responses={
-            status.HTTP_200_OK: DomainSerializer,
+            status.HTTP_200_OK: DomainReadSerializer,
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error."),
             status.HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Authentication required."),
             status.HTTP_403_FORBIDDEN: OpenApiResponse(description="Forbidden."),
@@ -92,7 +93,7 @@ from .serializers import DomainSerializer
                 "- Réservé à : superuser / staff global / owner / staff du domaine.\n"
                 "- `owner` est **read-only** (ne peut pas être modifié via l'API)."
         ),
-        request=DomainSerializer,
+        request=DomainWriteSerializer,
         parameters=[
             OpenApiParameter(
                 name="domain_id",
@@ -103,7 +104,7 @@ from .serializers import DomainSerializer
             ),
         ],
         responses={
-            status.HTTP_200_OK: DomainSerializer,
+            status.HTTP_200_OK: DomainReadSerializer,
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Validation error."),
             status.HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Authentication required."),
             status.HTTP_403_FORBIDDEN: OpenApiResponse(description="Forbidden."),
@@ -136,10 +137,17 @@ from .serializers import DomainSerializer
     ),
 )
 class DomainViewSet(viewsets.ModelViewSet):
-    serializer_class = DomainSerializer
     permission_classes = [IsAuthenticated, IsDomainOwnerOrStaff]
+    filterset_fields = []  # ✅ (ou supprime la ligne)
+    ordering = ["id"]
     lookup_field = "pk"
     lookup_url_kwarg = "domain_id"
+
+    def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return DomainReadSerializer
+        return DomainWriteSerializer
+
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -160,3 +168,29 @@ class DomainViewSet(viewsets.ModelViewSet):
         # Optionnel mais souvent pratique : le owner fait partie du staff.
         # (tu peux le retirer si tu veux vraiment séparer owner vs staff)
         domain.staff.add(self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        write_serializer = self.get_serializer(data=request.data)
+        write_serializer.is_valid(raise_exception=True)
+        self.perform_create(write_serializer)
+        instance = write_serializer.instance
+
+        read_data = DomainReadSerializer(instance, context=self.get_serializer_context()).data
+        headers = self.get_success_headers(read_data)
+        return Response(read_data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+
+        write_serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        write_serializer.is_valid(raise_exception=True)
+        self.perform_update(write_serializer)
+        instance.refresh_from_db()
+
+        read_data = DomainReadSerializer(instance, context=self.get_serializer_context()).data
+        return Response(read_data, status=status.HTTP_200_OK)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)

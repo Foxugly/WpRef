@@ -42,12 +42,14 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_filters',
     'django_extensions',
+    'parler',
 
     'customuser.apps.CustomuserConfig',
     'subject.apps.SubjectConfig',
     'question.apps.QuestionConfig',
     'quiz.apps.QuizConfig',
     'domain.apps.DomainConfig',
+    'language.apps.LanguageConfig',
 ]
 
 MIDDLEWARE = [

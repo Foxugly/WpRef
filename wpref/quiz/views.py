@@ -12,7 +12,7 @@ from drf_spectacular.utils import (
     OpenApiTypes,
 )
 from question.models import Question
-from question.serializers import QuestionSerializer
+#from question.serializers import QuestionWriteSerializer, QuestionReadSerializer
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -25,7 +25,7 @@ from wpref.tools import MyModelViewSet
 from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
 from .permissions import IsOwnerOrStaff
 from .serializers import (
-    QuizTemplateSerializer,  # QuizQuestionSerializer,
+    QuizTemplateSerializer,
     QuizSerializer, QuizQuestionAnswerSerializer, QuizQuestionReadSerializer, QuizQuestionWriteSerializer,
     QuizQuestionAnswerWriteSerializer, GenerateFromSubjectsInputSerializer, BulkCreateFromTemplateInputSerializer,
     CreateQuizInputSerializer
