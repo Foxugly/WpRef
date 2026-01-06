@@ -3,3 +3,5 @@
 db.sqlite3
 media/question_media/*
 !media/question_media/dummy.txt
+.coverage
+htmlcov/

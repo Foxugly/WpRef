@@ -8,12 +8,14 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     OpenApiTypes,
 )
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from wpref.tools import MyModelViewSet, ErrorDetailSerializer
 
 from .models import Subject
-from .serializers import SubjectReadSerializer, SubjectWriteSerializer
+from .serializers import SubjectReadSerializer, SubjectWriteSerializer, SubjectDetailSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,25 @@ logger = logging.getLogger(__name__)
         ],
         responses={
             200: SubjectReadSerializer,
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
+        },
+    ),
+    details=extend_schema(
+        tags=["Subject"],
+        summary="Récupérer un sujet avec détails",
+        parameters=[
+            OpenApiParameter(
+                name="subject_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="ID du sujet.",
+            )
+        ],
+        responses={
+            200: SubjectDetailSerializer,
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
             404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
@@ -153,6 +174,8 @@ class SubjectViewSet(MyModelViewSet):
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return SubjectReadSerializer
+        elif self.action in ["detail"]:
+            return SubjectDetailSerializer
         return SubjectWriteSerializer
 
     def get_permissions(self):
@@ -208,17 +231,29 @@ class SubjectViewSet(MyModelViewSet):
         self._log_call(
             method_name="retrieve",
             endpoint="GET /api/subject/{subject_id}/",
-            input_expected="path pk, body vide",
-            output="200 + SubjectDetailSerializer | 404",
+            input_expected="path subject_id, body vide",
+            output="200 + SubjectReadSerializer | 404",
         )
         return super().retrieve(request, *args, **kwargs)
+
+    @action(detail=True, methods=["get"], url_path="details")
+    def details(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="details",
+            endpoint="GET /api/subject/{subject_id}/details/",
+            input_expected="path subject_id, body vide",
+            output="200 + SubjectDetailSerializer | 404",
+        )
+        instance = self.get_object()
+        serializer = SubjectDetailSerializer(instance, context=self.get_serializer_context(), ).data
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
         self._log_call(
             method_name="create",
             endpoint="POST /api/subject/",
             input_expected="body JSON: SubjectSerializer (write fields)",
-            output="201 + SubjectSerializer | 400",
+            output="201 + SubjectWriteSerializer | 400",
         )
         response = super().create(request, *args, **kwargs)
         instance = Subject.objects.get(pk=response.data["id"])
@@ -230,7 +265,7 @@ class SubjectViewSet(MyModelViewSet):
             method_name="update",
             endpoint="PUT /api/subject/{subject_id}/",
             input_expected="path subject_id + body JSON complet (SubjectSerializer)",
-            output="200 + SubjectSerializer | 400 | 404",
+            output="200 + SubjecReadSerializer | 400 | 404",
         )
         response = super().update(request, *args, **kwargs)
         instance = Subject.objects.get(pk=response.data["id"])
@@ -243,7 +278,7 @@ class SubjectViewSet(MyModelViewSet):
             method_name="partial_update",
             endpoint="PATCH /api/subject/{subject_id}/",
             input_expected="path subject_id + body JSON partiel (SubjectSerializer)",
-            output="200 + SubjectSerializer | 400 | 404",
+            output="200 + SubjectReadSerializer | 400 | 404",
         )
         response =  super().partial_update(request, *args, **kwargs)
         instance = Subject.objects.get(pk=response.data["id"])

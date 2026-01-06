@@ -1,3 +1,5 @@
+from typing import List
+
 from django.db import transaction
 from domain.models import Domain
 from drf_spectacular.types import OpenApiTypes
@@ -64,6 +66,7 @@ QuestionMultipartWriteSerializer = inline_serializer(
 
 class QuestionLiteSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
+
     class Meta:
         model = Question
         fields = ["id", "title"]  # tu peux ajouter d'autres champs si tu veux
@@ -77,6 +80,18 @@ class QuestionMediaSerializer(serializers.ModelSerializer):
         model = QuestionMedia
         fields = ["id", "kind", "file", "external_url", "sort_order"]
         read_only_fields = ["id", "file", "external_url", "kind"]
+
+
+class QuestionAnswerOptionPublicReadSerializer(serializers.ModelSerializer):
+    content = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AnswerOption
+        fields = ["id", "content", "sort_order"]
+        read_only_fields = ["id"]
+
+    def get_content(self, obj) -> str:
+        return obj.safe_translation_getter("content", any_language=True) or ""
 
 
 class QuestionAnswerOptionReadSerializer(serializers.ModelSerializer):
@@ -128,39 +143,9 @@ class QuestionAnswerOptionWriteSerializer(serializers.ModelSerializer):
 
         return instance
 
-    # def validate(self, attrs):
-    #     question = self.context.get("question")
-    #     domain = question.domain
-    #
-    #     allowed = set(domain.allowed_languages.values_list("code", flat=True))
-    #     provided = set(attrs.get("translations", {}).keys())
-    #
-    #     missing = allowed - provided
-    #     extra = provided - allowed
-    #
-    #     if missing:
-    #         raise serializers.ValidationError(
-    #             {"translations": f"Langues manquantes: {sorted(missing)}"}
-    #         )
-    #     if extra:
-    #         raise serializers.ValidationError(
-    #             {"translations": f"Langues non autorisées: {sorted(extra)}"}
-    #         )
-    #     return attrs
-
-
 class QuestionInQuizQuestionSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
-    answer_options = QuestionAnswerOptionReadSerializer(many=True, read_only=True)
-
-    def __init__(self, *args, **kwargs):
-        show_correct = kwargs.pop("show_correct", False)
-        super().__init__(*args, **kwargs)
-        view = self.context.get("view")
-        swagger = getattr(view, "swagger_fake_view", False)
-
-        if not show_correct and not swagger:
-            self.fields["answer_options"].child.fields.pop("is_correct", None)
+    answer_options = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
@@ -169,24 +154,24 @@ class QuestionInQuizQuestionSerializer(serializers.ModelSerializer):
     def get_title(self, obj) -> str:
         return obj.safe_translation_getter("title", any_language=True) or ""
 
+    @extend_schema_field(QuestionAnswerOptionReadSerializer(many=True))
+    def get_answer_options(self, obj) -> List[any]:
+        show_correct = bool(self.context.get("show_correct", False))
+        view = self.context.get("view")
+        swagger = getattr(view, "swagger_fake_view", False)
+
+        Ser = QuestionAnswerOptionReadSerializer if (
+                show_correct or swagger) else QuestionAnswerOptionPublicReadSerializer
+        return Ser(obj.answer_options.all(), many=True, context=self.context).data
+
+
 class QuestionReadSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
     explanation = serializers.SerializerMethodField()
     subjects = SubjectReadSerializer(many=True, read_only=True)
-    answer_options = QuestionAnswerOptionReadSerializer(many=True, read_only=True)
+    answer_options = serializers.SerializerMethodField()
     media = QuestionMediaSerializer(many=True, read_only=True)
-
-    def __init__(self, *args, **kwargs):
-        show_correct = kwargs.pop("show_correct", False)
-        super().__init__(*args, **kwargs)
-
-        view = self.context.get("view")
-        swagger = getattr(view, "swagger_fake_view", False)
-
-        if not show_correct and not swagger:
-            # masque is_correct uniquement à l’output normal
-            self.fields["answer_options"].child.fields.pop("is_correct", None)
 
     class Meta:
         model = Question
@@ -216,6 +201,16 @@ class QuestionReadSerializer(serializers.ModelSerializer):
     def get_explanation(self, obj) -> str:
         return obj.safe_translation_getter("explanation", any_language=True) or ""
 
+    @extend_schema_field(QuestionAnswerOptionReadSerializer(many=True))
+    def get_answer_options(self, obj) -> List[any]:
+        show_correct = bool(self.context.get("show_correct", False))
+        view = self.context.get("view")
+        swagger = getattr(view, "swagger_fake_view", False)
+
+        Ser = QuestionAnswerOptionReadSerializer if (
+                show_correct or swagger) else QuestionAnswerOptionPublicReadSerializer
+        return Ser(obj.answer_options.all(), many=True, context=self.context).data
+
 
 class QuestionWriteSerializer(serializers.ModelSerializer):
     # sujets en lecture
@@ -233,17 +228,6 @@ class QuestionWriteSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
-
-    def __init__(self, *args, **kwargs):
-        show_correct = kwargs.pop("show_correct", False)
-        super().__init__(*args, **kwargs)
-
-        view = self.context.get("view")
-        swagger = getattr(view, "swagger_fake_view", False)
-
-        # Important: ne pas masquer is_correct pendant la génération OpenAPI
-        #if not show_correct and not swagger:
-        #    self.fields["answer_options"].child.fields.pop("is_correct", None)
 
     class Meta:
         model = Question
@@ -343,7 +327,7 @@ class QuestionWriteSerializer(serializers.ModelSerializer):
         allowed = set(domain.allowed_languages.values_list("code", flat=True))
 
         is_create = self.instance is None
-        #is_partial = getattr(self, "partial", False)
+        # is_partial = getattr(self, "partial", False)
 
         if is_create and not attrs.get("translations"):
             raise serializers.ValidationError({"translations": "Au moins une traduction est requise."})
@@ -393,4 +377,3 @@ class QuestionWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"answer_options": "Une seule réponse correcte est autorisée."})
 
         return attrs
-

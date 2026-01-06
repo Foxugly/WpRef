@@ -1,17 +1,16 @@
 import {Component, inject} from '@angular/core';
 
 import {Subscription} from 'rxjs';
-import {Router, RouterLink, RouterLinkActive} from '@angular/router';
+import {RouterLink, RouterLinkActive} from '@angular/router';
 import {MenubarModule} from 'primeng/menubar';
-import {FormsModule} from '@angular/forms'; // <-- IMPORTANT pour [(ngModel)]
-import {AuthService} from '../../services/auth/auth';
+import {FormsModule} from '@angular/forms';
 import {UserService} from '../../services/user/user';
-import {LangCode} from '../../../environments/environment';
 import {LangSelectComponent} from '../lang-select/lang-select';
 import {UserMenuComponent} from '../user-menu/user-menu';
 import {SubjectService} from '../../services/subject/subject';
 import {QuestionService} from '../../services/question/question';
 import {QuizService} from '../../services/quiz/quiz';
+import {SupportedLanguage} from '../../../environments/language';
 
 @Component({
   selector: 'app-topmenu',
@@ -29,9 +28,10 @@ import {QuizService} from '../../services/quiz/quiz';
 })
 export class TopmenuComponent {
 
-  subjectService = inject(SubjectService);
-  questionService = inject(QuestionService);
-  quizService = inject(QuizService);
+  private subjectService = inject(SubjectService);
+  private questionService = inject(QuestionService);
+  private quizService = inject(QuizService);
+  private userService = inject(UserService);
 
   goQuizList(): void {
     this.quizService.goList();
@@ -46,7 +46,7 @@ export class TopmenuComponent {
   }
 
   goSubjectQuiz() {
-    this.router.navigate(['/quiz/subject']);
+    this.quizService.goSubject();
   }
 
   menuItems = [
@@ -88,20 +88,13 @@ export class TopmenuComponent {
       ]
     },
   ];
-  currentLang: LangCode = 'en';
+  currentLang: SupportedLanguage = this.userService.currentLang;
   private sub?: Subscription;
 
-  constructor(
-    public auth: AuthService,
-    private router: Router,
-    private userService: UserService
-  ) {
-  }
-
-  onLangChange(lang: LangCode) {
+  onLangChange(lang: SupportedLanguage) {
     this.currentLang = lang;
-    this.userService.setLocalLanguage(lang);
-    this.userService.updateMeLanguage(lang).subscribe();
+    this.userService.setLang(lang);
+    this.userService.updateMeLanguage(lang).subscribe(); // lang est déjà LanguageEnumDto
   }
 
   ngOnDestroy() {

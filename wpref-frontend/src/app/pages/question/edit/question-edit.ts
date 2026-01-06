@@ -1,8 +1,8 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
-import {Question, QuestionCreatePayload, QuestionService,} from '../../../services/question/question';
-import {Subject, SubjectService} from '../../../services/subject/subject';
+import {QuestionService,} from '../../../services/question/question';
+import {SubjectService} from '../../../services/subject/subject';
 import {Editor} from 'primeng/editor';
 import {CheckboxModule} from 'primeng/checkbox';
 import {InputTextModule} from 'primeng/inputtext';
@@ -11,6 +11,13 @@ import {ButtonModule} from 'primeng/button';
 import {MultiSelectModule} from 'primeng/multiselect';
 import {PanelModule} from 'primeng/panel';
 import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/media-selector/media-selector';
+import {
+  QuestionAnswerOptionReadDto,
+  QuestionMediaDto,
+  QuestionMultipartWriteRequestDto,
+  QuestionReadDto, QuestionUpdateRequestParams,
+  SubjectReadDto
+} from '../../../api/generated';
 
 @Component({
   standalone: true,
@@ -35,7 +42,7 @@ export class QuestionEdit implements OnInit {
   saving = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
-  subjects = signal<Subject[]>([]);
+  subjects = signal<SubjectReadDto[]>([]);
   private fb = inject(FormBuilder);
   // Formulaire principal
   form: FormGroup = this.fb.group({
@@ -117,9 +124,7 @@ export class QuestionEdit implements OnInit {
       return;
     }
     this.saving.set(true);
-    // Le form a la même shape que QuestionCreatePayload
-    const raw = this.form.value as QuestionCreatePayload;
-    this.questionService.update(this.id, raw).subscribe({
+    this.questionService.update(this.form.value as  QuestionUpdateRequestParams).subscribe({
       next: () => {
         this.saving.set(false);
         this.success.set('Question mise à jour avec succès.');
@@ -152,10 +157,10 @@ export class QuestionEdit implements OnInit {
 
   private loadSubjects(): void {
     this.subjectService.list().subscribe({
-      next: (subs: Subject[]) => {
+      next: (subs: SubjectReadDto[]): void => {
         this.subjects.set(subs);
       },
-      error: (err) => {
+      error: (err): void => {
         console.error('Erreur chargement sujets', err);
       },
     });
@@ -166,15 +171,15 @@ export class QuestionEdit implements OnInit {
     this.error.set(null);
 
     this.questionService.retrieve(this.id).subscribe({
-      next: (q: Question) => {
-        const subjectIds = q.subjects?.map((s) => s.id) ?? [];
+      next: (q: QuestionReadDto): void => {
+        const subjectIds: number[] = q.subjects?.map((s: SubjectReadDto): number => s.id) ?? [];
         // réponses
         this.answerOptions.clear();
-        q.answer_options.forEach((opt) => {
+        q.answer_options.forEach((opt: QuestionAnswerOptionReadDto): void => {
           this.answerOptions.push(
             this.fb.group({
               content: [opt.content, Validators.required],
-              is_correct: [opt.is_correct],
+              // is_correct: [opt.is_correct], TODO
               sort_order: [opt.sort_order],
             }),
           );
@@ -187,7 +192,7 @@ export class QuestionEdit implements OnInit {
 
         // médias → MediaSelectorValue[] pour le composant
         const mediaSelectorItems: MediaSelectorValue[] = (q.media || []).map(
-          (m, idx) => ({
+          (m: QuestionMediaDto, idx: number) => ({
             id: m.id,
             kind: m.kind,
             sort_order: m.sort_order ?? idx + 1,

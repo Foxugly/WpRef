@@ -1,11 +1,12 @@
 import {Component} from '@angular/core';
 import {QuizNav, QuizNavItem} from '../quiz-nav/quiz-nav';
-import {Question} from '../../services/question/question';
+import {QuestionReadDto} from '../../api/generated';
 
-function createEmptyQuestion(id: number, title: string = ""): Question {
+
+function createEmptyQuestion(id: number, title: string = ""): QuestionReadDto {
   return {
+    domain: 0,
     id: id,
-    index: 0,
     title: title,
     description: "question",
     explanation: "parce que",

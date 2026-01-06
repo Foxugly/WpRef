@@ -178,6 +178,16 @@ class QuestionViewSet(MyModelViewSet):
     lookup_field = "pk"
     lookup_url_kwarg = "question_id"
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        user = getattr(self.request, "user", None)
+        ctx["show_correct"] = bool(
+            user
+            and user.is_authenticated
+            and (user.is_staff or user.is_superuser)
+        )
+        return ctx
+
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return QuestionReadSerializer
@@ -286,14 +296,14 @@ class QuestionViewSet(MyModelViewSet):
         )
         data = self._coerce_json_fields(request.data)
         media_data = data.get("media", [])
-        serializer = self.get_serializer(data=data, show_correct=True)
+        serializer = self.get_serializer(data=data, context=self.get_serializer_context())
         if not serializer.is_valid():
             logger.warning("CREATE errors: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         question = serializer.save()
         self._handle_media_upload(request, question, media_data=media_data)
         logger.info("Question created id=%s", question.id)
-        return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
+        return Response(QuestionReadSerializer(question, context=self.get_serializer_context()).data,
                         status=status.HTTP_201_CREATED)
 
     @extend_schema(
@@ -310,24 +320,6 @@ class QuestionViewSet(MyModelViewSet):
             output="200 + QuestionSerializer | 400 | 404",
         )
         return self._update_internal(request, partial=False)
-        # instance = self.get_object()
-        #
-        # data = self._coerce_json_fields(request.data)
-        # media_data = data.get("media", [])
-        #
-        # serializer = self.get_serializer(instance, data=data, partial=False, show_correct=True)
-        # if not serializer.is_valid():
-        #     logger.warning("UPDATE errors: %s", serializer.errors)
-        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        #
-        # question = serializer.save()
-        #
-        # # Rebuild media (ta logique delete+recreate est dans _handle_media_upload)
-        # self._handle_media_upload(request, question, media_data=media_data)
-        #
-        # logger.info("Question updated id=%s partial=%s", question.id, False)
-        # return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
-        #                 status=status.HTTP_200_OK)
 
     @extend_schema(
         request=OpenApiRequest(
@@ -343,28 +335,6 @@ class QuestionViewSet(MyModelViewSet):
             output="200 + QuestionSerializer | 400 | 404",
         )
         return self._update_internal(request, partial=True)
-        # instance = self.get_object()
-        #
-        # data = self._coerce_json_fields(request.data)
-        # media_data = data.get("media", [])
-        #
-        # serializer = QuestionWriteSerializer(instance, context=self.get_serializer_context(), data=data, partial=True,
-        #                                      show_correct=True)
-        # if not serializer.is_valid():
-        #     logger.warning("PATCH errors: %s", serializer.errors)
-        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        #
-        # question = serializer.save()
-        #
-        # # Option de design:
-        # # - Si tu veux que PATCH media remplace toujours tout: garde ce call tel quel
-        # # - Si tu veux que PATCH media ne fasse rien quand "media" absent: conditionne ci-dessous
-        # if "media" in data or request.FILES:
-        #     self._handle_media_upload(request, question, media_data=media_data)
-        #
-        # logger.info("Question updated id=%s partial=%s", question.id, True)
-        # return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
-        #                 status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
         self._log_call(
@@ -384,7 +354,7 @@ class QuestionViewSet(MyModelViewSet):
         media_data = data.get("media", [])
 
         serializer = QuestionWriteSerializer(instance, data=data, partial=partial,
-                                             context=self.get_serializer_context(), show_correct=True, )
+                                             context=self.get_serializer_context())
         if not serializer.is_valid():
             logger.warning("UPDATE errors: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -394,7 +364,7 @@ class QuestionViewSet(MyModelViewSet):
             self._handle_media_upload(request, question, media_data=media_data)
 
         logger.info("Question updated id=%s partial=%s", question.id, partial)
-        return Response(QuestionReadSerializer(question, context=self.get_serializer_context(), show_correct=True).data,
+        return Response(QuestionReadSerializer(question, context=self.get_serializer_context()).data,
                         status=status.HTTP_200_OK)
 
     # ==========================================================

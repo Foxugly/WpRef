@@ -1,4 +1,3 @@
-// src/app/pages/question/detail/question-detail.ts
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {ActivatedRoute} from '@angular/router';
@@ -62,7 +61,7 @@ export class QuestionView implements OnInit {
     this.questionService.retrieve(this.id).subscribe({
       next: (q) => {
         const navItem: QuizNavItem = {
-          index: 1,           // ou ce que tu veux
+          index: 1,
           id: q.id,
           answered: false,
           flagged: false,

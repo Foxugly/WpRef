@@ -20,12 +20,11 @@ class LanguageWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Language
         fields = [
-            "id",
             "code",
             "name",
             "active",
         ]
-        read_only_fields = ["id"]
+        #read_only_fields = ["id"]
 
     def validate_code(self, value: str) -> str:
         v = (value or "").strip().lower()

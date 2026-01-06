@@ -25,7 +25,7 @@
           <!-- Colonne 1 -->
           <div class="quiz-summary-item">
             <span class="quiz-summary-label">Titre</span>
-            <span class="quiz-summary-value">{{ quizSession()?.title }}</span>
+            <span class="quiz-summary-value">{{ quizSession()?.quiz_template_title }}</span>
           </div>
 
           <div class="quiz-summary-item">
@@ -80,7 +80,7 @@
           <div class="quiz-summary-item">
             <span class="quiz-summary-label">Expire le</span>
             <span class="quiz-summary-value">
-              {{ quizSession()?.expired_at | date : 'short' }}
+              {{ quizSession()?.ended_at | date : 'short' }}
             </span>
           </div>
         </div>

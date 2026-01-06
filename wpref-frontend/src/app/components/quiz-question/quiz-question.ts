@@ -3,7 +3,6 @@ import {Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges
 import {CommonModule} from '@angular/common';
 import {DomSanitizer, SafeResourceUrl,} from '@angular/platform-browser';
 
-import {Question} from '../../services/question/question';
 import {MediaSelectorValue} from '../media-selector/media-selector';
 import {CardModule} from 'primeng/card';
 import {ChipModule} from 'primeng/chip';
@@ -14,6 +13,7 @@ import {ButtonModule} from 'primeng/button';
 import {FormsModule} from '@angular/forms';
 import {ToggleButtonModule} from 'primeng/togglebutton';
 import {QuizNavItem} from '../quiz-nav/quiz-nav';
+import {QuestionMediaDto, QuestionReadDto} from '../../api/generated';
 
 
 export interface AnswerPayload {
@@ -57,7 +57,7 @@ export class QuizQuestionComponent implements OnChanges {
 
   private sanitizer = inject(DomSanitizer);
 
-  get question(): Question {
+  get question(): QuestionReadDto {
     return this.quizNavItem.question;
   }
 
@@ -115,7 +115,7 @@ export class QuizQuestionComponent implements OnChanges {
   }
 
 
-  mediaSrc(m: MediaSelectorValue): string {
+  mediaSrc(m:  QuestionMediaDto): string {
     // Pour images/vidéos : on part du principe que file est déjà une URL absolue ou relative
     return (m.file as string | null) || m.external_url || '';
   }
@@ -146,7 +146,7 @@ export class QuizQuestionComponent implements OnChanges {
     }
   }
 
-  externalSafeUrl(m: MediaSelectorValue): SafeResourceUrl | null {
+  externalSafeUrl(m:  QuestionMediaDto): SafeResourceUrl | null {
     const raw = m.external_url || '';
     if (!raw) return null;
     const embed = this.isYoutubeUrl(raw) ? this.toYoutubeEmbed(raw) : raw;

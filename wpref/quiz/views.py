@@ -29,6 +29,7 @@ from .serializers import (
     QuizQuestionAnswerWriteSerializer, GenerateFromSubjectsInputSerializer, BulkCreateFromTemplateInputSerializer,
     CreateQuizInputSerializer
 )
+from wpref.tools import ErrorDetailSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +243,7 @@ class QuizTemplateViewSet(MyModelViewSet):
     def add_question(self, request, pk=None, *args, **kwargs):
         self._log_call(
             method_name="add_question",
-            endpoint="POST /api/quiz/template/{id}/question/",
+            endpoint="POST /api/quiz/template/{qt_id}/question/",
             input_expected="body: QuizQuestionSerializer fields (question_id, sort_order?, weight?)",
             output="201 + QuizQuestionSerializer | 400 | 404",
             extra={"pk": pk},
@@ -271,14 +272,14 @@ class QuizTemplateViewSet(MyModelViewSet):
             OpenApiParameter("quizquestion_id", OpenApiTypes.INT, OpenApiParameter.PATH),
         ],
     )
-    @action(detail=True, methods=["patch", "put"], url_path=r"question/(?P<quizquestion_id>\d+)")
+    @action(detail=True, methods=["patch", "put"], url_path=r"question/(?P<qq_id>\d+)")
     def update_question(self, request, pk=None, quizquestion_id=None, *args, **kwargs):
         self._log_call(
             method_name="update_question",
-            endpoint="PUT/PATCH /api/quiz/template/{id}/question/{quizquestion_id}/",
+            endpoint="PUT/PATCH /api/quiz/template/{qt_id}/question/{qq_id}/",
             input_expected="path pk + quizquestion_id + body (QuizQuestionSerializer)",
             output="200 + QuizQuestionSerializer | 400 | 404",
-            extra={"pk": pk, "quizquestion_id": quizquestion_id},
+            extra={"qt_id": pk, "qq_id": quizquestion_id},
         )
         quiz_template = self.get_object()
         try:
@@ -307,14 +308,14 @@ class QuizTemplateViewSet(MyModelViewSet):
             404: OpenApiResponse(description="Template ou QuizQuestion introuvable"),
         },
         parameters=[
-            OpenApiParameter("quizquestion_id", OpenApiTypes.INT, OpenApiParameter.PATH),
+            OpenApiParameter("qq_id", OpenApiTypes.INT, OpenApiParameter.PATH),
         ],
     )
-    @action(detail=True, methods=["delete"], url_path=r"question/(?P<quizquestion_id>[^/.]+)")
+    @action(detail=True, methods=["delete"], url_path=r"question/(?P<qq_id>[^/.]+)")
     def delete_question(self, request, pk=None, quizquestion_id=None, *args, **kwargs):
         self._log_call(
             method_name="delete_question",
-            endpoint="DELETE /api/quiz/template/{id}/question/{quizquestion_id}/",
+            endpoint="DELETE /api/quiz/template/{qt_id}/question/{qq_id}/",
             input_expected="path pk + quizquestion_id, body vide",
             output="204 | 404",
             extra={"pk": pk, "quizquestion_id": quizquestion_id},
@@ -380,7 +381,7 @@ class QuizTemplateViewSet(MyModelViewSet):
         request=QuizQuestionWriteSerializer,
         responses={200: QuizQuestionWriteSerializer},
         parameters=[
-            OpenApiParameter("qt.id", OpenApiTypes.INT, OpenApiParameter.PATH),
+            OpenApiParameter("qt_id", OpenApiTypes.INT, OpenApiParameter.PATH),
         ],
     ),
     destroy=extend_schema(
@@ -475,7 +476,33 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
     list=extend_schema(
         tags=["Quiz"],
         summary="Lister les quizzes (sessions)",
-        responses={200: QuizSerializer(many=True)},
+        description=(
+                "Liste paginée des sujets.\n\n"
+                "Supporte :\n"
+                "- `search` (filtre name__icontains)\n"
+                "- `name`, `quiz_id` via DjangoFilterBackend\n"
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="search",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Recherche simple (name__icontains).",
+            ),
+            OpenApiParameter(
+                name="name",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filtre exact (via DjangoFilterBackend).",
+            ),
+        ],
+        responses={
+            200: QuizSerializer(many=True),
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+        },
     ),
     retrieve=extend_schema(
         tags=["Quiz"],
@@ -574,7 +601,16 @@ class QuizViewSet(MyModelViewSet):
             input_expected="query params optionnels, body vide",
             output="200 + [QuizSerializer] (paginé si pagination activée)",
         )
-        return super().list(request, *args, **kwargs)
+        qs = self.get_queryset()
+        search = request.query_params.get("search")
+        if search:
+            qs = qs.filter(translations__title__icontains=search).distinct()
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         self._log_call(

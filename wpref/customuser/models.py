@@ -143,7 +143,7 @@ class CustomUser(AbstractUser):
         - premier domaine visible (actif si active_only=True)
         - sinon None
         """
-        qs = self.get_visible_domains(active_only=active_only).order_by("name")
+        qs = self.get_visible_domains(active_only=active_only).order_by("translations__name", "id").distinct()
         domain = qs.first()
         self.current_domain = domain
         if save:

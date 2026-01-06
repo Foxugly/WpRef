@@ -343,3 +343,4 @@ class SubjectViewSetTests(APITestCase):
             r = self.client.delete(self._detail_url(s))
             self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
             mocked_destroy.assert_called()
+

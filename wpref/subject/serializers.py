@@ -1,6 +1,21 @@
 from rest_framework import serializers
 
 from .models import Subject
+from question.models import Question
+
+
+class QuestionInSubjectSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Question
+        fields = [
+            "id",
+            "title",
+        ]
+
+    def get_title(self, obj: Question) -> str:
+        return obj.safe_translation_getter("title", any_language=True) or ""
 
 
 class SubjectWriteSerializer(serializers.ModelSerializer):
@@ -16,7 +31,7 @@ class SubjectWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subject
-        fields = ["id", "translations", "domain"]
+        fields = ["translations", "domain"]
 
         # ---------------------------
         # helpers
@@ -89,3 +104,24 @@ class SubjectReadSerializer(serializers.ModelSerializer):
 
     def get_description(self, obj: Subject) -> str:
         return obj.safe_translation_getter("description", any_language=True) or ""
+
+
+class SubjectDetailSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    questions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Subject
+        fields = ["id", "name", "description", "domain", "questions"]
+
+    def get_name(self, obj: Subject) -> str:
+        return obj.safe_translation_getter("name", any_language=True) or ""
+
+    def get_description(self, obj: Subject) -> str:
+        return obj.safe_translation_getter("description", any_language=True) or ""
+
+    def get_questions(self, obj: Subject) -> str:
+        qs = obj.questions.all().filter(active=True).order_by("id")
+        return QuestionInSubjectSerializer(qs, many=True, context=self.context).data
+

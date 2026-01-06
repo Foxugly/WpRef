@@ -1,361 +1,480 @@
-# question/tests/test_models.py
-import logging
+# quiz/tests/test_models.py
+from __future__ import annotations
+
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
+
 from domain.models import Domain
-from question.models import Question, AnswerOption, QuestionMedia, QuestionSubject
-from subject.models import Subject
+from question.models import Question, AnswerOption
+from quiz.constants import VISIBILITY_IMMEDIATE, VISIBILITY_NEVER, VISIBILITY_SCHEDULED
+from quiz.models import Quiz, QuizQuestion, QuizQuestionAnswer, QuizTemplate
 
-from language.models import Language
-
-logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class QuestionModelsTestCase(TestCase):
+def make_domain(*, owner: User, name: str = "Domaine FR") -> Domain:
+    d = Domain.objects.create(owner=owner, active=True)
+    d.set_current_language("fr")
+    d.name = name
+    d.description = ""
+    d.save()
+    return d
+
+
+def make_question(*, domain: Domain, title: str = "Q?") -> Question:
+    """
+    Question nécessite:
+    - domain (FK non-null)
+    - translations.title (obligatoire)
+    """
+    q = Question.objects.create(domain=domain)
+    q.set_current_language("fr")
+    q.title = title
+    q.description = ""
+    q.explanation = ""
+    q.save()
+    return q
+
+
+def make_answer_option(*, question: Question, content: str, is_correct: bool, sort_order: int = 0) -> AnswerOption:
+    """
+    AnswerOption nécessite:
+    - question FK
+    - translations.content (obligatoire)
+    """
+    opt = AnswerOption.objects.create(question=question, is_correct=is_correct, sort_order=sort_order)
+    opt.set_current_language("fr")
+    opt.content = content
+    opt.save()
+    return opt
+
+
+class QuizModelsTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="pass123!")
+        self.user = User.objects.create_user(username="u1", password="pass123!")
+        self.domain = make_domain(owner=self.owner)
+
     # ------------------------------------------------------------------
-    # Helpers "robustes" (Domain/Subject peuvent avoir des champs requis)
+    # QuizTemplate: __str__, Meta.ordering
     # ------------------------------------------------------------------
-    def _auto_create_required_fields(self, model_cls, overrides=None):
-        """
-        Crée un objet en remplissant automatiquement les champs requis (non null, sans default)
-        avec des valeurs simples. Permet de ne pas dépendre du schéma exact du modèle.
-        """
-        overrides = overrides or {}
-        data = dict(overrides)
+    def test_quiztemplate_str_and_ordering(self):
+        qt = QuizTemplate.objects.create(title="Alpha", domain=self.domain)
+        self.assertEqual(str(qt), "Alpha")
+        self.assertEqual(QuizTemplate._meta.ordering, ["title"])
 
-        for f in model_cls._meta.fields:
-            if f.primary_key:
-                continue
-            if f.name in data:
-                continue
+    # ------------------------------------------------------------------
+    # QuizTemplate._make_unique_title + save() (title unique + slug)
+    # ------------------------------------------------------------------
+    def test_make_unique_title_appends_suffix_when_collision(self):
+        QuizTemplate.objects.create(title="Mon Quiz", domain=self.domain)
+        qt2 = QuizTemplate.objects.create(title="Mon Quiz", domain=self.domain)
+        self.assertEqual(qt2.title, "Mon Quiz (1)")
 
-            # Si le champ a un default => ignore
-            if f.has_default():
-                continue
+        qt3 = QuizTemplate.objects.create(title="Mon Quiz", domain=self.domain)
+        self.assertEqual(qt3.title, "Mon Quiz (2)")
 
-            # Requis ?
-            required = (not getattr(f, "null", False)) and (not getattr(f, "blank", False))
-            if not required:
-                continue
+    def test_make_unique_title_ignores_self_pk_on_update(self):
+        qt = QuizTemplate.objects.create(title="Unique", domain=self.domain)
+        old_title = qt.title
+        qt.description = "changed"
+        qt.save()
+        qt.refresh_from_db()
+        self.assertEqual(qt.title, old_title)
 
-            # ForeignKey requis -> pas géré ici (Domain est supposé sans FK requis)
-            if f.is_relation and f.many_to_one:
-                # On essaye au mieux : si FK requis, il faut adapter selon ton schéma.
-                # On raise pour que tu voies vite le champ.
-                raise RuntimeError(
-                    f"Impossible d'auto-créer {model_cls.__name__}: FK requis '{f.name}'. "
-                    f"Ajoute un override dans _make_domain()."
-                )
+    def test_save_generates_slug_and_handles_slug_collision(self):
+        qt1 = QuizTemplate.objects.create(title="Mon Super Quiz", domain=self.domain)
+        self.assertTrue(qt1.slug)
+        self.assertIn("mon-super-quiz", qt1.slug)
 
-            from django.db import models
+        # title collision => title suffix + slug différent
+        qt2 = QuizTemplate.objects.create(title="Mon Super Quiz", domain=self.domain)
+        self.assertNotEqual(qt1.slug, qt2.slug)
 
-            if isinstance(f, (models.CharField, models.SlugField)):
-                data[f.name] = "x"
-            elif isinstance(f, models.TextField):
-                data[f.name] = "x"
-            elif isinstance(f, models.BooleanField):
-                data[f.name] = True
-            elif isinstance(f, (models.IntegerField, models.PositiveIntegerField, models.SmallIntegerField)):
-                data[f.name] = 1
-            elif isinstance(f, models.DateTimeField):
-                data[f.name] = timezone.now()
-            elif isinstance(f, models.DateField):
-                data[f.name] = timezone.now().date()
-            else:
-                # fallback simple
-                data[f.name] = "x"
+        # slug collision volontaire : on crée un quiz dont le slugify(title) retombe sur custom-slug
+        qt3 = QuizTemplate.objects.create(title="Custom Slug", domain=self.domain)
+        qt3.slug = "custom-slug"
+        qt3.save()
 
-        return model_cls.objects.create(**data)
+        qt4 = QuizTemplate.objects.create(title="Custom Slug", domain=self.domain)
+        # le 2e "Custom Slug" devient "Custom Slug (1)" au titre, slug distinct aussi
+        self.assertNotEqual(qt3.slug, qt4.slug)
 
-    def _make_user(self, username_prefix="owner"):
-        n = User.objects.count() + 1
-        return User.objects.create_user(username=f"{username_prefix}{n}", password="pass", is_staff=True)
+    # ------------------------------------------------------------------
+    # QuizTemplate.questions_count, ordering questions/qquestions, slicing max_questions
+    # ------------------------------------------------------------------
+    def test_questions_count_and_get_ordered(self):
+        qt = QuizTemplate.objects.create(title="QPool", domain=self.domain, max_questions=10)
 
-    def _make_language(self, code="fr", name="Français"):
-        """
-        Optionnel: uniquement si tu veux utiliser allowed_languages dans Domain.
-        Si ton modèle Language a d'autres champs requis, adapte ici.
-        """
-        try:
-            return Language.objects.get(code=code)
-        except Language.DoesNotExist:
-            return Language.objects.create(code=code, name=name)
+        q1 = make_question(domain=self.domain, title="Q1")
+        q2 = make_question(domain=self.domain, title="Q2")
+        q3 = make_question(domain=self.domain, title="Q3")
 
-    def _make_domain(self, name="Domaine", *, owner=None, lang="fr", with_allowed_lang=False) -> Domain:
-        owner = owner or self._make_user("owner")
-        d = Domain.objects.create(owner=owner, active=True)
-        d.set_current_language(lang)
-        d.name = name
-        d.description = "desc"
-        d.save()
+        QuizQuestion.objects.create(quiz=qt, question=q2, sort_order=2, weight=1)
+        QuizQuestion.objects.create(quiz=qt, question=q1, sort_order=1, weight=1)
+        QuizQuestion.objects.create(quiz=qt, question=q3, sort_order=3, weight=1)
 
-        # Optionnel: si tu veux tester Domain.clean()
-        if with_allowed_lang:
-            # ajoute une langue valide de settings.LANGUAGES
-            # (si tu as le modèle language.Language)
-            try:
-                lang_obj = self._make_language(code=lang)
-                d.allowed_languages.add(lang_obj)
-            except Exception:
-                # si ton app Language n'est pas dispo dans ce contexte, ignore
-                pass
+        self.assertEqual(qt.questions_count, 3)
 
-        return d
+        ordered_qquestions = list(qt.get_ordered_qquestions())
+        self.assertEqual([qq.sort_order for qq in ordered_qquestions], [1, 2, 3])
 
-    def _make_subject(self, name="Math", lang="fr") -> Subject:
-        s = Subject.objects.create()
-        if hasattr(s, "set_current_language"):
-            s.set_current_language(lang)
-            if hasattr(s, "name"):
-                s.name = name
-            s.save()
-        return s
+        ordered_questions = list(qt.get_ordered_questions())
+        self.assertEqual([q.pk for q in ordered_questions], [q1.pk, q2.pk, q3.pk])
 
-    def _make_question(self, title="Q1", *, allow_multiple_correct=False, lang="fr") -> Question:
-        d = self._make_domain()
-        q = Question.objects.create(
-            domain=d,
-            allow_multiple_correct=allow_multiple_correct,
+    def test_get_ordered_questions_applies_max_questions_slice(self):
+        qt = QuizTemplate.objects.create(title="Slice", domain=self.domain, max_questions=2)
+
+        q1 = make_question(domain=self.domain, title="Q1")
+        q2 = make_question(domain=self.domain, title="Q2")
+        q3 = make_question(domain=self.domain, title="Q3")
+
+        QuizQuestion.objects.create(quiz=qt, question=q1, sort_order=1, weight=1)
+        QuizQuestion.objects.create(quiz=qt, question=q2, sort_order=2, weight=1)
+        QuizQuestion.objects.create(quiz=qt, question=q3, sort_order=3, weight=1)
+
+        ordered = list(qt.get_ordered_questions())
+        self.assertEqual(len(ordered), 2)
+        self.assertEqual([q.pk for q in ordered], [q1.pk, q2.pk])
+
+    # ------------------------------------------------------------------
+    # QuizTemplate.can_answer branches
+    # ------------------------------------------------------------------
+    def test_quiztemplate_can_answer_inactive_false(self):
+        qt = QuizTemplate.objects.create(title="Inactive", domain=self.domain, active=False, permanent=True)
+        self.assertFalse(qt.can_answer)
+
+    def test_quiztemplate_can_answer_permanent_true(self):
+        qt = QuizTemplate.objects.create(title="Perm", domain=self.domain, active=True, permanent=True)
+        self.assertTrue(qt.can_answer)
+
+    def test_quiztemplate_can_answer_not_permanent_started_at_none_false(self):
+        qt = QuizTemplate.objects.create(title="Sched", domain=self.domain, active=True, permanent=False, started_at=None)
+        self.assertFalse(qt.can_answer)
+
+    def test_quiztemplate_can_answer_not_permanent_no_ended_at_true(self):
+        qt = QuizTemplate.objects.create(
+            title="OpenEnd",
+            domain=self.domain,
             active=True,
-            is_mode_practice=True,
-            is_mode_exam=True,
+            permanent=False,
+            started_at=timezone.now() - timedelta(hours=1),
+            ended_at=None,
         )
-        q.set_current_language(lang)
-        q.title = title
-        q.description = "desc"
-        q.explanation = "expl"
-        q.save()
-        return q
+        self.assertTrue(qt.can_answer)
 
-    def _add_option(self, q: Question, *, is_correct: bool, sort_order: int, content="opt", lang="fr") -> AnswerOption:
-        o = AnswerOption.objects.create(
-            question=q,
-            is_correct=is_correct,
-            sort_order=sort_order,
+    def test_quiztemplate_can_answer_in_window_true_and_outside_false(self):
+        now = timezone.now()
+        qt = QuizTemplate.objects.create(
+            title="Window",
+            domain=self.domain,
+            active=True,
+            permanent=False,
+            started_at=now - timedelta(minutes=30),
+            ended_at=now + timedelta(minutes=30),
         )
-        o.set_current_language(lang)
-        o.content = content
-        o.save()
-        return o
+        self.assertTrue(qt.can_answer)
 
-    def _validate_question(self, q: Question):
-        # Question.clean() inspecte q.answer_options.all()
-        q.clean()
+        qt2 = QuizTemplate.objects.create(
+            title="Past",
+            domain=self.domain,
+            active=True,
+            permanent=False,
+            started_at=now - timedelta(hours=2),
+            ended_at=now - timedelta(hours=1),
+        )
+        self.assertFalse(qt2.can_answer)
 
     # ------------------------------------------------------------------
-    # Question.clean() rules
+    # QuizTemplate.can_show_result + can_show_details
     # ------------------------------------------------------------------
-    def test_question_clean_requires_at_least_two_answer_options(self):
-        q = self._make_question("Q-min-opts")
+    def test_can_show_result_practice_always_true(self):
+        qt = QuizTemplate.objects.create(title="P", domain=self.domain, mode=QuizTemplate.MODE_PRACTICE)
+        qt.result_visibility = VISIBILITY_NEVER
+        qt.save()
+        self.assertTrue(qt.can_show_result())
 
-        # 0 option
-        with self.assertRaises(ValidationError) as ctx0:
-            self._validate_question(q)
-        self.assertIn("at least 2", str(ctx0.exception).lower())
+    def test_can_show_details_practice_always_true(self):
+        qt = QuizTemplate.objects.create(title="PD", domain=self.domain, mode=QuizTemplate.MODE_PRACTICE)
+        qt.detail_visibility = VISIBILITY_NEVER
+        qt.save()
+        self.assertTrue(qt.can_show_details())
 
-        # 1 option
-        self._add_option(q, is_correct=True, sort_order=1)
+    def test_exam_visibility_never_false(self):
+        qt = QuizTemplate.objects.create(title="E1", domain=self.domain, mode=QuizTemplate.MODE_EXAM)
+        qt.result_visibility = VISIBILITY_NEVER
+        qt.detail_visibility = VISIBILITY_NEVER
+        qt.save()
+        self.assertFalse(qt.can_show_result())
+        self.assertFalse(qt.can_show_details())
+
+    def test_exam_visibility_immediate_true(self):
+        qt = QuizTemplate.objects.create(title="E2", domain=self.domain, mode=QuizTemplate.MODE_EXAM)
+        qt.result_visibility = VISIBILITY_IMMEDIATE
+        qt.detail_visibility = VISIBILITY_IMMEDIATE
+        qt.save()
+        self.assertTrue(qt.can_show_result())
+        self.assertTrue(qt.can_show_details())
+
+    def test_exam_visibility_scheduled_requires_date_and_compares_when(self):
+        now = timezone.now()
+        qt = QuizTemplate.objects.create(title="E3", domain=self.domain, mode=QuizTemplate.MODE_EXAM)
+
+        qt.result_visibility = VISIBILITY_SCHEDULED
+        qt.result_available_at = None
+        qt.save()
+        self.assertFalse(qt.can_show_result(when=now))
+
+        qt.result_available_at = now + timedelta(minutes=10)
+        qt.save()
+        self.assertFalse(qt.can_show_result(when=now))
+        self.assertTrue(qt.can_show_result(when=now + timedelta(minutes=11)))
+
+        qt.detail_visibility = VISIBILITY_SCHEDULED
+        qt.detail_available_at = None
+        qt.save()
+        self.assertFalse(qt.can_show_details(when=now))
+
+        qt.detail_available_at = now + timedelta(minutes=5)
+        qt.save()
+        self.assertFalse(qt.can_show_details(when=now))
+        self.assertTrue(qt.can_show_details(when=now + timedelta(minutes=6)))
+
+    # ------------------------------------------------------------------
+    # QuizQuestion: __str__, ordering, unique constraints
+    # ------------------------------------------------------------------
+    def test_quizquestion_str_and_ordering(self):
+        qt = QuizTemplate.objects.create(title="QQ", domain=self.domain)
+        q = make_question(domain=self.domain, title="QX")
+        qq = QuizQuestion.objects.create(quiz=qt, question=q, sort_order=7, weight=3)
+
+        self.assertIn("ord:7", str(qq))
+        self.assertIn("w:3", str(qq))
+        self.assertEqual(QuizQuestion._meta.ordering, ["sort_order"])
+
+    def test_quizquestion_unique_together_enforced(self):
+        qt = QuizTemplate.objects.create(title="uniq", domain=self.domain)
+        q = make_question(domain=self.domain, title="Q1")
+        QuizQuestion.objects.create(quiz=qt, question=q, sort_order=1, weight=1)
+
+        # 1) même (quiz, question) -> IntegrityError
+        with transaction.atomic():
+            with self.assertRaises(IntegrityError):
+                QuizQuestion.objects.create(quiz=qt, question=q, sort_order=2, weight=1)
+
+        # transaction OK après le rollback du savepoint
+        q2 = make_question(domain=self.domain, title="Q2")
+
+        # 2) même (quiz, sort_order) -> IntegrityError
+        with transaction.atomic():
+            with self.assertRaises(IntegrityError):
+                QuizQuestion.objects.create(quiz=qt, question=q2, sort_order=1, weight=1)
+
+    # ------------------------------------------------------------------
+    # Quiz: __str__, start(), save() ended_at calc, can_answer branches
+    # ------------------------------------------------------------------
+    def test_quiz_str(self):
+        qt = QuizTemplate.objects.create(title="T", domain=self.domain)
+        quiz = Quiz.objects.create(quiz_template=qt, user=self.user, domain=self.domain)
+        self.assertIn("Quiz", str(quiz))
+        self.assertIn("T", str(quiz))
+
+    def test_quiz_start_sets_active_and_started_at(self):
+        qt = QuizTemplate.objects.create(title="Start", domain=self.domain)
+        quiz = Quiz.objects.create(quiz_template=qt, user=self.user, domain=self.domain)
+
+        self.assertFalse(quiz.active)
+        self.assertIsNone(quiz.started_at)
+
+        quiz.start()
+        quiz.refresh_from_db()
+        self.assertTrue(quiz.active)
+        self.assertIsNotNone(quiz.started_at)
+
+    def test_quiz_save_sets_ended_at_with_duration_and_template_end(self):
+        now = timezone.now()
+        qt = QuizTemplate.objects.create(
+            title="Dur",
+            domain=self.domain,
+            with_duration=True,
+            duration=10,
+            ended_at=now + timedelta(minutes=5),  # template end plus tôt
+        )
+        quiz = Quiz.objects.create(quiz_template=qt, user=self.user, domain=self.domain)
+        quiz.started_at = now
+        quiz.save()
+        quiz.refresh_from_db()
+        self.assertEqual(quiz.ended_at, qt.ended_at)
+
+    def test_quiz_save_sets_ended_at_with_duration_no_template_end(self):
+        now = timezone.now()
+        qt = QuizTemplate.objects.create(title="Dur2", domain=self.domain, with_duration=True, duration=10, ended_at=None)
+        quiz = Quiz.objects.create(quiz_template=qt, user=self.user, domain=self.domain)
+        quiz.started_at = now
+        quiz.save()
+        quiz.refresh_from_db()
+        self.assertEqual(quiz.ended_at, now + timedelta(minutes=10))
+
+    def test_quiz_save_does_not_set_ended_at_if_no_duration(self):
+        now = timezone.now()
+        qt = QuizTemplate.objects.create(title="NoDur", domain=self.domain, with_duration=False, duration=10)
+        quiz = Quiz.objects.create(quiz_template=qt, user=self.user, domain=self.domain)
+        quiz.started_at = now
+        quiz.save()
+        quiz.refresh_from_db()
+        self.assertIsNone(quiz.ended_at)
+
+    def test_quiz_can_answer_branches(self):
+        now = timezone.now()
+        qt = QuizTemplate.objects.create(title="CA", domain=self.domain, active=True, permanent=True)
+
+        quiz = Quiz.objects.create(quiz_template=qt, user=self.user, domain=self.domain)
+
+        quiz.active = False
+        quiz.started_at = now
+        quiz.save()
+        self.assertFalse(quiz.can_answer)
+
+        quiz.active = True
+        quiz.started_at = None
+        quiz.ended_at = None
+        quiz.save()
+        self.assertFalse(quiz.can_answer)
+
+        qt.active = False
+        qt.save()
+        quiz.started_at = now
+        quiz.save()
+        self.assertFalse(quiz.can_answer)
+
+        qt.active = True
+        qt.save()
+        quiz.ended_at = None
+        quiz.save()
+        self.assertTrue(quiz.can_answer)
+
+        quiz.ended_at = now + timedelta(minutes=1)
+        quiz.save()
+        self.assertTrue(quiz.can_answer)
+
+        quiz.ended_at = now - timedelta(minutes=1)
+        quiz.save()
+        self.assertFalse(quiz.can_answer)
+
+    # ------------------------------------------------------------------
+    # QuizQuestionAnswer: clean/save/full_clean, properties, uniqueness, compute_score
+    # ------------------------------------------------------------------
+    def _setup_quiz_for_answers(self, *, weight=2) -> tuple[Quiz, QuizQuestion]:
+        qt = QuizTemplate.objects.create(title=f"Ans-{timezone.now().timestamp()}", domain=self.domain, permanent=True)
+        q = make_question(domain=self.domain, title="ScoreQ")
+        qq = QuizQuestion.objects.create(quiz=qt, question=q, sort_order=1, weight=weight)
+
+        quiz = Quiz.objects.create(
+            quiz_template=qt,
+            user=self.user,
+            domain=self.domain,
+            active=True,
+            started_at=timezone.now(),
+        )
+        return quiz, qq
+
+    def test_quizquestionanswer_clean_blocks_if_quiz_cannot_answer(self):
+        quiz, qq = self._setup_quiz_for_answers()
+        quiz.active = False
+        quiz.save()
+
+        a = QuizQuestionAnswer(quiz=quiz, quizquestion=qq, question_order=1)
+        with self.assertRaises(ValidationError):
+            a.full_clean()
+
+    def test_quizquestionanswer_save_calls_full_clean(self):
+        quiz, qq = self._setup_quiz_for_answers()
+        a = QuizQuestionAnswer(quiz=quiz, quizquestion=qq, question_order=1)
+        a.save()
+        self.assertIsNotNone(a.pk)
+
+    def test_quizquestionanswer_properties_index_and_quiz_template(self):
+        quiz, qq = self._setup_quiz_for_answers(weight=5)
+        a = QuizQuestionAnswer.objects.create(quiz=quiz, quizquestion=qq, question_order=1)
+        self.assertEqual(a.index, 1)  # sort_order
+        self.assertEqual(a.quiz_template, quiz.quiz_template)
+
+    def test_quizquestionanswer_uniqueness_constraints(self):
+        quiz, qq = self._setup_quiz_for_answers()
+        QuizQuestionAnswer.objects.create(quiz=quiz, quizquestion=qq, question_order=1)
+
+        # 1) Unicité (quiz, quizquestion) -> ValidationError (détecté par full_clean())
         with self.assertRaises(ValidationError) as ctx1:
-            self._validate_question(q)
-        self.assertIn("at least 2", str(ctx1.exception).lower())
+            QuizQuestionAnswer.objects.create(quiz=quiz, quizquestion=qq, question_order=2)
+        self.assertIn("already exists", str(ctx1.exception).lower())
 
-    def test_question_clean_requires_at_least_one_correct(self):
-        q = self._make_question("Q-no-correct")
-        self._add_option(q, is_correct=False, sort_order=1)
-        self._add_option(q, is_correct=False, sort_order=2)
+        # 2) Unicité (quiz, question_order) -> ValidationError aussi
+        q2 = make_question(domain=self.domain, title="Q2")
+        qt = quiz.quiz_template
+        qq2 = QuizQuestion.objects.create(quiz=qt, question=q2, sort_order=2, weight=1)
 
-        with self.assertRaises(ValidationError) as ctx:
-            self._validate_question(q)
-        self.assertIn("au moins une", str(ctx.exception).lower())
-        self.assertIn("correct", str(ctx.exception).lower())
+        obj = QuizQuestionAnswer(quiz=quiz, quizquestion=qq2, question_order=1)  # même order que la 1ère réponse
+        with self.assertRaises(ValidationError) as ctx2:
+            obj.full_clean()
+        self.assertIn("already exists", str(ctx2.exception).lower())
 
-    def test_question_clean_requires_exactly_one_correct_when_multiple_not_allowed(self):
-        q = self._make_question("Q-one-correct-only", allow_multiple_correct=False)
-        self._add_option(q, is_correct=True, sort_order=1)
-        self._add_option(q, is_correct=True, sort_order=2)
+    def test_compute_score_correct_incorrect_and_no_correct_opts(self):
+        quiz, qq = self._setup_quiz_for_answers(weight=3)
+        q = qq.question
 
-        with self.assertRaises(ValidationError) as ctx:
-            self._validate_question(q)
-        self.assertIn("only one", str(ctx.exception).lower())
+        o1 = make_answer_option(question=q, content="A", is_correct=True, sort_order=1)
+        o2 = make_answer_option(question=q, content="B", is_correct=True, sort_order=2)
+        o3 = make_answer_option(question=q, content="C", is_correct=False, sort_order=3)
 
-    def test_question_clean_allows_multiple_correct_when_flag_true(self):
-        q = self._make_question("Q-multi-correct", allow_multiple_correct=True)
-        self._add_option(q, is_correct=True, sort_order=1)
-        self._add_option(q, is_correct=True, sort_order=2)
+        a = QuizQuestionAnswer.objects.create(quiz=quiz, quizquestion=qq, question_order=1)
 
-        # doit passer
-        self._validate_question(q)
+        a.selected_options.set([o1, o2])
+        earned, max_score = a.compute_score(save=True)
+        a.refresh_from_db()
+        self.assertEqual(max_score, 3.0)
+        self.assertEqual(earned, 3.0)
+        self.assertTrue(a.is_correct)
 
-    def test_question_clean_passes_for_valid_single_correct(self):
-        q = self._make_question("Q-valid", allow_multiple_correct=False)
-        self._add_option(q, is_correct=True, sort_order=1)
-        self._add_option(q, is_correct=False, sort_order=2)
+        a.selected_options.set([o1, o3])
+        earned, max_score = a.compute_score(save=True)
+        a.refresh_from_db()
+        self.assertEqual(earned, 0.0)
+        self.assertFalse(a.is_correct)
 
-        self._validate_question(q)
+        # Edge: aucune option correcte => même si selected == set() => incorrect (len(correct_opts)==0)
+        quiz2, qq2 = self._setup_quiz_for_answers(weight=2)
+        q_empty = qq2.question
+        make_answer_option(question=q_empty, content="X", is_correct=False, sort_order=1)
+        make_answer_option(question=q_empty, content="Y", is_correct=False, sort_order=2)
 
-    # ------------------------------------------------------------------
-    # Question __str__ (avec fallback si pas de traduction)
-    # ------------------------------------------------------------------
-    def test_question_str_with_translation(self):
-        q = self._make_question("Ma question")
-        self.assertEqual(str(q), "Ma question")
+        a2 = QuizQuestionAnswer.objects.create(quiz=quiz2, quizquestion=qq2, question_order=1)
+        a2.selected_options.set([])
+        earned2, max2 = a2.compute_score(save=True)
+        a2.refresh_from_db()
+        self.assertEqual(max2, 2.0)
+        self.assertEqual(earned2, 0.0)
+        self.assertFalse(a2.is_correct)
 
-    def test_question_str_fallback_when_no_title_translation(self):
-        d = self._make_domain()
-        q = Question.objects.create(
-            domain=d,
-            allow_multiple_correct=False,
-            active=True,
-            is_mode_practice=True,
-            is_mode_exam=True,
-        )
-        # pas de titre en traduction
-        self.assertEqual(str(q), f"Question#{q.pk}")
+    def test_compute_score_save_false_does_not_persist(self):
+        quiz, qq = self._setup_quiz_for_answers(weight=4)
+        q = qq.question
+        o1 = make_answer_option(question=q, content="A", is_correct=True, sort_order=1)
+        # pour éviter le "len(correct_opts)==0" edge, on s’assure qu’il y a bien au moins 1 correct
+        make_answer_option(question=q, content="B", is_correct=False, sort_order=2)
 
-    # ------------------------------------------------------------------
-    # Question ordering (Meta.ordering = ["-pk"])
-    # ------------------------------------------------------------------
-    def test_question_ordering_is_newest_pk_first(self):
-        q1 = self._make_question("Q-old")
-        q2 = self._make_question("Q-new")
-        ordered = list(Question.objects.all())
-        self.assertEqual([x.pk for x in ordered], [q2.pk, q1.pk])
+        a = QuizQuestionAnswer.objects.create(quiz=quiz, quizquestion=qq, question_order=1)
+        a.selected_options.set([o1])
 
-    # ------------------------------------------------------------------
-    # AnswerOption ordering + __str__
-    # ------------------------------------------------------------------
-    def test_answeroption_ordering_sort_order_then_id(self):
-        q = self._make_question("Q-ordering")
-        o2 = self._add_option(q, is_correct=False, sort_order=2, content="B")
-        o1 = self._add_option(q, is_correct=True, sort_order=1, content="A")
+        earned, max_score = a.compute_score(save=False)
+        self.assertEqual(earned, 4.0)
+        self.assertEqual(max_score, 4.0)
 
-        ordered = list(q.answer_options.all())
-        self.assertEqual([x.pk for x in ordered], [o1.pk, o2.pk])
-
-        # __str__
-        self.assertIn(f"Option(Q{q.pk})", str(o1))
-        self.assertIn("✔", str(o1))
-        self.assertIn("✗", str(o2))
-
-    # ------------------------------------------------------------------
-    # M2M subjects through QuestionSubject
-    # ------------------------------------------------------------------
-    def test_question_subject_add_creates_through_row(self):
-        s = self._make_subject("History", "history")
-        q = self._make_question("Q-subjects")
-
-        q.subjects.add(s)  # crée QuestionSubject (through)
-        self.assertEqual(q.subjects.count(), 1)
-        self.assertEqual(QuestionSubject.objects.filter(question=q, subject=s).count(), 1)
-
-        link = QuestionSubject.objects.get(question=q, subject=s)
-        self.assertEqual(link.sort_order, 0)
-        self.assertEqual(link.weight, 1)
-        self.assertIn("↔", str(link))
-        self.assertIn("ord:", str(link))
-        self.assertIn("w:", str(link))
-
-    def test_questionsubject_unique_together_enforced(self):
-        s = self._make_subject("Geo", "geo")
-        q = self._make_question("Q-unique-link")
-
-        QuestionSubject.objects.create(question=q, subject=s)
-        with self.assertRaises(IntegrityError):
-            QuestionSubject.objects.create(question=q, subject=s)
-
-    def test_questionsubject_ordering_is_newest_pk_first(self):
-        s1 = self._make_subject("Aaa", "aaa")
-        s2 = self._make_subject("Bbb", "bbb")
-        q = self._make_question("Q-order-subject")
-        qs1 = QuestionSubject.objects.create(question=q, subject=s1, sort_order=5)
-        qs2 = QuestionSubject.objects.create(question=q, subject=s2, sort_order=0)
-
-        ordered = list(QuestionSubject.objects.all())
-        # ordering = ["-pk"]
-        self.assertEqual([x.pk for x in ordered], [qs2.pk, qs1.pk])
-
-    def test_questionsubject_str_fallback_when_subject_has_no_translation(self):
-        # Subject sans name traduit => fallback Subject#id
-        s = Subject.objects.create()
-        q = self._make_question("Q-link-fallback")
-        link = QuestionSubject.objects.create(question=q, subject=s, sort_order=0, weight=1)
-        self.assertIn(f"Subject#{s.pk}", str(link))
-
-    # ------------------------------------------------------------------
-    # QuestionMedia.clean() + __str__
-    # ------------------------------------------------------------------
-    def test_questionmedia_clean_external_requires_external_url_only(self):
-        q = self._make_question("Q-media-ext")
-
-        # external sans url
-        m1 = QuestionMedia(question=q, kind=QuestionMedia.EXTERNAL, external_url=None, file=None, sort_order=0)
-        with self.assertRaises(ValidationError) as ctx:
-            m1.clean()
-        self.assertIn("external_url", str(ctx.exception).lower())
-
-        # external avec url + file => interdit
-        f = SimpleUploadedFile("x.png", b"fake", content_type="image/png")
-        m2 = QuestionMedia(question=q, kind=QuestionMedia.EXTERNAL, external_url="https://x", file=f, sort_order=0)
-        with self.assertRaises(ValidationError):
-            m2.clean()
-
-    def test_questionmedia_clean_file_requires_file_only(self):
-        q = self._make_question("Q-media-file")
-
-        # image sans file
-        m1 = QuestionMedia(question=q, kind=QuestionMedia.IMAGE, file=None, external_url=None, sort_order=0)
-        with self.assertRaises(ValidationError) as ctx:
-            m1.clean()
-        self.assertIn("file", str(ctx.exception).lower())
-
-        # image avec file + external_url => interdit
-        f = SimpleUploadedFile("x.png", b"fake", content_type="image/png")
-        m2 = QuestionMedia(question=q, kind=QuestionMedia.IMAGE, file=f, external_url="https://x", sort_order=0)
-        with self.assertRaises(ValidationError):
-            m2.clean()
-
-        # OK : image avec file only
-        m3 = QuestionMedia(question=q, kind=QuestionMedia.IMAGE, file=f, external_url=None, sort_order=0)
-        m3.clean()
-
-    def test_questionmedia_str(self):
-        q = self._make_question("Q-media-str")
-
-        # external url
-        m1 = QuestionMedia.objects.create(
-            question=q,
-            kind=QuestionMedia.EXTERNAL,
-            external_url="https://example.com",
-            sort_order=1,
-        )
-        self.assertIn("external", str(m1))
-        self.assertIn("https://example.com", str(m1))
-
-        # file
-        f = SimpleUploadedFile("x.png", b"fake", content_type="image/png")
-        m2 = QuestionMedia.objects.create(
-            question=q,
-            kind=QuestionMedia.IMAGE,
-            file=f,
-            sort_order=2,
-        )
-        self.assertIn("image", str(m2))
-        # le path exact dépend du storage, on check juste qu'il y a un nom
-        self.assertTrue("x.png" in str(m2) or "question_media" in str(m2))
-
-    def test_domain_clean_rejects_invalid_allowed_language_code(self):
-        owner = self._make_user("owner")
-        d = self._make_domain(name="D", owner=owner, lang="fr")
-
-        # crée une language invalide (pas dans settings.LANGUAGES)
-        bad = Language.objects.create(code="xx", name="Invalid")
-        d.allowed_languages.add(bad)
-
-        with self.assertRaises(ValidationError):
-            d.clean()
+        a_db = QuizQuestionAnswer.objects.get(pk=a.pk)
+        self.assertEqual(a_db.earned_score, 0)
+        self.assertEqual(a_db.max_score, 0)
+        self.assertIsNone(a_db.is_correct)

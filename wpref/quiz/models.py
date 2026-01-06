@@ -240,7 +240,7 @@ class Quiz(models.Model):
     )
 
     quiz_template = models.ForeignKey(
-        "quiz.quizTemplate",
+        "quiz.QuizTemplate",
         on_delete=models.CASCADE,
         related_name="quiz",
     )

@@ -4,10 +4,11 @@ import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {CommonModule} from '@angular/common';
 import {PaginatorModule} from 'primeng/paginator';
-import {QuizService, QuizSession} from '../../../services/quiz/quiz';
+import {QuizService} from '../../../services/quiz/quiz';
 import {DialogModule} from 'primeng/dialog';
 import {QuizSubjectForm} from '../subject-form/subject-form'
 import {TableModule} from 'primeng/table';
+import {QuizDto} from '../../../api/generated';
 
 @Component({
   selector: 'app-quiz-list',
@@ -16,7 +17,7 @@ import {TableModule} from 'primeng/table';
   styleUrl: './quiz-list.scss',
 })
 export class QuizList implements OnInit {
-  quizz = signal<QuizSession[]>([]);
+  quizz = signal<QuizDto[]>([]);
   q = signal('');
 
   first = 0;           // index de départ (offset)
@@ -30,7 +31,7 @@ export class QuizList implements OnInit {
 
   private quizService = inject(QuizService);
 
-  get pagedQuiz(): QuizSession[] {
+  get pagedQuiz(): QuizDto[] {
     const all = this.quizz() || [];
     return all.slice(this.first, this.first + this.rows);
   }
@@ -41,9 +42,9 @@ export class QuizList implements OnInit {
 
   load(): void {
     this.quizService
-      .listQuizSession({search: this.q() || undefined})
+      .listQuiz({search: this.q() || undefined})
       .subscribe({
-        next: (quizz: QuizSession[]) => {
+        next: (quizz: QuizDto[]) => {
           this.quizz.set(quizz);
           this.first = 0;
         },
@@ -62,14 +63,14 @@ export class QuizList implements OnInit {
     this.saving.set(true);
     this.success.set(null);
 
-    this.quizService.generateQuizSession(payload).subscribe({
+    this.quizService.generateQuiz(payload).subscribe({
       next: (): void => {
         this.saving.set(false);
         this.success.set('Quiz généré avec succès.');
         this.closeDialog();
         this.load();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Erreur génération quiz', err);
         this.saving.set(false);
       },

@@ -2,11 +2,12 @@ import {Component, inject, OnInit} from '@angular/core';
 
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
-import {Subject, SubjectService} from '../../../services/subject/subject';
-import {Question, QuestionService} from '../../../services/question/question';
+import {SubjectService} from '../../../services/subject/subject';
+import {QuestionService} from '../../../services/question/question';
 import {Editor} from 'primeng/editor';
 import {InputTextModule} from 'primeng/inputtext';
 import {Button} from 'primeng/button';
+import {QuestionReadDto, SubjectDetailDto, SubjectReadDto, SubjectWriteRequestDto} from '../../../api/generated';
 
 
 @Component({
@@ -18,7 +19,7 @@ import {Button} from 'primeng/button';
 })
 export class SubjectEdit implements OnInit {
   id!: number;
-  questions: Question[] = [];
+  questions: QuestionReadDto[] = [];
   private fb = inject(FormBuilder);
   form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -30,18 +31,19 @@ export class SubjectEdit implements OnInit {
 
   ngOnInit() {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
-    this.subjectService.retrieve(this.id).subscribe((s: Subject) => {
+    this.subjectService.detail(this.id).subscribe((s: SubjectDetailDto) => {
       this.form.patchValue({name: s.name, description: s.description || ''});
-      this.questions = s.questions || [];
+      console.log(s.questions);
     });
+    this.questions = [];
   }
 
-  save() {
+  save():void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.subjectService.update(this.id, this.form.value).subscribe({
+    this.subjectService.update(this.id, this.form.value as SubjectWriteRequestDto).subscribe({
       next: () => this.goList()
     });
   }

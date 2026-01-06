@@ -1,21 +1,15 @@
 import {Injectable} from '@angular/core';
 import {map, Observable} from 'rxjs';
 import {MediaSelectorValue} from '../../components/media-selector/media-selector';
-import {
-  QuestionApi,
-  QuestionCreateRequestParams,
-  QuestionPartialUpdateRequestParams,
-  QuestionUpdateRequestParams
-} from '../../api/generated/api/question.service';
-import {QuestionDto} from '../../api/generated/model/question';
+
 import {ROUTES} from '../../app.routes-paths'
 import {Router} from '@angular/router';
-import {QuestionAnswerOptionDto} from '../../api/generated';
-
-type QuestionUpdateBodyParams = Omit<QuestionUpdateRequestParams, 'questionId'>;
-type QuestionPartialBodyParams = Omit<QuestionPartialUpdateRequestParams, 'questionId'>;
-
-
+import {
+  QuestionAnswerOptionReadDto,
+  QuestionReadDto,
+  QuestionApi, QuestionListRequestParams, QuestionCreateRequestParams, QuestionUpdateRequestParams,
+  QuestionPartialUpdateRequestParams, QuestionRetrieveRequestParams, QuestionDestroyRequestParams
+} from '../../api/generated';
 
 export interface QuestionFormValue {
   title: string;
@@ -28,7 +22,7 @@ export interface QuestionFormValue {
 
   subjectIds: number[];
 
-  answerOptions: QuestionAnswerOptionDto[];
+  answerOptions: QuestionAnswerOptionReadDto[];
 
   media: MediaSelectorValue[]; // inclut File éventuel
 }
@@ -43,37 +37,36 @@ export class QuestionService {
   }
 
   // LIST
-  list(params?: { search?: string }): Observable<Array<QuestionDto>> {
-    return this.api.questionList({search: params?.search});
+  list(params?: { name?: string; search?: string }): Observable<Array<QuestionReadDto>> {
+    const payload : QuestionListRequestParams = {title:params?.name, search:params?.search}
+    return this.api.questionList(payload);
   }
 
   // CREATE (multipart / form)
-  create(payload: QuestionCreatePayload): Observable<QuestionDto> {
-    const req: QuestionCreateRequestParams = this.toRequestParams(payload);
-    return this.api.questionCreate(req);
+  create(payload: QuestionCreateRequestParams): Observable<QuestionReadDto> {
+    return this.api.questionCreate(payload);
   }
 
   // UPDATE (PUT)
-  update(questionId: number, payload: QuestionCreatePayload): Observable<QuestionDto> {
-    const req: QuestionUpdateBodyParams = this.toRequestParams(payload);
-    return this.api.questionUpdate({questionId, ...req});
+  update(payload: QuestionUpdateRequestParams): Observable<QuestionReadDto> {
+    return this.api.questionUpdate(payload);
   }
 
   // UPDATE (PATCH)
-  updatePartial(questionId: number, payload: QuestionUpdatePayload): Observable<QuestionDto> {
-    const req: QuestionPartialBodyParams = this.toRequestParamsPartial(payload);
-    return this.api.questionPartialUpdate({questionId, ...req});
+  updatePartial(payload: QuestionPartialUpdateRequestParams): Observable<QuestionReadDto> {
+    return this.api.questionPartialUpdate(payload);
   }
 
   // RETRIEVE
-  retrieve(questionId: number): Observable<QuestionDto> {
-    return this.api.questionRetrieve({questionId});
+  retrieve(questionId: number): Observable<QuestionReadDto> {
+    const payload:QuestionRetrieveRequestParams = {questionId:questionId};
+    return this.api.questionRetrieve(payload);
   }
 
   // DELETE
   delete(questionId: number): Observable<void> {
-    // l'API générée retourne "any" sur delete ; on caste proprement
-    return this.api.questionDestroy({questionId}).pipe(map(() => void 0));
+    const payload:QuestionDestroyRequestParams = {questionId:questionId};
+    return this.api.questionDestroy(payload).pipe(map(() => void 0));
   }
 
   // --------------------------
@@ -116,10 +109,10 @@ export class QuestionService {
       : [];
   }
 
-  private mapAnswerOptions(answerOptions: QuestionAnswerOptionDto[] | undefined) {
+  private mapAnswerOptions(answerOptions: QuestionAnswerOptionReadDto[] | undefined) {
     return (answerOptions ?? []).map((opt, index) => ({
       content: opt.content,
-      is_correct: !!opt.is_correct,
+     // is_correct: !!opt.is_correct, TODO
       sort_order: opt.sort_order ?? index + 1,
     }));
   }
@@ -166,51 +159,6 @@ export class QuestionService {
         sort_order,
       };
     });
-
     return {mediaMeta, mediaFiles};
   }
-
-  private toRequestParams(payload: QuestionCreatePayload): QuestionCreateRequestParams {
-    const subjectIds = this.cleanIds(payload.subjectIds);
-
-    const answerOptionsPayload = this.mapAnswerOptions(payload.answerOptions);
-
-    const {mediaMeta, mediaFiles} = this.mapMedia(payload.media);
-
-    return {
-      title: payload.title ?? '',
-      description: payload.description ?? '',
-      // explanation: payload.explanation ?? '', // ajoute si ton RequestParams le supporte
-      subjectIds, // ou subject_ids selon ton généré
-      answerOptions: JSON.stringify(answerOptionsPayload),
-      media: JSON.stringify(mediaMeta),
-
-      // ✅ N fichiers (selon le nom généré)
-      mediaFiles, // <— si ton generated RequestParams expose un champ array de fichiers
-    };
-  }
-
-  private toRequestParamsPartial(payload: QuestionUpdatePayload): QuestionPartialBodyParams {
-    const out: QuestionPartialBodyParams = {};
-
-    if (payload.title !== undefined) out.title = payload.title;
-    if (payload.description !== undefined) out.description = payload.description;
-    // if (payload.explanation !== undefined) out.explanation = payload.explanation;
-    if (payload.subjectIds !== undefined) {
-      out.subjectIds = this.cleanIds(payload.subjectIds);
-    }
-
-    if (payload.answerOptions !== undefined) {
-      out.answerOptions = JSON.stringify(this.mapAnswerOptions(payload.answerOptions));
-    }
-
-    if (payload.media !== undefined) {
-      const {mediaMeta, mediaFiles} = this.mapMedia(payload.media);
-      out.media = JSON.stringify(mediaMeta);
-      out.mediaFiles = mediaFiles; // ✅ si supporté par le client généré
-    }
-
-    return out;
-  }
-
 }

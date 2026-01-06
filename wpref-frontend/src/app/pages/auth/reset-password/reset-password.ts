@@ -40,7 +40,7 @@ export class ResetPassword {
     this.isSubmitting = true;
     const email = this.form.value.email as string;
 
-    this.authService.requestPasswordReset(email).subscribe({
+    this.authService.requestPasswordReset({email:email}).subscribe({
       next: () => {
         this.isSubmitting = false;
         this.successMessage =

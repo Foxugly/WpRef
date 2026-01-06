@@ -16,7 +16,6 @@ paths:
       - Domain
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -24,7 +23,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Domain'
+                  $ref: '#/components/schemas/DomainRead'
           description: ''
     post:
       operationId: domain_create
@@ -41,23 +40,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Domain'
+              $ref: '#/components/schemas/DomainWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Domain'
+              $ref: '#/components/schemas/DomainWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Domain'
+              $ref: '#/components/schemas/DomainWriteRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Domain'
+                $ref: '#/components/schemas/DomainRead'
           description: ''
         '400':
           description: Validation error.
@@ -67,7 +65,7 @@ paths:
     get:
       operationId: domain_retrieve
       description: |-
-        Retourne un domaine (par `id`).
+        Retourne un domaine (par `domain_id`).
 
         ⚠️ Si l'utilisateur n'a pas accès au domaine, l'API renvoie généralement **404** (car `get_queryset()` ne retourne pas l'objet).
       summary: Récupérer un domaine
@@ -76,19 +74,18 @@ paths:
         name: domain_id
         schema:
           type: integer
-        description: Identifiant du domaine (correspond à `<int:pk>` dans l'URL).
+        description: Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).
         required: true
       tags:
       - Domain
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Domain'
+                $ref: '#/components/schemas/DomainRead'
           description: ''
         '404':
           description: Not found (domain non visible ou inexistant).
@@ -105,7 +102,7 @@ paths:
         name: domain_id
         schema:
           type: integer
-        description: Identifiant du domaine (correspond à `<int:pk>` dans l'URL).
+        description: Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).
         required: true
       tags:
       - Domain
@@ -113,23 +110,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Domain'
+              $ref: '#/components/schemas/DomainWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Domain'
+              $ref: '#/components/schemas/DomainWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Domain'
+              $ref: '#/components/schemas/DomainWriteRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Domain'
+                $ref: '#/components/schemas/DomainRead'
           description: ''
         '400':
           description: Validation error.
@@ -152,7 +148,7 @@ paths:
         name: domain_id
         schema:
           type: integer
-        description: Identifiant du domaine (correspond à `<int:pk>` dans l'URL).
+        description: Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).
         required: true
       tags:
       - Domain
@@ -160,22 +156,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedDomain'
+              $ref: '#/components/schemas/PatchedDomainPartialRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedDomain'
+              $ref: '#/components/schemas/PatchedDomainPartialRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedDomain'
+              $ref: '#/components/schemas/PatchedDomainPartialRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Domain'
+                $ref: '#/components/schemas/DomainRead'
           description: ''
         '400':
           description: Validation error.
@@ -198,12 +193,11 @@ paths:
         name: domain_id
         schema:
           type: integer
-        description: Identifiant du domaine (correspond à `<int:pk>` dans l'URL).
+        description: Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).
         required: true
       tags:
       - Domain
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -214,6 +208,246 @@ paths:
           description: Forbidden.
         '404':
           description: Not found (domain non visible ou inexistant).
+  /api/lang/:
+    get:
+      operationId: lang_list
+      description: |
+        Liste paginée des langues.
+
+        Supporte :
+        - `search` (DRF SearchFilter sur `code`, `name`)
+        - `ordering` (DRF OrderingFilter sur `code`, `name`, `id`)
+      summary: Lister les langues
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Tri (ex: "code", "-name", "id").'
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Numéro de page (si pagination activée).
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Taille de page (si PageNumberPagination configurée).
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Recherche simple sur code/name.
+      tags:
+      - Language
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LanguageRead'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden (admin only)
+    post:
+      operationId: lang_create
+      summary: Créer une langue
+      tags:
+      - Language
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LanguageWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LanguageWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LanguageWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageRead'
+          description: ''
+        '400':
+          description: Validation error
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden (admin only)
+  /api/lang/{lang_id}/:
+    get:
+      operationId: lang_retrieve
+      summary: Récupérer une langue
+      parameters:
+      - in: path
+        name: lang_id
+        schema:
+          type: integer
+        description: ID de la langue.
+        required: true
+      tags:
+      - Language
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageRead'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden (admin only)
+    put:
+      operationId: lang_update
+      summary: Mettre à jour une langue (PUT)
+      parameters:
+      - in: path
+        name: lang_id
+        schema:
+          type: integer
+        description: ID de la langue.
+        required: true
+      tags:
+      - Language
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LanguageWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LanguageWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LanguageWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageRead'
+          description: ''
+        '400':
+          description: Validation error
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden (admin only)
+    patch:
+      operationId: lang_partial_update
+      summary: Mettre à jour une langue (PATCH)
+      parameters:
+      - in: path
+        name: lang_id
+        schema:
+          type: integer
+        description: ID de la langue.
+        required: true
+      tags:
+      - Language
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLanguageWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLanguageWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLanguageWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageRead'
+          description: ''
+        '400':
+          description: Validation error
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden (admin only)
+    delete:
+      operationId: lang_destroy
+      summary: Supprimer une langue
+      parameters:
+      - in: path
+        name: lang_id
+        schema:
+          type: integer
+        description: ID de la langue.
+        required: true
+      tags:
+      - Language
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No Content
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden (admin only)
   /api/question/:
     get:
       operationId: question_list
@@ -244,7 +478,6 @@ paths:
       - Question
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -252,7 +485,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Question'
+                  $ref: '#/components/schemas/QuestionRead'
           description: ''
         '403':
           content:
@@ -277,22 +510,22 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuestionMultipartWrite'
+              $ref: '#/components/schemas/QuestionMultipartWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuestionMultipartWrite'
+              $ref: '#/components/schemas/QuestionMultipartWriteRequest'
           application/json:
             schema:
-              $ref: '#/components/schemas/QuestionMultipartWrite'
+              $ref: '#/components/schemas/QuestionMultipartWriteRequest'
+        required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Question'
+                $ref: '#/components/schemas/QuestionRead'
           description: ''
         '400':
           content:
@@ -322,13 +555,12 @@ paths:
       - Question
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Question'
+                $ref: '#/components/schemas/QuestionRead'
           description: ''
         '404':
           content:
@@ -361,22 +593,22 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuestionMultipartWrite'
+              $ref: '#/components/schemas/QuestionMultipartWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuestionMultipartWrite'
+              $ref: '#/components/schemas/QuestionMultipartWriteRequest'
           application/json:
             schema:
-              $ref: '#/components/schemas/QuestionMultipartWrite'
+              $ref: '#/components/schemas/QuestionMultipartWriteRequest'
+        required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Question'
+                $ref: '#/components/schemas/QuestionRead'
           description: ''
         '400':
           content:
@@ -416,22 +648,21 @@ paths:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedQuestionMultipartWrite'
+              $ref: '#/components/schemas/PatchedQuestionMultipartWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedQuestionMultipartWrite'
+              $ref: '#/components/schemas/PatchedQuestionMultipartWriteRequest'
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedQuestionMultipartWrite'
+              $ref: '#/components/schemas/PatchedQuestionMultipartWriteRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Question'
+                $ref: '#/components/schemas/QuestionRead'
           description: ''
         '400':
           content:
@@ -466,7 +697,6 @@ paths:
       - Question
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '204':
           description: No Content
@@ -485,11 +715,27 @@ paths:
   /api/quiz/:
     get:
       operationId: quiz_list
+      description: |
+        Liste paginée des sujets.
+
+        Supporte :
+        - `search` (filtre name__icontains)
+        - `name`, `quiz_id` via DjangoFilterBackend
       summary: Lister les quizzes (sessions)
+      parameters:
+      - in: query
+        name: name
+        schema:
+          type: string
+        description: Filtre exact (via DjangoFilterBackend).
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Recherche simple (name__icontains).
       tags:
       - Quiz
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -500,6 +746,18 @@ paths:
                 items:
                   $ref: '#/components/schemas/Quiz'
           description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden
     post:
       operationId: quiz_create
       summary: Créer un quiz à partir d'un template de quiz
@@ -509,16 +767,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Quiz'
+              $ref: '#/components/schemas/QuizRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Quiz'
+              $ref: '#/components/schemas/QuizRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Quiz'
+              $ref: '#/components/schemas/QuizRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -540,7 +797,6 @@ paths:
       tags:
       - Quiz
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -564,16 +820,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Quiz'
+              $ref: '#/components/schemas/QuizRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Quiz'
+              $ref: '#/components/schemas/QuizRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Quiz'
+              $ref: '#/components/schemas/QuizRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -597,15 +852,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedQuiz'
+              $ref: '#/components/schemas/PatchedQuizRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedQuiz'
+              $ref: '#/components/schemas/PatchedQuizRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedQuiz'
+              $ref: '#/components/schemas/PatchedQuizRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -627,7 +881,6 @@ paths:
       - Quiz
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '204':
           description: No Content
@@ -644,7 +897,6 @@ paths:
       tags:
       - QuizAnswer
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -670,15 +922,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/QuizQuestionAnswerWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/QuizQuestionAnswerWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/QuizQuestionAnswerWriteRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -710,7 +961,6 @@ paths:
       - QuizAnswer
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -738,15 +988,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/QuizQuestionAnswerWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/QuizQuestionAnswerWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/QuizQuestionAnswerWriteRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -775,15 +1024,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedQuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/PatchedQuizQuestionAnswerWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedQuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/PatchedQuizQuestionAnswerWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedQuizQuestionAnswerWrite'
+              $ref: '#/components/schemas/PatchedQuizQuestionAnswerWriteRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -810,7 +1058,6 @@ paths:
       - QuizAnswer
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '204':
           description: No Content
@@ -827,7 +1074,6 @@ paths:
       tags:
       - Quiz
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -856,16 +1102,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateQuizInput'
+              $ref: '#/components/schemas/CreateQuizInputRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CreateQuizInput'
+              $ref: '#/components/schemas/CreateQuizInputRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CreateQuizInput'
+              $ref: '#/components/schemas/CreateQuizInputRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -888,16 +1133,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BulkCreateFromTemplateInput'
+              $ref: '#/components/schemas/BulkCreateFromTemplateInputRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/BulkCreateFromTemplateInput'
+              $ref: '#/components/schemas/BulkCreateFromTemplateInputRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/BulkCreateFromTemplateInput'
+              $ref: '#/components/schemas/BulkCreateFromTemplateInputRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -920,7 +1164,6 @@ paths:
       - QuizTemplate
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -939,16 +1182,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizTemplate'
+              $ref: '#/components/schemas/QuizTemplateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuizTemplate'
+              $ref: '#/components/schemas/QuizTemplateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuizTemplate'
+              $ref: '#/components/schemas/QuizTemplateRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -970,7 +1212,6 @@ paths:
       tags:
       - QuizTemplate
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -994,16 +1235,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizTemplate'
+              $ref: '#/components/schemas/QuizTemplateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuizTemplate'
+              $ref: '#/components/schemas/QuizTemplateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuizTemplate'
+              $ref: '#/components/schemas/QuizTemplateRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1027,15 +1267,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedQuizTemplate'
+              $ref: '#/components/schemas/PatchedQuizTemplateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedQuizTemplate'
+              $ref: '#/components/schemas/PatchedQuizTemplateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedQuizTemplate'
+              $ref: '#/components/schemas/PatchedQuizTemplateRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1057,7 +1296,6 @@ paths:
       - QuizTemplate
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '204':
           description: No Content
@@ -1074,7 +1312,6 @@ paths:
       tags:
       - QuizTemplate
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1100,16 +1337,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizQuestionWrite'
+              $ref: '#/components/schemas/QuizQuestionWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuizQuestionWrite'
+              $ref: '#/components/schemas/QuizQuestionWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuizQuestionWrite'
+              $ref: '#/components/schemas/QuizQuestionWriteRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1141,7 +1377,6 @@ paths:
       - QuizTemplate
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -1169,16 +1404,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizQuestionWrite'
+              $ref: '#/components/schemas/QuizQuestionWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/QuizQuestionWrite'
+              $ref: '#/components/schemas/QuizQuestionWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/QuizQuestionWrite'
+              $ref: '#/components/schemas/QuizQuestionWriteRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1197,11 +1431,6 @@ paths:
           type: integer
         required: true
       - in: path
-        name: qt.id
-        schema:
-          type: integer
-        required: true
-      - in: path
         name: qt_id
         schema:
           type: integer
@@ -1212,15 +1441,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedQuizQuestionWrite'
+              $ref: '#/components/schemas/PatchedQuizQuestionWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedQuizQuestionWrite'
+              $ref: '#/components/schemas/PatchedQuizQuestionWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedQuizQuestionWrite'
+              $ref: '#/components/schemas/PatchedQuizQuestionWriteRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1247,7 +1475,6 @@ paths:
       - QuizTemplate
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '204':
           description: No Content
@@ -1261,16 +1488,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GenerateFromSubjectsInput'
+              $ref: '#/components/schemas/GenerateFromSubjectsInputRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/GenerateFromSubjectsInput'
+              $ref: '#/components/schemas/GenerateFromSubjectsInputRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/GenerateFromSubjectsInput'
+              $ref: '#/components/schemas/GenerateFromSubjectsInputRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1303,12 +1529,13 @@ paths:
           type: string
           enum:
           - en
+          - es
           - fr
+          - it
           - nl
       tags:
       - schema
       security:
-      - jwtAuth: []
       - jwtAuth: []
       - {}
       responses:
@@ -1356,7 +1583,6 @@ paths:
       - Subject
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -1364,7 +1590,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Subject'
+                  $ref: '#/components/schemas/SubjectRead'
           description: ''
         '401':
           content:
@@ -1387,23 +1613,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Subject'
+              $ref: '#/components/schemas/SubjectWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Subject'
+              $ref: '#/components/schemas/SubjectWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Subject'
+              $ref: '#/components/schemas/SubjectWriteRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subject'
+                $ref: '#/components/schemas/SubjectRead'
           description: ''
         '400':
           content:
@@ -1439,13 +1664,12 @@ paths:
       - Subject
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subject'
+                $ref: '#/components/schemas/SubjectRead'
           description: ''
         '401':
           content:
@@ -1481,23 +1705,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Subject'
+              $ref: '#/components/schemas/SubjectWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Subject'
+              $ref: '#/components/schemas/SubjectWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Subject'
+              $ref: '#/components/schemas/SubjectWriteRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subject'
+                $ref: '#/components/schemas/SubjectRead'
           description: ''
         '400':
           content:
@@ -1540,22 +1763,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedSubject'
+              $ref: '#/components/schemas/PatchedSubjectWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedSubject'
+              $ref: '#/components/schemas/PatchedSubjectWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedSubject'
+              $ref: '#/components/schemas/PatchedSubjectWriteRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subject'
+                $ref: '#/components/schemas/SubjectRead'
           description: ''
         '400':
           content:
@@ -1596,7 +1818,6 @@ paths:
       - Subject
       security:
       - jwtAuth: []
-      - jwtAuth: []
       responses:
         '204':
           description: No Content
@@ -1618,6 +1839,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
           description: Not found
+  /api/subject/{subject_id}/details/:
+    get:
+      operationId: subject_details_retrieve
+      summary: Récupérer un sujet avec détails
+      parameters:
+      - in: path
+        name: subject_id
+        schema:
+          type: integer
+        description: ID du sujet.
+        required: true
+      tags:
+      - Subject
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectDetail'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found
   /api/token/:
     post:
       operationId: token_create
@@ -1630,16 +1891,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenObtainPair'
+              $ref: '#/components/schemas/TokenObtainPairRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenObtainPair'
+              $ref: '#/components/schemas/TokenObtainPairRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenObtainPair'
+              $ref: '#/components/schemas/TokenObtainPairRequest'
         required: true
-      security:
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -1659,16 +1918,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: '#/components/schemas/TokenRefreshRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: '#/components/schemas/TokenRefreshRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: '#/components/schemas/TokenRefreshRequest'
         required: true
-      security:
-      - jwtAuth: []
       responses:
         '200':
           content:
@@ -1684,7 +1941,6 @@ paths:
       tags:
       - User
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1717,16 +1973,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CustomUserCreate'
+              $ref: '#/components/schemas/CustomUserCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CustomUserCreate'
+              $ref: '#/components/schemas/CustomUserCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CustomUserCreate'
+              $ref: '#/components/schemas/CustomUserCreateRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       - {}
       responses:
@@ -1738,13 +1993,13 @@ paths:
           description: ''
         '400':
           description: Validation error
-  /api/user/{id}/:
+  /api/user/{user_id}/:
     get:
       operationId: user_retrieve
       summary: Récupérer un utilisateur
       parameters:
       - in: path
-        name: id
+        name: user_id
         schema:
           type: string
           pattern: ^\d+$
@@ -1752,7 +2007,6 @@ paths:
       tags:
       - User
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1784,7 +2038,7 @@ paths:
       summary: Mettre à jour un utilisateur (PUT)
       parameters:
       - in: path
-        name: id
+        name: user_id
         schema:
           type: string
           pattern: ^\d+$
@@ -1795,15 +2049,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CustomUserUpdate'
+              $ref: '#/components/schemas/CustomUserUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CustomUserUpdate'
+              $ref: '#/components/schemas/CustomUserUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CustomUserUpdate'
+              $ref: '#/components/schemas/CustomUserUpdateRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1817,7 +2070,7 @@ paths:
       summary: Mettre à jour un utilisateur (PATCH)
       parameters:
       - in: path
-        name: id
+        name: user_id
         schema:
           type: string
           pattern: ^\d+$
@@ -1828,15 +2081,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedCustomUserUpdate'
+              $ref: '#/components/schemas/PatchedCustomUserUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedCustomUserUpdate'
+              $ref: '#/components/schemas/PatchedCustomUserUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedCustomUserUpdate'
+              $ref: '#/components/schemas/PatchedCustomUserUpdateRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1845,7 +2097,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CustomUserRead'
           description: ''
-  /api/user/{id}/quizzes/:
+  /api/user/{user_id}/quizzes/:
     get:
       operationId: user_quiz_list
       description: |-
@@ -1854,20 +2106,14 @@ paths:
       summary: Lister les quizzes d’un utilisateur
       parameters:
       - in: path
-        name: id
+        name: user_id
         schema:
           type: integer
-        required: true
-      - in: path
-        name: pk
-        schema:
-          type: integer
-        description: ID utilisateur (pk).
+        description: ID utilisateur.
         required: true
       tags:
       - User
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1899,44 +2145,123 @@ paths:
   /api/user/me/:
     get:
       operationId: user_me_retrieve
+      description: Retourne le profil de l'utilisateur authentifié.
+      summary: Récupérer et mettre à jour mon profil
       tags:
-      - user
+      - User
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Me'
+                $ref: '#/components/schemas/CustomUserRead'
           description: ''
-  /api/user/me/current-domain/:
-    post:
-      operationId: user_me_current_domain_create
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Validation error
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden
+    patch:
+      operationId: user_me_partial_update
+      description: Retourne le profil de l'utilisateur authentifié.
+      summary: Récupérer et mettre à jour mon profil
       tags:
-      - user
+      - User
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Me'
+              $ref: '#/components/schemas/PatchedCustomUserReadRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Me'
+              $ref: '#/components/schemas/PatchedCustomUserReadRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Me'
+              $ref: '#/components/schemas/PatchedCustomUserReadRequest'
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Me'
+                $ref: '#/components/schemas/CustomUserRead'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Validation error
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden
+  /api/user/me/current-domain/:
+    post:
+      operationId: user_me_current_domain_create
+      description: Met à jour `current_domain` sur l'utilisateur authentifié, puis
+        renvoie le profil mis à jour.
+      summary: Définir mon domaine courant
+      tags:
+      - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetCurrentDomainRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetCurrentDomainRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetCurrentDomainRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUserRead'
+          description: ''
+        '400':
+          description: Validation error
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Forbidden
   /api/user/password/change/:
     post:
       operationId: user_password_change_create
@@ -1948,16 +2273,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordChange'
+              $ref: '#/components/schemas/PasswordChangeRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PasswordChange'
+              $ref: '#/components/schemas/PasswordChangeRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PasswordChange'
+              $ref: '#/components/schemas/PasswordChangeRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1991,16 +2315,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequest'
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequest'
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequest'
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
         required: true
       security:
-      - jwtAuth: []
       - {}
       responses:
         '200':
@@ -2026,16 +2349,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordResetConfirm'
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PasswordResetConfirm'
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PasswordResetConfirm'
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
         required: true
       security:
-      - jwtAuth: []
       - jwtAuth: []
       - {}
       responses:
@@ -2053,7 +2375,7 @@ paths:
           description: Lien invalide / token invalide
 components:
   schemas:
-    BulkCreateFromTemplateInput:
+    BulkCreateFromTemplateInputRequest:
       type: object
       properties:
         quiz_template_id:
@@ -2065,18 +2387,19 @@ components:
       required:
       - quiz_template_id
       - user_ids
-    CreateQuizInput:
+    CreateQuizInputRequest:
       type: object
       properties:
         quiz_template_id:
           type: integer
       required:
       - quiz_template_id
-    CustomUserCreate:
+    CustomUserCreateRequest:
       type: object
       properties:
         username:
           type: string
+          minLength: 1
           description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
             only.
           pattern: ^[\w.@+-]+$
@@ -2095,6 +2418,7 @@ components:
         password:
           type: string
           writeOnly: true
+          minLength: 1
         language:
           $ref: '#/components/schemas/LanguageEnum'
       required:
@@ -2108,10 +2432,9 @@ components:
           readOnly: true
         username:
           type: string
+          readOnly: true
           description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
             only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
         email:
           type: string
           format: email
@@ -2123,11 +2446,6 @@ components:
         last_name:
           type: string
           maxLength: 150
-        is_staff:
-          type: boolean
-          readOnly: true
-          title: Staff status
-          description: Designates whether the user can log into this admin site.
         language:
           $ref: '#/components/schemas/LanguageEnum'
         is_superuser:
@@ -2136,19 +2454,43 @@ components:
           title: Superuser status
           description: Designates that this user has all permissions without explicitly
             assigning them.
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
         is_active:
           type: boolean
           readOnly: true
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
+        current_domain:
+          type: integer
+          nullable: true
+        current_domain_title:
+          type: string
+          readOnly: true
+        owned_domain_ids:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        managed_domain_ids:
+          type: array
+          items:
+            type: integer
+          readOnly: true
       required:
+      - current_domain_title
       - id
       - is_active
       - is_staff
       - is_superuser
+      - managed_domain_ids
+      - owned_domain_ids
       - username
-    CustomUserUpdate:
+    CustomUserUpdateRequest:
       type: object
       properties:
         email:
@@ -2165,35 +2507,38 @@ components:
         password:
           type: string
           writeOnly: true
+          minLength: 1
         is_active:
           type: boolean
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
-    Domain:
+    DomainRead:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        title:
+        name:
           type: string
-          maxLength: 120
+          readOnly: true
         description:
           type: string
-        allowed_languages: {}
+          readOnly: true
+        allowed_languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LanguageRead'
+          readOnly: true
         active:
           type: boolean
+          readOnly: true
         owner:
           type: integer
           readOnly: true
         owner_username:
           type: string
           readOnly: true
-        staff_ids:
-          type: array
-          items:
-            type: integer
         staff_usernames:
           type: array
           items:
@@ -2208,23 +2553,50 @@ components:
           format: date-time
           readOnly: true
       required:
+      - active
+      - allowed_languages
       - created_at
+      - description
       - id
+      - name
       - owner
       - owner_username
       - staff_usernames
-      - title
       - updated_at
+    DomainWriteRequest:
+      type: object
+      properties:
+        translations:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: {}
+          writeOnly: true
+        allowed_languages:
+          type: array
+          items:
+            type: integer
+        active:
+          type: boolean
+        staff:
+          type: array
+          items:
+            type: integer
+      required:
+      - allowed_languages
+      - staff
+      - translations
     ErrorDetail:
       type: object
       properties:
         detail:
           type: string
-    GenerateFromSubjectsInput:
+    GenerateFromSubjectsInputRequest:
       type: object
       properties:
         title:
           type: string
+          minLength: 1
         subject_ids:
           type: array
           items:
@@ -2250,22 +2622,120 @@ components:
       - en
       - fr
       - nl
+      - it
+      - es
       type: string
       description: |-
         * `en` - English
-        * `fr` - Français
-        * `nl` - Nederlands
-    Me:
+        * `fr` - French
+        * `nl` - Dutch
+        * `it` - Italy
+        * `es` - Spain
+    LanguageRead:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        username:
+        code:
           type: string
           readOnly: true
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
+          description: 'Code ISO (ex: fr, nl, en, fr-BE)'
+        name:
+          type: string
+          readOnly: true
+          description: 'Nom lisible (ex: Français, Nederlands, English)'
+        active:
+          type: boolean
+          readOnly: true
+          description: Langue disponible pour la saisie et l'affichage
+      required:
+      - active
+      - code
+      - id
+      - name
+    LanguageWriteRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: 'Code ISO (ex: fr, nl, en, fr-BE)'
+          maxLength: 10
+        name:
+          type: string
+          minLength: 1
+          description: 'Nom lisible (ex: Français, Nederlands, English)'
+          maxLength: 100
+        active:
+          type: boolean
+          description: Langue disponible pour la saisie et l'affichage
+      required:
+      - code
+      - name
+    ModeEnum:
+      enum:
+      - practice
+      - exam
+      type: string
+      description: |-
+        * `practice` - Practice
+        * `exam` - Examen
+    PasswordChangeRequest:
+      type: object
+      properties:
+        old_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - new_password
+      - old_password
+    PasswordResetConfirmRequest:
+      type: object
+      properties:
+        uid:
+          type: string
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+        new_password1:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password2:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - new_password1
+      - new_password2
+      - token
+      - uid
+    PasswordResetOK:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    PasswordResetRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    PatchedCustomUserReadRequest:
+      type: object
+      properties:
         email:
           type: string
           format: email
@@ -2279,91 +2749,10 @@ components:
           maxLength: 150
         language:
           $ref: '#/components/schemas/LanguageEnum'
-        is_superuser:
-          type: boolean
-          title: Superuser status
-          description: Designates that this user has all permissions without explicitly
-            assigning them.
-        is_staff:
-          type: boolean
-          title: Staff status
-          description: Designates whether the user can log into this admin site.
         current_domain:
           type: integer
           nullable: true
-        current_domain_title:
-          type: string
-          readOnly: true
-        owned_domain_ids:
-          type: array
-          items:
-            type: integer
-          readOnly: true
-        managed_domain_ids:
-          type: array
-          items:
-            type: integer
-          readOnly: true
-      required:
-      - current_domain_title
-      - id
-      - managed_domain_ids
-      - owned_domain_ids
-      - username
-    ModeEnum:
-      enum:
-      - practice
-      - exam
-      type: string
-      description: |-
-        * `practice` - Practice
-        * `exam` - Examen
-    PasswordChange:
-      type: object
-      properties:
-        old_password:
-          type: string
-          writeOnly: true
-        new_password:
-          type: string
-          writeOnly: true
-      required:
-      - new_password
-      - old_password
-    PasswordResetConfirm:
-      type: object
-      properties:
-        uid:
-          type: string
-        token:
-          type: string
-        new_password1:
-          type: string
-          writeOnly: true
-        new_password2:
-          type: string
-          writeOnly: true
-      required:
-      - new_password1
-      - new_password2
-      - token
-      - uid
-    PasswordResetOK:
-      type: object
-      properties:
-        detail:
-          type: string
-      required:
-      - detail
-    PasswordResetRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-      required:
-      - email
-    PatchedCustomUserUpdate:
+    PatchedCustomUserUpdateRequest:
       type: object
       properties:
         email:
@@ -2380,55 +2769,54 @@ components:
         password:
           type: string
           writeOnly: true
+          minLength: 1
         is_active:
           type: boolean
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
-    PatchedDomain:
+    PatchedDomainPartialRequest:
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
-        title:
-          type: string
-          maxLength: 120
-        description:
-          type: string
-        allowed_languages: {}
-        active:
-          type: boolean
-        owner:
-          type: integer
-          readOnly: true
-        owner_username:
-          type: string
-          readOnly: true
-        staff_ids:
+        translations:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: {}
+          writeOnly: true
+        allowed_languages:
           type: array
           items:
             type: integer
-        staff_usernames:
+        active:
+          type: boolean
+        staff:
           type: array
           items:
-            type: string
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-    PatchedQuestionMultipartWrite:
+            type: integer
+    PatchedLanguageWriteRequest:
       type: object
       properties:
-        title:
+        code:
           type: string
-        description:
+          minLength: 1
+          description: 'Code ISO (ex: fr, nl, en, fr-BE)'
+          maxLength: 10
+        name:
           type: string
+          minLength: 1
+          description: 'Nom lisible (ex: Français, Nederlands, English)'
+          maxLength: 100
+        active:
+          type: boolean
+          description: Langue disponible pour la saisie et l'affichage
+    PatchedQuestionMultipartWriteRequest:
+      type: object
+      properties:
+        translations:
+          type: string
+          minLength: 1
+          description: 'JSON string ex: {"fr":{"title":"...","description":"","explanation":""},"nl":{...}}'
         subject_ids:
           type: array
           items:
@@ -2436,9 +2824,14 @@ components:
           description: Envoyer en multipart comme subject_ids=1&subject_ids=2 (QueryDict.getlist).
         answer_options:
           type: string
-          description: 'JSON string (liste) ex: [{"text":"A","is_correct":true},{"text":"B","is_correct":false}]'
+          minLength: 1
+          description: 'JSON string (liste) ex: [{"is_correct": true, "sort_order":
+            1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}},
+            {"is_correct": false, "sort_order": 2, "translations": {"fr": {"content":
+            "B"}, "nl": {"content": "B"}}}]'
         media:
           type: string
+          minLength: 1
           description: 'JSON string (liste) ex: [{"kind":"external","external_url":"https://...",
             "sort_order":1}]'
         media_files:
@@ -2448,74 +2841,7 @@ components:
             format: binary
           description: 'Envoyer en multipart avec la même clé répétée: media_files=<file1>,
             media_files=<file2>, ...'
-    PatchedQuiz:
-      type: object
-      description: Représente une session de quiz (Quiz).
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        quiz_template:
-          type: integer
-        quiz_template_title:
-          type: string
-          readOnly: true
-        user:
-          type: integer
-          readOnly: true
-          nullable: true
-        mode:
-          type: string
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        started_at:
-          type: string
-          format: date-time
-          nullable: true
-        ended_at:
-          type: string
-          format: date-time
-          nullable: true
-        active:
-          type: boolean
-        can_answer:
-          type: boolean
-          readOnly: true
-        max_questions:
-          type: integer
-          readOnly: true
-        questions:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuizQuestionRead'
-          readOnly: true
-        answers:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuizQuestionAnswer'
-          readOnly: true
-        total_answers:
-          type: integer
-          nullable: true
-          readOnly: true
-        correct_answers:
-          type: integer
-          nullable: true
-          readOnly: true
-        earned_score:
-          type: number
-          format: double
-          nullable: true
-          readOnly: true
-        max_score:
-          type: number
-          format: double
-          nullable: true
-          readOnly: true
-    PatchedQuizQuestionAnswerWrite:
+    PatchedQuizQuestionAnswerWriteRequest:
       type: object
       properties:
         question_id:
@@ -2529,12 +2855,9 @@ components:
           type: array
           items:
             type: integer
-    PatchedQuizQuestionWrite:
+    PatchedQuizQuestionWriteRequest:
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
         question_id:
           type: integer
           writeOnly: true
@@ -2549,24 +2872,40 @@ components:
           minimum: 0
           format: int64
           description: Poids de la question dans le score.
-    PatchedQuizTemplate:
+    PatchedQuizRequest:
+      type: object
+      description: Représente une session de quiz (Quiz).
+      properties:
+        domain:
+          type: integer
+          nullable: true
+        quiz_template:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        active:
+          type: boolean
+    PatchedQuizTemplateRequest:
       type: object
       description: |-
         Serializer principal pour QuizTemplate (usage admin).
         - lecture : inclut les QuizQuestion avec la Question associée
         - écriture : tu peux rester simple et gérer les QuizQuestion via des endpoints dédiés.
       properties:
-        id:
+        domain:
           type: integer
-          readOnly: true
+          nullable: true
         title:
           type: string
+          minLength: 1
           title: Titre du quiz
           maxLength: 200
-        slug:
-          type: string
-          readOnly: true
-          pattern: ^[-a-zA-Z0-9_]+$
         mode:
           $ref: '#/components/schemas/ModeEnum'
         description:
@@ -2601,16 +2940,6 @@ components:
         active:
           type: boolean
           title: Actif ?
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        questions_count:
-          type: integer
-          readOnly: true
-        can_answer:
-          type: boolean
-          readOnly: true
         result_visibility:
           allOf:
           - $ref: '#/components/schemas/VisibilityEnum'
@@ -2643,82 +2972,20 @@ components:
           nullable: true
           title: Détail visible à partir de
           description: Utilisé uniquement si la visibilité est 'À partir d'une date'.
-        quiz_questions:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuizQuestion'
-          readOnly: true
-    PatchedSubject:
+    PatchedSubjectWriteRequest:
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
-        name:
-          type: string
-          title: Nom
-          maxLength: 120
-        description:
-          type: string
+        translations:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: {}
+          writeOnly: true
+          description: 'Ex: {"fr":{"name":"Math","description":""},"nl":{"name":"Wiskunde","description":""}}'
         domain:
           type: integer
           nullable: true
-    Question:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        title:
-          type: string
-          title: Titre
-          maxLength: 255
-        description:
-          type: string
-        explanation:
-          type: string
-          title: Explication
-        allow_multiple_correct:
-          type: boolean
-          title: Plusieurs bonnes réponses ?
-        active:
-          type: boolean
-        is_mode_practice:
-          type: boolean
-          title: Pour s'exercer
-        is_mode_exam:
-          type: boolean
-          title: Pour les examens
-        subjects:
-          type: array
-          items:
-            $ref: '#/components/schemas/Subject'
-          readOnly: true
-        subject_ids:
-          type: array
-          items:
-            type: integer
-          writeOnly: true
-        answer_options:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuestionAnswerOption'
-        media:
-          type: array
-          items:
-            $ref: '#/components/schemas/QuestionMedia'
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - created_at
-      - id
-      - media
-      - subjects
-      - title
-    QuestionAnswerOption:
+    QuestionAnswerOptionRead:
       type: object
       properties:
         id:
@@ -2726,7 +2993,9 @@ components:
           readOnly: true
         content:
           type: string
-          title: Texte de la réponse
+          readOnly: true
+        is_correct:
+          type: boolean
         sort_order:
           type: integer
           maximum: 9223372036854775807
@@ -2743,12 +3012,11 @@ components:
           readOnly: true
         title:
           type: string
-          title: Titre
-          maxLength: 255
+          readOnly: true
         answer_options:
           type: array
           items:
-            $ref: '#/components/schemas/QuestionAnswerOption'
+            $ref: '#/components/schemas/QuestionAnswerOptionRead'
           readOnly: true
       required:
       - answer_options
@@ -2776,20 +3044,21 @@ components:
           nullable: true
         sort_order:
           type: integer
-          readOnly: true
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
       required:
       - external_url
       - file
       - id
       - kind
-      - sort_order
-    QuestionMultipartWrite:
+    QuestionMultipartWriteRequest:
       type: object
       properties:
-        title:
+        translations:
           type: string
-        description:
-          type: string
+          minLength: 1
+          description: 'JSON string ex: {"fr":{"title":"...","description":"","explanation":""},"nl":{...}}'
         subject_ids:
           type: array
           items:
@@ -2797,9 +3066,14 @@ components:
           description: Envoyer en multipart comme subject_ids=1&subject_ids=2 (QueryDict.getlist).
         answer_options:
           type: string
-          description: 'JSON string (liste) ex: [{"text":"A","is_correct":true},{"text":"B","is_correct":false}]'
+          minLength: 1
+          description: 'JSON string (liste) ex: [{"is_correct": true, "sort_order":
+            1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}},
+            {"is_correct": false, "sort_order": 2, "translations": {"fr": {"content":
+            "B"}, "nl": {"content": "B"}}}]'
         media:
           type: string
+          minLength: 1
           description: 'JSON string (liste) ex: [{"kind":"external","external_url":"https://...",
             "sort_order":1}]'
         media_files:
@@ -2809,6 +3083,74 @@ components:
             format: binary
           description: 'Envoyer en multipart avec la même clé répétée: media_files=<file1>,
             media_files=<file2>, ...'
+      required:
+      - translations
+    QuestionRead:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        domain:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        explanation:
+          type: string
+          readOnly: true
+        allow_multiple_correct:
+          type: boolean
+          readOnly: true
+          title: Plusieurs bonnes réponses ?
+        active:
+          type: boolean
+          readOnly: true
+        is_mode_practice:
+          type: boolean
+          readOnly: true
+          title: Pour s'exercer
+        is_mode_exam:
+          type: boolean
+          readOnly: true
+          title: Pour les examens
+        subjects:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubjectRead'
+          readOnly: true
+        answer_options:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionAnswerOptionRead'
+          readOnly: true
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionMedia'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - active
+      - allow_multiple_correct
+      - answer_options
+      - created_at
+      - description
+      - domain
+      - explanation
+      - id
+      - is_mode_exam
+      - is_mode_practice
+      - media
+      - subjects
+      - title
     Quiz:
       type: object
       description: Représente une session de quiz (Quiz).
@@ -2816,6 +3158,9 @@ components:
         id:
           type: integer
           readOnly: true
+        domain:
+          type: integer
+          nullable: true
         quiz_template:
           type: integer
         quiz_template_title:
@@ -2876,11 +3221,18 @@ components:
           format: double
           nullable: true
           readOnly: true
+        with_duration:
+          type: boolean
+          readOnly: true
+        duration:
+          type: integer
+          readOnly: true
       required:
       - answers
       - can_answer
       - correct_answers
       - created_at
+      - duration
       - earned_score
       - id
       - max_questions
@@ -2891,6 +3243,7 @@ components:
       - quiz_template_title
       - total_answers
       - user
+      - with_duration
     QuizQuestion:
       type: object
       description: |-
@@ -2907,9 +3260,6 @@ components:
           allOf:
           - $ref: '#/components/schemas/QuestionInQuizQuestion'
           readOnly: true
-        question_id:
-          type: integer
-          writeOnly: true
         sort_order:
           type: integer
           maximum: 9223372036854775807
@@ -2925,7 +3275,6 @@ components:
       required:
       - id
       - question
-      - question_id
       - quiz
     QuizQuestionAnswer:
       type: object
@@ -2965,7 +3314,7 @@ components:
       - quiz
       - quizquestion_id
       - selected_options
-    QuizQuestionAnswerWrite:
+    QuizQuestionAnswerWriteRequest:
       type: object
       properties:
         question_id:
@@ -3003,12 +3352,46 @@ components:
       required:
       - id
       - question
+    QuizQuestionRequest:
+      type: object
+      description: |-
+        Représente une question incluse dans un template de quiz.
+        On expose quelques infos de la Question en read-only.
+      properties:
+        question_id:
+          type: integer
+          writeOnly: true
+        sort_order:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          default: 0
+        weight:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Poids de la question dans le score.
+      required:
+      - question_id
     QuizQuestionWrite:
       type: object
       properties:
-        id:
+        sort_order:
           type: integer
-          readOnly: true
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        weight:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Poids de la question dans le score.
+    QuizQuestionWriteRequest:
+      type: object
+      properties:
         question_id:
           type: integer
           writeOnly: true
@@ -3024,8 +3407,28 @@ components:
           format: int64
           description: Poids de la question dans le score.
       required:
-      - id
       - question_id
+    QuizRequest:
+      type: object
+      description: Représente une session de quiz (Quiz).
+      properties:
+        domain:
+          type: integer
+          nullable: true
+        quiz_template:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        active:
+          type: boolean
+      required:
+      - quiz_template
     QuizSimple:
       type: object
       properties:
@@ -3048,6 +3451,9 @@ components:
         id:
           type: integer
           readOnly: true
+        domain:
+          type: integer
+          nullable: true
         title:
           type: string
           title: Titre du quiz
@@ -3145,7 +3551,96 @@ components:
       - quiz_questions
       - slug
       - title
-    Subject:
+    QuizTemplateRequest:
+      type: object
+      description: |-
+        Serializer principal pour QuizTemplate (usage admin).
+        - lecture : inclut les QuizQuestion avec la Question associée
+        - écriture : tu peux rester simple et gérer les QuizQuestion via des endpoints dédiés.
+      properties:
+        domain:
+          type: integer
+          nullable: true
+        title:
+          type: string
+          minLength: 1
+          title: Titre du quiz
+          maxLength: 200
+        mode:
+          $ref: '#/components/schemas/ModeEnum'
+        description:
+          type: string
+        max_questions:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Nombre de questions dans le quiz
+          description: Nombre de questions à poser parmi le pool lié.
+        permanent:
+          type: boolean
+          title: Permanent ?
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        with_duration:
+          type: boolean
+          title: Avec Timer ?
+        duration:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: Temps (en minutes)
+        active:
+          type: boolean
+          title: Actif ?
+        result_visibility:
+          allOf:
+          - $ref: '#/components/schemas/VisibilityEnum'
+          title: Visibilité du résultat global
+          description: |-
+            Quand le score global du quiz peut être affiché à l'utilisateur.
+
+            * `immediate` - Immédiat
+            * `scheduled` - À partir d'une date
+            * `never` - Jamais
+        result_available_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: Résultat global visible à partir de
+          description: Utilisé uniquement si la visibilité est 'À partir d'une date'.
+        detail_visibility:
+          allOf:
+          - $ref: '#/components/schemas/VisibilityEnum'
+          title: Visibilité du détail des réponses
+          description: |-
+            Quand les réponses détaillées (réponses de l'utilisateur et bonnes réponses) peuvent être affichées.
+
+            * `immediate` - Immédiat
+            * `scheduled` - À partir d'une date
+            * `never` - Jamais
+        detail_available_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: Détail visible à partir de
+          description: Utilisé uniquement si la visibilité est 'À partir d'une date'.
+      required:
+      - title
+    SetCurrentDomainRequest:
+      type: object
+      properties:
+        domain_id:
+          type: integer
+          nullable: true
+    SubjectDetail:
       type: object
       properties:
         id:
@@ -3153,25 +3648,58 @@ components:
           readOnly: true
         name:
           type: string
-          title: Nom
-          maxLength: 120
+          readOnly: true
         description:
           type: string
+          readOnly: true
+        domain:
+          type: integer
+          nullable: true
+        questions:
+          type: string
+          readOnly: true
+      required:
+      - description
+      - id
+      - name
+      - questions
+    SubjectRead:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
         domain:
           type: integer
           nullable: true
       required:
+      - description
       - id
       - name
+    SubjectWriteRequest:
+      type: object
+      properties:
+        translations:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: {}
+          writeOnly: true
+          description: 'Ex: {"fr":{"name":"Math","description":""},"nl":{"name":"Wiskunde","description":""}}'
+        domain:
+          type: integer
+          nullable: true
+      required:
+      - translations
     TokenObtainPair:
       type: object
       properties:
-        username:
-          type: string
-          writeOnly: true
-        password:
-          type: string
-          writeOnly: true
         access:
           type: string
           readOnly: true
@@ -3180,8 +3708,20 @@ components:
           readOnly: true
       required:
       - access
-      - password
       - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
       - username
     TokenRefresh:
       type: object
@@ -3189,11 +3729,16 @@ components:
         access:
           type: string
           readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
         refresh:
           type: string
           writeOnly: true
+          minLength: 1
       required:
-      - access
       - refresh
     VisibilityEnum:
       enum:

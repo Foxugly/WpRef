@@ -5,6 +5,7 @@ import {SubjectService} from '../../../services/subject/subject';
 import {Editor} from 'primeng/editor';
 import {InputTextModule} from 'primeng/inputtext';
 import {Button} from 'primeng/button';
+import {SubjectCreateRequestParams, SubjectWriteRequestDto} from '../../../api/generated';
 
 @Component({
   standalone: true,
@@ -32,8 +33,8 @@ export class SubjectCreate {
       this.form.markAllAsTouched();
       return;
     }
-
-    this.subjectService.create(this.form.value).subscribe({
+    const payload: SubjectCreateRequestParams = {subjectWriteRequestDto:this.form.value as SubjectWriteRequestDto};
+    this.subjectService.create(payload).subscribe({
       next: () => this.subjectService.goList(),
     });
   }

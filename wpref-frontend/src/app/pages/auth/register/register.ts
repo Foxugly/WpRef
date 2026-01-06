@@ -18,7 +18,7 @@ export class Register {
   isSubmitting = false;
   successMessage = '';
   errorMessage = '';
-  hide = true; // 👈 booléen simple
+  hide = true;
 
   constructor(
     private fb: FormBuilder,

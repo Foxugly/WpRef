@@ -1,11 +1,12 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Question, QuestionService} from '../../../services/question/question';
+import {QuestionService} from '../../../services/question/question';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {CommonModule} from '@angular/common';
 import {PaginatorModule} from 'primeng/paginator';
 import {TableModule} from 'primeng/table';
+import {QuestionReadDto} from '../../../api/generated';
 
 
 @Component({
@@ -16,7 +17,7 @@ import {TableModule} from 'primeng/table';
   styleUrl: './question-list.scss'
 })
 export class QuestionList implements OnInit {
-  questions = signal<Question[]>([]);
+  questions = signal<QuestionReadDto[]>([]);
   q = signal('');
   // 👉 ÉTAT DE PAGINATION
   first = 0;           // index de départ (offset)
@@ -31,7 +32,7 @@ export class QuestionList implements OnInit {
     this.questionService
       .list({search: this.q() || undefined})
       .subscribe({
-        next: (subs: Question[]) => {
+        next: (subs: QuestionReadDto[]) => {
           this.questions.set(subs);
           this.first = 0;
         },
@@ -48,7 +49,7 @@ export class QuestionList implements OnInit {
   }
 
   // 👉 QUESTIONS POUR LA PAGE COURANTE
-  get pagedQuestions(): Question[] {
+  get pagedQuestions(): QuestionReadDto[] {
     const all = this.questions() || [];
     return all.slice(this.first, this.first + this.rows);
   }

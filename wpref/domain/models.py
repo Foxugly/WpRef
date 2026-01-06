@@ -31,11 +31,10 @@ class Domain(TranslatableModel):
         related_name="owned_domains",
     )
 
-    # ✅ Le staff/gestionnaires du domaine
     staff = models.ManyToManyField(
         User,
         blank=True,
-        related_name="managed_domains",  # ✅ côté user : user.managed_domains.all()
+        related_name="managed_domains",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -2,6 +2,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models.deletion import ProtectedError
 from django.test import TestCase
+from django.utils.translation import activate
 
 from domain.models import Domain
 from subject.models import Subject
@@ -64,18 +65,33 @@ class SubjectModelTestCase(TestCase):
         self.assertEqual(s2.translations.count(), 0)
         self.assertEqual(str(s2), f"Subject#{s2.pk}")
 
-    def test_safe_translation_getter_any_language(self):
+    def test_safe_translation_getter_any_language_returns_one_available_translation(self):
         s = Subject.objects.create()
+
+        s.set_current_language("fr")
+        s.name = "Mathématiques"
+        s.description = ""
+        s.save()
 
         s.set_current_language("nl")
         s.name = "Wiskunde"
         s.description = ""
         s.save()
 
+        # Force une langue courante qui n'a PAS de traduction sur l'objet
+        activate("en")
+
+        # Recharge pour éviter le cache parler
         s2 = Subject.objects.get(pk=s.pk)
 
-        # même si la langue courante n'a pas de traduction, any_language=True doit trouver quelque chose
-        self.assertEqual(s2.safe_translation_getter("name", any_language=True), "Wiskunde")
+        self.assertIn(
+            s2.safe_translation_getter("name", any_language=True),
+            {"Mathématiques", "Wiskunde"},
+        )
+
+        # Et test “strict” par langue
+        self.assertEqual(s2.safe_translation_getter("name", language_code="nl"), "Wiskunde")
+        self.assertEqual(s2.safe_translation_getter("name", language_code="fr"), "Mathématiques")
 
     def test_ordering_is_by_minus_pk(self):
         s1 = Subject.objects.create()

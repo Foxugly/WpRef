@@ -1,10 +1,18 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {QuizService, QuizSession} from '../../../services/quiz/quiz';
-import {Question, QuestionService} from '../../../services/question/question';
+import {QuizService} from '../../../services/quiz/quiz';
+import {QuestionService} from '../../../services/question/question';
 import {UserService} from '../../../services/user/user';
 import {AnswerPayload, QuizQuestionComponent} from '../../../components/quiz-question/quiz-question';
 import {QuizNav, QuizNavItem} from '../../../components/quiz-nav/quiz-nav';
+import {
+  QuestionReadDto,
+  QuizDto,
+  QuizQuestionAnswerDto,
+  QuizQuestionAnswerWriteRequestDto,
+  QuizQuestionReadDto
+} from '../../../api/generated';
+import {HttpResponse} from '@angular/common/http';
 
 @Component({
   selector: 'app-quiz-question-view',
@@ -21,7 +29,7 @@ export class QuizQuestionView implements OnInit {
   index: number = 1;
   loading = signal(false);
   error = signal<string | null>(null);
-  quizSession = signal<QuizSession | null>(null);
+  quizSession = signal<QuizDto | null>(null);
   quizNavItem = signal<QuizNavItem | null>(null);
   quizNavItems = signal<QuizNavItem[]>([]);
   protected showCorrect: boolean = false;
@@ -44,7 +52,12 @@ export class QuizQuestionView implements OnInit {
    * Appelé par le composant enfant quand l'utilisateur clique sur "Suivante"
    */
   onNextQuestion(payload: AnswerPayload): void {
-    this.saveAnswer(payload, () => {
+    const qqawr: QuizQuestionAnswerWriteRequestDto = {
+      question_id: payload.questionId,
+      question_order: payload.index,
+      selected_options: payload.selectedOptionIds,
+    };
+    this.saveAnswer(qqawr, () => {
       this.goQuestionNext(this.index);
     });
   }
@@ -53,7 +66,12 @@ export class QuizQuestionView implements OnInit {
    * Appelé par le composant enfant quand l'utilisateur clique sur "Précédente"
    */
   onPreviousQuestion(payload: AnswerPayload): void {
-    this.saveAnswer(payload, () => {
+    const qqawr: QuizQuestionAnswerWriteRequestDto = {
+      question_id: payload.questionId,
+      question_order: payload.index,
+      selected_options: payload.selectedOptionIds,
+    };
+    this.saveAnswer(qqawr, () => {
       this.goQuestionPrev(this.index);
     });
   }
@@ -119,23 +137,26 @@ export class QuizQuestionView implements OnInit {
     this.quizNavItem.set(item);
   }
 
-  private saveAnswer(payload: AnswerPayload, afterSave?: () => void): void {
+  private saveAnswer(payload: QuizQuestionAnswerWriteRequestDto, afterSave?: () => void): void {
     // À adapter au nom réel de ta méthode d'API :
     // ex: this.quizService.saveAnswer(this.quiz_id, payload)
+    // @ts-ignore
     this.quizService.saveAnswer(this.quiz_id, payload).subscribe({
-      next: (response) => {
+      next: (resp: HttpResponse<QuizQuestionAnswerDto>): void => {
         // on marque la question comme répondue
-        if (response.status === 200 || response.status === 201) {
-          this.markAnswered(payload.index);
+        if (resp.status === 200 || resp.status === 201) {
+          if (payload.question_order == null) {
+            return;
+          }
+          this.markAnswered(payload.question_order);
           // 2) stocker les réponses de l'utilisateur dans QuizNavItems
           this.quizNavItems.update(items =>
             items.map(item => {
-              if (item.index === payload.index) {
+              if (item.index === payload.question_order) {
                 return {
                   ...item,
                   answered: true,
-                  // ⚠️ adapter 'selectedOptionIds' au nom réel du champ dans payload si besoin
-                  selectedOptionIds: payload.selectedOptionIds ?? [],
+                  selectedOptionIds: payload.selected_options ?? [],
                 };
               }
               return item;
@@ -144,13 +165,13 @@ export class QuizQuestionView implements OnInit {
 
           // 3) garder quizNavItem courant en phase
           this.quizNavItem.update(current => {
-            if (!current || current.index !== payload.index) {
+            if (!current || current.index !== payload.question_order) {
               return current;
             }
             return {
               ...current,
               answered: true,
-              selectedOptionIds: payload.selectedOptionIds ?? [],
+              selectedOptionIds: payload.selected_options ?? [],
             };
           });
         }
@@ -158,9 +179,8 @@ export class QuizQuestionView implements OnInit {
           afterSave();
         }
       },
-      error: (err) => {
+      error: (err: any): void => {
         console.error('Erreur lors de la sauvegarde de la réponse', err);
-        // tu peux afficher un toast ou mettre un message dans this.error
       }
     });
   }
@@ -175,13 +195,10 @@ export class QuizQuestionView implements OnInit {
 
     items.forEach(item => {
       this.quizService.getAnswer(quizId, item.index).subscribe({
-        next: (attempt) => {
-          // attempt.options vient de QuizAttemptDetailView (backend)
-          console.log("attempt");
-          console.log(attempt);
-          const selectedIds = attempt.options
-            .filter(o => o.is_selected)
-            .map(o => o.id);
+        next: (answer: QuizQuestionAnswerDto) => {
+          console.log("answer");
+          console.log(answer);
+          const selectedIds = answer.selected_options;
 
           if (selectedIds.length === 0) {
             // rien de coché pour cette question → on ne touche pas
@@ -224,14 +241,15 @@ export class QuizQuestionView implements OnInit {
   }
 
 
-  private buildQuestionNavItems(questions: Question[]): void {
+  private buildQuestionNavItems(questions: QuizQuestionReadDto[]): void {
     console.log("buildQuestionNavItems");
-    const navItems: QuizNavItem[] = questions.map((q, idx) => ({
-      index: q.index,
-      id: q.id,
+    // @ts-ignore
+    const navItems: QuizNavItem[] = questions.map((qq: QuizQuestionRead, idx: number) => ({
+      index: qq.sort_order,
+      id: qq.id,
       answered: false,
       flagged: false,
-      question: q,
+      question: qq.question,
       selectedOptionIds: [],
     }));
 
@@ -241,13 +259,13 @@ export class QuizQuestionView implements OnInit {
   private loadQuestion(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.quizService.retrieveSession(this.quiz_id).subscribe({
-      next: (session) => {
+    this.quizService.retrieveQuiz(this.quiz_id).subscribe({
+      next: (session: QuizDto): void => {
         this.quizSession.set(session);
 
         // Récupérer l'index de la question dans la session
-        const index = this.question_id - 1;
-        this.buildQuestionNavItems(session.questions);
+        const index: number = this.question_id - 1;
+        this.buildQuestionNavItems(session.questions); // TODO envoyer les questions
         this.hydrateNavItemsFromBackend();
         if (index < 0 || index >= this.quizNavItems().length) {
           console.error('Index de question invalide', index);

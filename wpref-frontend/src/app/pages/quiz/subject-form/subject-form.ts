@@ -9,8 +9,9 @@ import {CheckboxModule} from 'primeng/checkbox';
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
 
-import {Subject, SubjectService} from '../../../services/subject/subject';
+import {SubjectService} from '../../../services/subject/subject';
 import {QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
+import {SubjectReadDto} from '../../../api/generated';
 
 @Component({
   standalone: true,
@@ -28,7 +29,7 @@ export class QuizSubjectForm implements OnInit {
 
   @Output() generate = new EventEmitter<QuizSubjectCreatePayload>();
   @Output() subjectsChange = new EventEmitter<number[]>();
-  subjects = signal<Subject[]>([]);
+  subjects = signal<SubjectReadDto[]>([]);
   private subjectService = inject(SubjectService);
   private fb = inject(FormBuilder);
   // Formulaire principal
@@ -93,7 +94,7 @@ export class QuizSubjectForm implements OnInit {
   private loadSubjects(): void {
     this.loading.set(true);
     this.subjectService.list().subscribe({
-      next: (subs: Subject[]) => {
+      next: (subs: SubjectReadDto[]) => {
         this.subjects.set(subs);
         this.loading.set(false);
       },

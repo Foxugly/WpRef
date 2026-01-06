@@ -35,19 +35,9 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
         source="question",  # remplit le champ modèle "question"
         write_only=True,
     )
-    #
-    # question_title = serializers.CharField(source="question.title", read_only=True)
 
     question = QuestionInQuizQuestionSerializer(read_only=True)
 
-    def __init__(self, *args, **kwargs):
-        show_correct = kwargs.pop("show_correct", False)
-        super().__init__(*args, **kwargs)
-        # transmettre le paramètre au serializer imbriqué
-        self.fields["question"] = QuestionInQuizQuestionSerializer(
-            read_only=True,
-            show_correct=show_correct,
-        )
 
     class Meta:
         model = QuizQuestion
@@ -112,7 +102,7 @@ class QuizQuestionWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = QuizQuestion
-        fields = ["id", "question_id", "sort_order", "weight"]
+        fields = ["question_id", "sort_order", "weight"]
 
     def validate(self, attrs):
         quiz_template = self.context.get("quiz_template")
@@ -165,16 +155,6 @@ class QuizQuestionReadSerializer(serializers.ModelSerializer):
         model = QuizQuestion
         fields = ["id", "question", "sort_order", "weight"]
 
-    def __init__(self, *args, **kwargs):
-        show_correct = kwargs.pop("show_correct", False)
-        super().__init__(*args, **kwargs)
-        # transmettre le paramètre au serializer imbriqué
-        self.fields["question"] = QuestionInQuizQuestionSerializer(
-            read_only=True,
-            show_correct=show_correct,
-        )
-
-
 class QuizSerializer(serializers.ModelSerializer):
     """
     Représente une session de quiz (Quiz).
@@ -185,11 +165,12 @@ class QuizSerializer(serializers.ModelSerializer):
     can_answer = serializers.SerializerMethodField()
     questions = serializers.SerializerMethodField()
     answers = QuizQuestionAnswerSerializer(many=True, read_only=True)
-
     total_answers = serializers.SerializerMethodField()
     correct_answers = serializers.SerializerMethodField()
     earned_score = serializers.SerializerMethodField()
     max_score = serializers.SerializerMethodField()
+    with_duration = serializers.BooleanField(source="quiz_template.with_duration", read_only=True)
+    duration = serializers.IntegerField(source="quiz_template.duration", read_only=True)
 
     class Meta:
         model = Quiz
@@ -211,7 +192,9 @@ class QuizSerializer(serializers.ModelSerializer):
             "total_answers",
             "correct_answers",
             "earned_score",
-            "max_score"
+            "max_score",
+            "with_duration",
+            "duration",
         ]
         read_only_fields = ["created_at", "user", "can_answer"]
 
@@ -229,7 +212,7 @@ class QuizSerializer(serializers.ModelSerializer):
         return self._is_admin() or bool(quiz.quiz_template.can_show_result())
 
     @extend_schema_field(QuizQuestionReadSerializer(many=True))
-    def get_questions(self, obj):
+    def get_questions(self, obj) -> serializers.ModelSerializer:
         qt = obj.quiz_template
         show_details = self._can_show_details(obj)
         qs = (
@@ -246,25 +229,25 @@ class QuizSerializer(serializers.ModelSerializer):
         return obj._answers_cache
 
     @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_total_answers(self, obj):
+    def get_total_answers(self, obj)->int:
         if not self._can_show_result(obj):
             return None
         return self._answers_qs(obj).count()
 
     @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_correct_answers(self, obj):
+    def get_correct_answers(self, obj)-> int:
         if not self._can_show_result(obj):
             return None
         return self._answers_qs(obj).filter(is_correct=True).count()
 
     @extend_schema_field(serializers.FloatField(allow_null=True))
-    def get_earned_score(self, obj):
+    def get_earned_score(self, obj) -> float:
         if not self._can_show_result(obj):
             return None
         return sum(a.earned_score for a in self._answers_qs(obj))
 
     @extend_schema_field(serializers.FloatField(allow_null=True))
-    def get_max_score(self, obj):
+    def get_max_score(self, obj) -> int:
         if not self._can_show_result(obj):
             return None
         return sum(a.max_score for a in self._answers_qs(obj))

@@ -1,24 +1,22 @@
 import {Injectable} from '@angular/core';
 import {Observable, switchMap, tap} from 'rxjs';
 
-import {TokenApi} from '../../api/generated/api/token.service';
-import {AuthApi} from '../../api/generated/api/auth.service';
-import {UserApi} from '../../api/generated/api/user.service';
-
-import {TokenObtainPairDto} from '../../api/generated/model/token-obtain-pair';
-import {TokenRefreshDto} from '../../api/generated/model/token-refresh';
-import {CustomUserCreateDto} from '../../api/generated/model/custom-user-create';
-import {CustomUserReadDto} from '../../api/generated/model/custom-user-read';
-
-import {
-  MeDto,
-  PasswordChangeDto,
-  PasswordResetConfirmDto,
-  PasswordResetOKDto,
-  PasswordResetRequestDto
-} from '../../api/generated';
 import {UserService} from '../user/user';
-
+import {
+  AuthApi,
+  CustomUserCreateRequestDto,
+  CustomUserReadDto,
+  PasswordChangeRequestDto,
+  PasswordResetConfirmRequestDto,
+  PasswordResetOKDto,
+  PasswordResetRequestRequestDto,
+  TokenApi,
+  TokenObtainPairDto,
+  TokenObtainPairRequestDto,
+  TokenRefreshDto,
+  TokenRefreshRequestDto,
+  UserApi
+} from '../../api/generated';
 
 @Injectable({providedIn: 'root'})
 export class AuthService {
@@ -38,7 +36,6 @@ export class AuthService {
     private authApi: AuthApi,
     private userApi: UserApi,
     private userService: UserService
-    //private userService: UserService,
   ) {
     const storedAccess =
       localStorage.getItem(this.ACCESS_KEY) ??
@@ -59,21 +56,17 @@ export class AuthService {
     return this.isLoggedIn();
   }
 
-  /**
-   * POST /api/token/
-   * Signature générée : tokenCreate({ tokenObtainPairDto })
-   */
-  getToken(username: string, password: string): Observable<TokenObtainPairDto> {
-    const tokenObtainPairDto = {username, password} as TokenObtainPairDto;
-    return this.tokenApi.tokenCreate({tokenObtainPairDto});
+  getToken(payload: TokenObtainPairRequestDto): Observable<TokenObtainPairDto> {
+    console.log("getToken");
+    return this.tokenApi.tokenCreate({tokenObtainPairRequestDto: payload});
   }
 
-  /**
-   * Login = tokenCreate -> store -> userService.getMe()
-   */
-  login(username: string, password: string, remember = false): Observable<MeDto> {
-    return this.getToken(username, password).pipe(
-      tap((dto) => {
+
+  login(username: string, password: string, remember = false): Observable<CustomUserReadDto> {
+    console.log("login");
+    const payload: TokenObtainPairRequestDto = {username, password};
+    return this.getToken(payload).pipe(
+      tap((dto: TokenObtainPairDto) => {
         this.setTokens(dto.access, dto.refresh, remember);
         this.setUsername(username, remember);
       }),
@@ -87,12 +80,12 @@ export class AuthService {
    * Signature générée : tokenRefreshCreate({ tokenRefreshDto })
    */
   refreshTokens(): Observable<TokenRefreshDto> | null {
-    const refresh = this.getRefreshToken();
+    const refresh: string | null = this.getRefreshToken();
     if (!refresh) return null;
-
-    const tokenRefreshDto = {refresh} as TokenRefreshDto;
-
-    return this.tokenApi.tokenRefreshCreate({tokenRefreshDto}).pipe(
+    const payload: TokenRefreshRequestDto = {refresh};
+    return this.tokenApi.tokenRefreshCreate({
+      tokenRefreshRequestDto: payload
+    }).pipe(
       tap((dto) => {
         const remember = this.rememberEnabled();
         this.setTokens(dto.access, refresh, remember);
@@ -104,48 +97,24 @@ export class AuthService {
    * POST /api/user/  (création ouverte)
    * Signature générée : userCreate({ customUserCreateDto })
    */
-  register(payload: CustomUserCreateDto): Observable<CustomUserReadDto> {
-    const customUserCreateDto: CustomUserCreateDto = {
-      username: payload.username,
-      email: payload.email,
-      first_name: payload.first_name,
-      last_name: payload.last_name,
-      password: payload.password,
-      // is_staff/is_superuser/is_active: non envoyés
-    };
-
-    return this.userApi.userCreate({customUserCreateDto});
+  register(payload: CustomUserCreateRequestDto): Observable<CustomUserReadDto> {
+    return this.userApi.userCreate({customUserCreateRequestDto: payload});
   }
 
   // -------------------------
   // OpenAPI-aligned calls
   // -------------------------
 
-  /**
-   * POST /api/user/password/reset/
-   * Signature générée : userPasswordResetCreate({ passwordResetRequestDto })
-   */
-  requestPasswordReset(email: string): Observable<any> {
-    const passwordResetRequestDto: PasswordResetRequestDto = {email};
-    return this.authApi.userPasswordResetCreate({passwordResetRequestDto});
+  requestPasswordReset(payload: PasswordResetRequestRequestDto): Observable<PasswordResetOKDto> {
+    return this.authApi.userPasswordResetCreate({passwordResetRequestRequestDto: payload});
   }
 
-  /**
-   * POST /api/user/password/reset/confirm/
-   */
-  confirmPasswordReset(dto: PasswordResetConfirmDto): Observable<PasswordResetOKDto> {
-    return this.authApi.userPasswordResetConfirmCreate({
-      passwordResetConfirmDto: dto,
-    });
+  confirmPasswordReset(payload: PasswordResetConfirmRequestDto): Observable<PasswordResetOKDto> {
+    return this.authApi.userPasswordResetConfirmCreate({passwordResetConfirmRequestDto: payload});
   }
 
-  /**
-   * POST /api/user/password/change/
-   */
-  changePassword(payload: PasswordChangeDto): Observable<any> {
-    return this.authApi.userPasswordChangeCreate({
-      passwordChangeDto: payload,
-    });
+  changePassword(payload: PasswordChangeRequestDto): Observable<PasswordResetOKDto> {
+    return this.authApi.userPasswordChangeCreate({passwordChangeRequestDto: payload});
   }
 
   // -------------------------

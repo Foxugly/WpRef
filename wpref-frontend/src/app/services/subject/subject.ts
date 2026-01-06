@@ -2,16 +2,13 @@ import {Injectable} from '@angular/core';
 import {Router} from '@angular/router';
 import {map, Observable} from 'rxjs';
 
-import {
-  SubjectApi, SubjectCreateRequestParams, SubjectPartialUpdateRequestParams,
-  SubjectUpdateRequestParams
-} from '../../api/generated/api/subject.service';
-import { SubjectDto } from '../../api/generated/model/subject';
 import {ROUTES} from '../../app.routes-paths'
-
-export type SubjectWritePayload = Pick<SubjectDto, 'name' | 'slug' | 'description'>;
-type SubjectUpdateBody = Omit<SubjectUpdateRequestParams, 'subjectId'>;
-type SubjectPartialBody = Omit<SubjectPartialUpdateRequestParams, 'subjectId'>;
+import {
+  PatchedSubjectWriteRequestDto, SubjectCreateRequestParams, SubjectDetailDto, SubjectReadDto,
+  SubjectWriteRequestDto
+} from '../../api/generated';
+import{SubjectApi} from '../../api/generated';
+export type SubjectWritePayload = Pick<SubjectReadDto, 'name' | 'description'>;
 
 @Injectable({
   providedIn: 'root',
@@ -21,31 +18,32 @@ export class SubjectService {
   constructor(private api: SubjectApi, private router: Router) {
   }
 
-  list(params?: { search?: string }): Observable<SubjectDto[]> {
-    return this.api.subjectList({search: params?.search,});
+  list(params?: { name?: string; search?: string }): Observable<SubjectReadDto[]> {
+    return this.api.subjectList({name:params?.name, search:params?.search});
   }
 
-  retrieve(subjectId: number): Observable<SubjectDto> {
-    return this.api.subjectRetrieve({subjectId});
+  retrieve(subjectId: number): Observable<SubjectReadDto> {
+    return this.api.subjectRetrieve({ subjectId: subjectId });
   }
 
-  create(payload: SubjectWritePayload): Observable<SubjectDto> {
-    const req: SubjectCreateRequestParams = { subjectDto: payload as any };
-    return this.api.subjectCreate(req);
+  detail(subjectId: number): Observable<SubjectDetailDto> {
+    return this.api.subjectDetailsRetrieve({ subjectId: subjectId });
   }
 
-  update(subjectId: number, payload: SubjectWritePayload): Observable<SubjectDto> {
-    const body: SubjectUpdateBody = { subjectDto: payload as any };
-    return this.api.subjectUpdate({ subjectId, ...body });
+  create(payload: SubjectCreateRequestParams): Observable<SubjectReadDto> {
+    return this.api.subjectCreate(payload);
   }
 
-  updatePartial(subjectId: number, payload: SubjectPartialBody): Observable<SubjectDto> {
-    const body: SubjectPartialBody = payload;
-    return this.api.subjectPartialUpdate({ subjectId, ...body });
+  update(subjectId: number, payload: SubjectWriteRequestDto): Observable<SubjectReadDto> {
+    return this.api.subjectUpdate({subjectId:subjectId, subjectWriteRequestDto:payload});
+  }
+
+  updatePartial(subjectId: number, payload: PatchedSubjectWriteRequestDto): Observable<SubjectReadDto> {
+    return this.api.subjectPartialUpdate({subjectId:subjectId, patchedSubjectWriteRequestDto:payload});
   }
 
   delete(subjectId: number): Observable<void> {
-    return this.api.subjectDestroy({ subjectId }).pipe(map(() => void 0));
+    return this.api.subjectDestroy({subjectId:subjectId}).pipe(map(() => void 0));
   }
 
   goQuestionNew(): void {

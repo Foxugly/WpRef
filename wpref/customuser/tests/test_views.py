@@ -38,6 +38,12 @@ class UserViewsTests(APITestCase):
             username="admin", password="adminpass123!", email="admin@example.com", is_superuser=True, is_staff=True
         )
 
+    def _as_list(self, data):
+        # support pagination DRF
+        if isinstance(data, dict) and "results" in data:
+            return data["results"]
+        return data
+
     # ------------------------------------------------------------------
     # CustomUserViewSet
     # ------------------------------------------------------------------
@@ -56,7 +62,7 @@ class UserViewsTests(APITestCase):
         self.client.force_authenticate(user=self.staff)
         res = self.client.get(self.USER_LIST_CREATE_URL)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(res.data, list)
+        self.assertIsInstance(self._as_list(res.data), list)
 
     def test_user_create_is_public_and_hashes_password(self):
         payload = {

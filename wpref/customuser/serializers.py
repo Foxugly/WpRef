@@ -19,11 +19,35 @@ PasswordResetOKSerializer = inline_serializer(
 
 
 class CustomUserReadSerializer(serializers.ModelSerializer):
+    current_domain_title = serializers.CharField(source="current_domain.title", read_only=True)
+
+    owned_domain_ids = serializers.SerializerMethodField()
+    managed_domain_ids = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name", "is_staff", "language", "is_superuser", "is_active"]
-        read_only_fields = ["id", "is_staff", "is_superuser", "is_active"]
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "language",
+            "is_superuser",
+            "is_staff",
+            "is_active",
+            "current_domain",
+            "current_domain_title",
+            "owned_domain_ids",
+            "managed_domain_ids",
+        ]
+        read_only_fields = ["id", "username", "is_staff", "is_superuser", "is_active"]
 
+    def get_owned_domain_ids(self, obj) -> List[int]:
+        return list(obj.owned_domains.values_list("id", flat=True))
+
+    def get_managed_domain_ids(self, obj) -> List[int]:
+        return list(obj.managed_domains.values_list("id", flat=True))
 
 class CustomUserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -105,46 +129,6 @@ class PasswordChangeSerializer(serializers.Serializer):
         validate_password(value)
         return value
 
-
-class MeSerializer(serializers.ModelSerializer):
-    current_domain_title = serializers.CharField(source="current_domain.title", read_only=True)
-
-    owned_domain_ids = serializers.SerializerMethodField()
-    managed_domain_ids = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = [
-            "id",
-            "username",
-            "email",
-            "first_name",
-            "last_name",
-            "language",
-            "is_superuser",
-            "is_staff",
-            "current_domain",  # ✅ id ou null
-            "current_domain_title",
-            "owned_domain_ids",
-            "managed_domain_ids",
-        ]
-        read_only_fields = ["id", "username"]
-
-    def get_owned_domain_ids(self, obj) -> List[int]:
-        return list(obj.owned_domains.values_list("id", flat=True))
-
-    def get_managed_domain_ids(self, obj) -> List[int]:
-        return list(obj.managed_domains.values_list("id", flat=True))
-
-class MeUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = [
-            "first_name",
-            "last_name",
-            "email",
-            "language",
-        ]
 
 class SetCurrentDomainSerializer(serializers.Serializer):
     domain_id = serializers.IntegerField(required=False, allow_null=True)

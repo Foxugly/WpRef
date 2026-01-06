@@ -1,10 +1,11 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {UserService} from '../../../services/user/user';
-import {QuizService, QuizSession} from '../../../services/quiz/quiz';
+import {QuizService} from '../../../services/quiz/quiz';
 import {Button} from 'primeng/button';
 import {CardModule} from 'primeng/card';
 import {DatePipe} from '@angular/common';
+import {CreateQuizInputRequestDto, QuizDto} from '../../../api/generated';
 
 @Component({
   selector: 'app-view',
@@ -20,7 +21,7 @@ export class QuizView implements OnInit {
   id!: number;
   loading = signal(false);
   error = signal<string | null>(null);
-  quizSession = signal<QuizSession | null>(null);
+  quizSession = signal<QuizDto | null>(null);
   private route = inject(ActivatedRoute);
   private quizService = inject(QuizService);
   private userService = inject(UserService);
@@ -40,7 +41,8 @@ export class QuizView implements OnInit {
   }
 
   goStart(): void {
-    this.quizService.goStart(this.id);
+    const payload: CreateQuizInputRequestDto = {quiz_template_id : this.id};
+    this.quizService.goStart(this.id, payload);
   }
 
   goQuestion(): void {
@@ -51,7 +53,7 @@ export class QuizView implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    this.quizService.retrieveSession(this.id).subscribe({
+    this.quizService.retrieveQuiz(this.id).subscribe({
       next: (q) => {
         this.quizSession.set(q);
         this.loading.set(false);

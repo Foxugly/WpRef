@@ -1,10 +1,12 @@
 import {Component} from '@angular/core';
 
-import {UserService} from '../../../services/user/user';
 import {InputTextModule} from 'primeng/inputtext';
 import {PasswordModule} from 'primeng/password';
 
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
+import {AuthService} from '../../../services/auth/auth';
+import {PasswordChangeRequestDto} from '../../../api/generated';
+
 
 @Component({
   selector: 'app-change-password',
@@ -22,7 +24,7 @@ export class ChangePassword {
 
   constructor(
     private fb: FormBuilder,
-    private userService: UserService
+    private authService: AuthService
   ) {
     this.form = this.fb.nonNullable.group(
       {
@@ -75,11 +77,10 @@ export class ChangePassword {
 
     // 🔴 AVANT : const { old_password, new_password1, new_password2 } = ...
     // ✅ MAINTENANT : on récupère les vrais noms des contrôles
-    const {old_password, new_password} = this.form.getRawValue();
+    const payload: PasswordChangeRequestDto = this.form.getRawValue();
 
 
-    this.userService.requestPasswordChange(
-      old_password, new_password).subscribe({
+    this.authService.changePassword(payload).subscribe({
       next: () => {
         this.isSubmitting = false;
         this.successMessage = 'Votre mot de passe a été modifié.';

@@ -13,7 +13,6 @@ LANG_CODES = {code for code, _ in settings.LANGUAGES}
 
 
 class DomainReadSerializer(serializers.ModelSerializer):
-    # Parler: name/description ne sont pas des champs DB -> SerializerMethodField
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
     allowed_languages = LanguageReadSerializer(many=True, read_only=True)
@@ -36,6 +35,9 @@ class DomainReadSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+        extra_kwargs = {
+            "owner": {"read_only": True}
+        }
 
     def get_name(self, obj: Domain) -> str:
         return obj.safe_translation_getter("name", any_language=True) or ""
@@ -48,42 +50,19 @@ class DomainReadSerializer(serializers.ModelSerializer):
 
 
 class DomainWriteSerializer(serializers.ModelSerializer):
-    """
-    Ecriture:
-    - translations: {"fr": {"name": "...", "description": "..."}, "nl": {...}}
-    - staff_ids: [1, 2, 3]
-    - allowed_language_codes: ["fr", "nl"]
-    """
-    allowed_language_codes = serializers.ListField(
-        child=serializers.CharField(),
-        write_only=True,
-        required=False,
-    )
-
-    translations = serializers.DictField(
-        child=serializers.DictField(),
-        write_only=True,
-        required=True,
-        help_text='Ex: {"fr":{"name":"...","description":""},"nl":{"name":"...","description":""}}',
-    )
-
-    staff_ids = serializers.PrimaryKeyRelatedField(
-        source="staff",
-        queryset=User.objects.all(),
-        many=True,
-        required=False,
-    )
+    allowed_languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, required=True, )
+    translations = serializers.DictField(child=serializers.DictField(),write_only=True,required=True,)
+    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(),many=True,required=True,)
 
     class Meta:
         model = Domain
         fields = [
-            "id",
             "translations",
-            "allowed_language_codes",
+            "allowed_languages",
             "active",
-            "staff_ids",
+            "staff",
         ]
-        read_only_fields = ["id"]
+        #read_only_fields = ["id"]
 
     # ---------------------------
     # helpers
@@ -98,21 +77,29 @@ class DomainWriteSerializer(serializers.ModelSerializer):
     # ---------------------------
     # validation
     # ---------------------------
-    def validate_allowed_language_codes(self, value):
-        value = value or []
-        codes = [(c or "").strip().lower() for c in value if (c or "").strip()]
-        invalid = [c for c in codes if c not in LANG_CODES]
-        if invalid:
-            raise serializers.ValidationError(f"Invalid language code(s): {', '.join(invalid)}")
-        # dédup ordre
-        seen = set()
-        uniq = []
-        for c in codes:
-            if c in seen:
+    def validate_allowed_languages(self, value):
+        if not value:
+            return value
+
+            # déduplication tout en gardant l'ordre
+        seen_ids = set()
+        unique_languages = []
+        for lang in value:
+            if lang.pk in seen_ids:
                 continue
-            seen.add(c)
-            uniq.append(c)
-        return uniq
+            seen_ids.add(lang.pk)
+            unique_languages.append(lang)
+
+        # validation métier : le code doit exister dans settings.LANGUAGES
+        valid_codes = {code for code, _ in settings.LANGUAGES}
+        invalid = [lang.code for lang in unique_languages if lang.code not in valid_codes]
+
+        if invalid:
+            raise serializers.ValidationError(
+                f"Invalid language code(s): {', '.join(sorted(invalid))}"
+            )
+
+        return unique_languages
 
     def validate(self, attrs):
         translations = attrs.get("translations")
@@ -168,3 +155,10 @@ class DomainWriteSerializer(serializers.ModelSerializer):
             self._apply_translations(instance, translations)
 
         return instance
+
+
+class DomainPartialSerializer(DomainWriteSerializer):
+    allowed_languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, required=False, )
+    translations = serializers.DictField(child=serializers.DictField(), write_only=True, required=False, )
+    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False, )
+    active = serializers.BooleanField(required=False)

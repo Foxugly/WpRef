@@ -23,7 +23,6 @@ from wpref.tools import ErrorDetailSerializer
 
 from .permissions import IsSelfOrStaffOrSuperuser, IsSelf
 from .serializers import *
-from customuser.serializers import SetCurrentDomainSerializer
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -81,24 +80,10 @@ User = get_user_model()
     # -------------------------
     me=extend_schema(
         tags=["User"],
-        summary="Récupérer mon profil",
+        summary="Récupérer et mettre à jour mon profil",
         description="Retourne le profil de l'utilisateur authentifié.",
         responses={
-            200: MeSerializer,
-            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
-            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
-        },
-    ),
-    me_update=extend_schema(
-        tags=["User"],
-        summary="Mettre à jour mon profil",
-        description=(
-            "Met à jour partiellement le profil de l'utilisateur connecté.\n\n"
-            "Champs typiquement autorisés : `first_name`, `last_name`, `email`, `language`."
-        ),
-        request=MeUpdateSerializer,
-        responses={
-            200: MeSerializer,
+            200: CustomUserReadSerializer,
             400: OpenApiResponse(response=ErrorDetailSerializer, description="Validation error"),
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
@@ -110,7 +95,7 @@ User = get_user_model()
         description="Met à jour `current_domain` sur l'utilisateur authentifié, puis renvoie le profil mis à jour.",
         request=SetCurrentDomainSerializer,
         responses={
-            200: MeSerializer,
+            200: CustomUserReadSerializer,
             400: OpenApiResponse(description="Validation error"),
             401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
@@ -124,6 +109,8 @@ class CustomUserViewSet(
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
+    lookup_field = "pk"
+    lookup_url_kwarg = "user_id"
     queryset = CustomUser.objects.all().order_by("id")
     lookup_value_regex = r"\d+"  # ✅ empêche 'me' d'être capturé comme pk
 
@@ -134,7 +121,7 @@ class CustomUserViewSet(
             return [IsAdminUser()]
         # retrieve/update/partial_update
         if self.action in ("me" , "set_current_domain"):
-            return [IsSelf]
+            return [IsSelf()]
         return [IsSelfOrStaffOrSuperuser()]
 
     def get_serializer_class(self):
@@ -142,18 +129,16 @@ class CustomUserViewSet(
             return CustomUserCreateSerializer
         if self.action in ["update", "partial_update"]:
             return CustomUserUpdateSerializer
-        if self.action in ["me", "set_current_domain"]:
-            return MeSerializer
         return CustomUserReadSerializer
 
-    @action(detail=False, methods=["get"], url_path="me")
+    @action(detail=False, methods=["get", "patch"], url_path="me")
     def me(self, request):
-        serializer = MeSerializer(request.user, context={"request": request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if request.method.lower() == "get":
+            serializer = CustomUserReadSerializer(request.user, context={"request": request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["patch"], url_path="me")
-    def me_update(self, request):
-        serializer = MeUpdateSerializer(
+        # PATCH
+        serializer = CustomUserReadSerializer(
             request.user,
             data=request.data,
             partial=True,
@@ -161,7 +146,7 @@ class CustomUserViewSet(
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(MeSerializer(request.user, context={"request": request}).data)
+        return Response(CustomUserReadSerializer(request.user, context={"request": request}).data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], url_path="me/current-domain")
     def set_current_domain(self, request):
@@ -170,12 +155,12 @@ class CustomUserViewSet(
         serializer.save()  # met à jour request.user.current_domain
 
         # renvoyer le profil à jour
-        out = MeSerializer(request.user, context={"request": request})
+        out = CustomUserReadSerializer(request.user, context={"request": request})
         return Response(out.data, status=status.HTTP_200_OK)
 
 
 # ---------------------------------------------------------------------
-# /api/users/<id>/quizzes/   (GET)
+# /api/users/<user_id>/quizzes/   (GET)
 # ---------------------------------------------------------------------
 
 @extend_schema_view(
@@ -188,11 +173,11 @@ class CustomUserViewSet(
         ),
         parameters=[
             OpenApiParameter(
-                name="pk",
+                name="user_id",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.PATH,
                 required=True,
-                description="ID utilisateur (pk).",
+                description="ID utilisateur.",
             )
         ],
         responses={
@@ -207,6 +192,8 @@ class UserQuizListView(GenericAPIView):
     permission_classes = [IsSelfOrStaffOrSuperuser]
     serializer_class = QuizSimpleSerializer
     queryset = CustomUser.objects.none()
+    lookup_field = "pk"
+    lookup_url_kwarg = "user_id"
 
     @extend_schema(
         operation_id="user_quiz_list",

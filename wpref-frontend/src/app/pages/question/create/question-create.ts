@@ -1,7 +1,7 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {QuestionCreatePayload, QuestionService} from '../../../services/question/question';
-import {Subject, SubjectService} from '../../../services/subject/subject';
+import {SubjectService} from '../../../services/subject/subject';
 import {Editor} from 'primeng/editor';
 import {CheckboxModule} from 'primeng/checkbox';
 import {InputTextModule} from 'primeng/inputtext';
@@ -10,6 +10,8 @@ import {ButtonModule} from 'primeng/button';
 import {MultiSelectModule} from 'primeng/multiselect';
 import {PanelModule} from 'primeng/panel';
 import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/media-selector/media-selector';
+import {QuestionCreateRequestParams, SubjectReadDto} from '../../../api/generated';
+
 
 @Component({
   standalone: true,
@@ -35,7 +37,7 @@ export class QuestionCreate implements OnInit {
   saving = signal(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
-  subjects = signal<Subject[]>([]);
+  subjects = signal<SubjectReadDto[]>([]);
   // Injections
   private fb = inject(FormBuilder);
   // Formulaire principal
@@ -138,8 +140,7 @@ export class QuestionCreate implements OnInit {
       return;
     }
     this.saving.set(true);
-    const raw = this.form.value as QuestionCreatePayload;
-    this.questionService.create(raw).subscribe({
+    this.questionService.create(this.form.value as QuestionCreateRequestParams).subscribe({
       next: () => {
         this.saving.set(false);
         this.success.set('Question créée avec succès.');
@@ -161,7 +162,7 @@ export class QuestionCreate implements OnInit {
 
   private loadSubjects(): void {
     this.subjectService.list().subscribe({
-      next: (subs: Subject[]) => this.subjects.set(subs),
+      next: (subs: SubjectReadDto[]) => this.subjects.set(subs),
       error: (err) => {
         console.error('Erreur chargement sujets', err);
       },

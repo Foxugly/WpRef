@@ -1,10 +1,11 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Subject, SubjectService} from '../../../services/subject/subject';
+import {SubjectService} from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {PaginatorModule} from 'primeng/paginator';
 import {TableModule} from 'primeng/table';
+import {SubjectReadDto} from '../../../api/generated';
 
 @Component({
   standalone: true,
@@ -16,7 +17,7 @@ import {TableModule} from 'primeng/table';
 export class SubjectList implements OnInit {
   private subjectService = inject(SubjectService);
 
-  subjects = signal<Subject[]>([]);
+  subjects = signal<SubjectReadDto[]>([]);
   q = signal('');
 
   // 📌 Pagination
@@ -31,7 +32,7 @@ export class SubjectList implements OnInit {
     this.subjectService
       .list({search: this.q() || undefined})
       .subscribe({
-        next: (subs: Subject[]) => {
+        next: (subs: SubjectReadDto[]) => {
           this.subjects.set(subs);
           this.first = 0;  // retour à la première page à chaque recherche
         },
@@ -48,7 +49,7 @@ export class SubjectList implements OnInit {
   }
 
   // Liste paginée pour la page courante
-  get pagedSubjects(): Subject[] {
+  get pagedSubjects(): SubjectReadDto[] {
     const all = this.subjects() || [];
     return all.slice(this.first, this.first + this.rows);
   }

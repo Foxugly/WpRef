@@ -1,13 +1,14 @@
 from django.db.models import Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, OpenApiParameter
-from rest_framework import viewsets, status
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from wpref.tools import MyModelViewSet
 
 from .models import Domain
 from .permissions import IsDomainOwnerOrStaff
-from .serializers import DomainReadSerializer, DomainWriteSerializer
+from .serializers import DomainReadSerializer, DomainWriteSerializer, DomainPartialSerializer
 
 
 @extend_schema_view(
@@ -25,7 +26,7 @@ from .serializers import DomainReadSerializer, DomainWriteSerializer
         tags=["Domain"],
         summary="Récupérer un domaine",
         description=(
-                "Retourne un domaine (par `id`).\n\n"
+                "Retourne un domaine (par `domain_id`).\n\n"
                 "⚠️ Si l'utilisateur n'a pas accès au domaine, l'API renvoie généralement **404** "
                 "(car `get_queryset()` ne retourne pas l'objet)."
         ),
@@ -35,7 +36,7 @@ from .serializers import DomainReadSerializer, DomainWriteSerializer
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.PATH,
                 required=True,
-                description="Identifiant du domaine (correspond à `<int:pk>` dans l'URL).",
+                description="Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).",
             ),
         ],
         responses={
@@ -74,7 +75,7 @@ from .serializers import DomainReadSerializer, DomainWriteSerializer
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.PATH,
                 required=True,
-                description="Identifiant du domaine (correspond à `<int:pk>` dans l'URL).",
+                description="Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).",
             ),
         ],
         responses={
@@ -93,14 +94,14 @@ from .serializers import DomainReadSerializer, DomainWriteSerializer
                 "- Réservé à : superuser / staff global / owner / staff du domaine.\n"
                 "- `owner` est **read-only** (ne peut pas être modifié via l'API)."
         ),
-        request=DomainWriteSerializer,
+        request=DomainPartialSerializer,
         parameters=[
             OpenApiParameter(
                 name="domain_id",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.PATH,
                 required=True,
-                description="Identifiant du domaine (correspond à `<int:pk>` dans l'URL).",
+                description="Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).",
             ),
         ],
         responses={
@@ -125,7 +126,7 @@ from .serializers import DomainReadSerializer, DomainWriteSerializer
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.PATH,
                 required=True,
-                description="Identifiant du domaine (correspond à `<int:pk>` dans l'URL).",
+                description="Identifiant du domaine (correspond à `<int:domain_id>` dans l'URL).",
             ),
         ],
         responses={
@@ -136,9 +137,8 @@ from .serializers import DomainReadSerializer, DomainWriteSerializer
         },
     ),
 )
-class DomainViewSet(viewsets.ModelViewSet):
+class DomainViewSet(MyModelViewSet):
     permission_classes = [IsAuthenticated, IsDomainOwnerOrStaff]
-    filterset_fields = []  # ✅ (ou supprime la ligne)
     ordering = ["id"]
     lookup_field = "pk"
     lookup_url_kwarg = "domain_id"
@@ -146,8 +146,9 @@ class DomainViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return DomainReadSerializer
+        if self.action == "partial_update":
+            return DomainPartialSerializer
         return DomainWriteSerializer
-
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

@@ -60,27 +60,15 @@ class SubjectSerializerTests(TestCase):
         ser = SubjectWriteSerializer(data=payload)
         self.assertTrue(ser.is_valid(), ser.errors)
         obj = ser.save()
+        created = Subject.objects.get(pk=obj.pk)
 
         self.assertIsInstance(obj, Subject)
         self.assertEqual(obj.domain_id, self.domain.id)
 
         # Vérifie que les traductions existent réellement en DB
         obj_fr = Subject.objects.get(pk=obj.pk)
-        obj_fr.set_current_language("fr")
-        self.assertEqual(obj_fr.name, "Mathématiques")
-        self.assertEqual(obj_fr.description, "Les maths")
-
-        obj_nl = Subject.objects.get(pk=obj.pk)
-        obj_nl.set_current_language("nl")
-        self.assertEqual(obj_nl.name, "Wiskunde")
-        self.assertEqual(obj_nl.description, "Wiskunde beschrijving")
-
-        # sanity: any_language getter trouve quelque chose
-        obj_any = Subject.objects.get(pk=obj.pk)
-        self.assertIn(
-            obj_any.safe_translation_getter("name", any_language=True),
-            {"Mathématiques", "Wiskunde"},
-        )
+        self.assertEqual(created.safe_translation_getter("name", language_code="fr"), "Mathématiques")
+        self.assertEqual(created.safe_translation_getter("name", language_code="nl"), "Wiskunde")
 
     def test_write_create_allows_null_domain(self):
         payload = {

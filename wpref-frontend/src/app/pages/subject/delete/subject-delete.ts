@@ -1,8 +1,9 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 
 import {ActivatedRoute} from '@angular/router';
-import {Subject, SubjectService} from '../../../services/subject/subject';
+import {SubjectService} from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
+import {SubjectReadDto} from '../../../api/generated';
 
 @Component({
   standalone: true,
@@ -16,7 +17,7 @@ export class SubjectDelete implements OnInit {
   private subjectService = inject(SubjectService);
 
   id!: number;
-  subject = signal<Subject | null>(null);
+  subject = signal<SubjectReadDto | null>(null);
 
   goBack(): void {
     this.subjectService.goBack();

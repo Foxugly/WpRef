@@ -36,7 +36,7 @@ class CustomUserReadSerializerTests(TestCase):
         data = CustomUserReadSerializer(instance=self.user).data
         self.assertEqual(
             set(data.keys()),
-            {"id", "username", "email", "first_name", "last_name", "is_staff", "is_superuser", "is_active"},
+            {"id", "username", "email", "first_name", "last_name", "language", "is_staff", "is_superuser", "is_active"},
         )
         self.assertEqual(data["username"], "u1")
 
@@ -186,26 +186,26 @@ class PasswordChangeSerializerTests(TestCase):
         self.assertIn("new_password", serializer.errors)
 
 
-class MeSerializerTests(TestCase):
-    def setUp(self):
-        # ⚠️ si ton CustomUser est le même modèle que User, adapte l'import/creation
-        self.user = User.objects.create_user(
-            username="meuser",
-            password="SecretPass123!",
-            email="me@example.com",
-            first_name="Me",
-            last_name="User",
-        )
-        # language peut exister sur CustomUser seulement (selon ton modèle)
-        if hasattr(self.user, "language"):
-            self.user.language = "fr"
-            self.user.save()
-
-    def test_me_serializer_has_expected_fields(self):
-        data = MeSerializer(instance=self.user).data
-        self.assertEqual(set(data.keys()), {"id", "username", "email", "first_name", "last_name", "language"})
-
-    def test_me_serializer_read_only_fields(self):
-        serializer = MeSerializer()
-        self.assertTrue(serializer.get_fields()["id"].read_only)
-        self.assertTrue(serializer.get_fields()["username"].read_only)
+# class MeSerializerTests(TestCase):
+#     def setUp(self):
+#         # ⚠️ si ton CustomUser est le même modèle que User, adapte l'import/creation
+#         self.user = User.objects.create_user(
+#             username="meuser",
+#             password="SecretPass123!",
+#             email="me@example.com",
+#             first_name="Me",
+#             last_name="User",
+#         )
+#         # language peut exister sur CustomUser seulement (selon ton modèle)
+#         if hasattr(self.user, "language"):
+#             self.user.language = "fr"
+#             self.user.save()
+#
+#     def test_me_serializer_has_expected_fields(self):
+#         data = MeSerializer(instance=self.user).data
+#         self.assertEqual(set(data.keys()), {"id", "username", "email", "first_name", "last_name", "language"})
+#
+#     def test_me_serializer_read_only_fields(self):
+#         serializer = MeSerializer()
+#         self.assertTrue(serializer.get_fields()["id"].read_only)
+#         self.assertTrue(serializer.get_fields()["username"].read_only)

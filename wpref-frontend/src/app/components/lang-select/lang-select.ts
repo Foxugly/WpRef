@@ -2,7 +2,7 @@ import {Component, EventEmitter, Input, OnChanges, Output, SimpleChanges} from '
 
 import {FormsModule} from '@angular/forms';
 import {SelectButtonModule} from 'primeng/selectbutton';
-import {LangCode} from '../../../environments/environment'; // adapte le chemin si besoin
+import {SupportedLanguage} from '../../../environments/language'; // adapte le chemin si besoin
 
 @Component({
   selector: 'app-lang-select',
@@ -13,10 +13,10 @@ import {LangCode} from '../../../environments/environment'; // adapte le chemin 
 })
 export class LangSelectComponent implements OnChanges {
   /** Langue actuelle ( venant du parent ) */
-  @Input() lang: LangCode = 'en';
+  @Input() lang!: SupportedLanguage;
 
   /** Événement vers le parent quand la langue change */
-  @Output() langChange = new EventEmitter<LangCode>();
+  @Output() langChange = new EventEmitter<SupportedLanguage>();
 
   /** Valeur liée au p-selectbutton (string) */
   internalLang: string = 'en';
@@ -35,7 +35,7 @@ export class LangSelectComponent implements OnChanges {
   }
 
   onInternalChange(value: string) {
-    const code = value as LangCode;
+    const code = value as SupportedLanguage;
     this.internalLang = code;
     this.langChange.emit(code);
   }

@@ -1,8 +1,9 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
 
 import {ActivatedRoute} from '@angular/router';
-import {Question, QuestionService} from '../../../services/question/question';
 import {Button} from 'primeng/button';
+import {QuestionReadDto} from '../../../api/generated';
+import {QuestionService} from '../../../services/question/question';
 
 @Component({
   standalone: true,
@@ -13,7 +14,7 @@ import {Button} from 'primeng/button';
 })
 export class QuestionDelete implements OnInit {
   id!: number;
-  question = signal<Question | null>(null);
+  question = signal<QuestionReadDto | null>(null);
   private route = inject(ActivatedRoute);
   private questionService = inject(QuestionService);
 

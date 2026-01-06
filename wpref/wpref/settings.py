@@ -146,14 +146,12 @@ SPECTACULAR_SETTINGS = {
     # Le bouton Authorize persiste votre token entre les refresh
     "SWAGGER_UI_SETTINGS": {"persistAuthorization": True},
     # Appliquer le schéma de sécu par défaut à tous les endpoints
-    "SECURITY": [{"jwtAuth": []}],
+   # "SECURITY": [{"jwtAuth": []}],
     "ENUM_NAME_OVERRIDES": {
         "VisibilityEnum": "quiz.constants.VISIBILITY_CHOICES",
-    }
+    },
+    "COMPONENT_SPLIT_REQUEST": True,
 }
-
-CKEDITOR_UPLOAD_PATH = "uploads/"
-CKEDITOR_IMAGE_BACKEND = "pillow"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

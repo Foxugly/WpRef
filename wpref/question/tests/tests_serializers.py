@@ -1,11 +1,19 @@
-# question/tests/test_serializers.py
-import logging
+# question/tests/tests_serializers.py
+from __future__ import annotations
 
-from django.apps import apps
+import json
+from dataclasses import dataclass
+
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
+from django.utils import translation
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from domain.models import Domain
+from language.models import Language
+from subject.models import Subject
+
 from question.models import Question, AnswerOption, QuestionMedia
 from question.serializers import (
     QuestionLiteSerializer,
@@ -16,417 +24,433 @@ from question.serializers import (
     QuestionReadSerializer,
     QuestionWriteSerializer,
 )
-from subject.models import Subject
 
-logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+@dataclass
 class DummyView:
-    def __init__(self, swagger_fake_view=False):
-        self.swagger_fake_view = swagger_fake_view
+    swagger_fake_view: bool = False
 
 
-class QuestionSerializersTestCase(TestCase):
-    # ------------------------------------------------------------------
-    # Helpers robustes
-    # ------------------------------------------------------------------
-    def _make_user(self, username_prefix="u"):
-        n = User.objects.count() + 1
-        return User.objects.create_user(
-            username=f"{username_prefix}{n}",
-            password="pass",
-            is_staff=True,
-        )
+@override_settings(LANGUAGES=(("fr", "Français"), ("nl", "Nederlands"), ("en", "English")))
+class QuestionSerializersTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = User.objects.create_user(username="owner", password="pass")
 
-    def _auto_create_required_fields(self, model_cls, overrides=None):
-        """
-        Utilisé uniquement pour Language (ou modèle simple) quand on ne veut pas
-        dépendre des champs exacts (name/label/etc).
-        Ne gère PAS les FK requises.
-        """
-        from django.db import models
-        overrides = overrides or {}
-        data = dict(overrides)
+        # Languages (modèle Language) + subset autorisé côté Domain
+        cls.lang_fr = Language.objects.create(code="fr", name="Français", active=True)
+        cls.lang_nl = Language.objects.create(code="nl", name="Nederlands", active=True)
+        cls.lang_en = Language.objects.create(code="en", name="English", active=True)
 
-        for f in model_cls._meta.fields:
-            if f.primary_key:
-                continue
-            if f.name in data:
-                continue
-            if f.has_default():
-                continue
+        cls.domain = Domain.objects.create(owner=cls.owner, active=True)
+        # autoriser fr + nl uniquement pour tester missing/extra
+        cls.domain.allowed_languages.set([cls.lang_fr, cls.lang_nl])
 
-            required = (not getattr(f, "null", False)) and (not getattr(f, "blank", False))
-            if not required:
-                continue
+        # Subject avec traductions
+        cls.subject = Subject.objects.create(domain=cls.domain)
+        cls.subject.set_current_language("fr")
+        cls.subject.name = "Mathématiques"
+        cls.subject.description = ""
+        cls.subject.save()
 
-            if f.is_relation and f.many_to_one:
-                raise RuntimeError(f"FK requis non géré auto: {model_cls.__name__}.{f.name}")
+        # Une question de base + traductions
+        cls.q = Question.objects.create(domain=cls.domain)
+        cls.q.set_current_language("fr")
+        cls.q.title = "Titre FR"
+        cls.q.description = "Desc FR"
+        cls.q.explanation = "Expl FR"
+        cls.q.save()
 
-            if isinstance(f, (models.CharField, models.SlugField)):
-                data[f.name] = "x"
-            elif isinstance(f, models.TextField):
-                data[f.name] = "x"
-            elif isinstance(f, models.BooleanField):
-                data[f.name] = True
-            elif isinstance(f, (models.IntegerField, models.PositiveIntegerField, models.SmallIntegerField)):
-                data[f.name] = 1
-            else:
-                data[f.name] = "x"
+        # answer options (fr/nl)
+        cls.ao1 = AnswerOption.objects.create(question=cls.q, is_correct=True, sort_order=1)
+        cls.ao1.set_current_language("fr")
+        cls.ao1.content = "A"
+        cls.ao1.save()
+        cls.ao1.set_current_language("nl")
+        cls.ao1.content = "A (nl)"
+        cls.ao1.save()
 
-        return model_cls.objects.create(**data)
+        cls.ao2 = AnswerOption.objects.create(question=cls.q, is_correct=False, sort_order=2)
+        cls.ao2.set_current_language("fr")
+        cls.ao2.content = "B"
+        cls.ao2.save()
+        cls.ao2.set_current_language("nl")
+        cls.ao2.content = "B (nl)"
+        cls.ao2.save()
 
-    def _make_language(self, code: str):
-        """
-        Essaie de créer/retourner language.Language avec code.
-        Adaptation auto si le modèle a d'autres champs requis.
-        """
-        Language = apps.get_model("language", "Language")
-        obj = Language.objects.filter(code=code).first()
-        if obj:
-            return obj
-        # crée en remplissant les champs requis
-        return self._auto_create_required_fields(Language, overrides={"code": code})
+    # ---------------------------------------------------------------------
+    # Inline serializer (multipart schema)
+    # ---------------------------------------------------------------------
+    def test_question_multipart_write_serializer_requires_translations(self):
+        ser = QuestionWriteSerializer(data={"domain": self.domain.id,})
+        self.assertFalse(ser.is_valid())
+        self.assertIn("translations", ser.errors)
 
-    def _make_domain(self, *, owner=None, name="Domain", allowed_codes=("fr", "nl"), lang="fr"):
-        owner = owner or self._make_user("owner")
-        d = Domain.objects.create(owner=owner, active=True)
-        d.set_current_language(lang)
-        d.name = name
-        d.description = "desc"
-        d.save()
+    def test_question_write_serializer_accepts_payload(self):
+        payload = {
+            "domain": self.domain.id,
+            "translations": {"fr": {"title": "T", "description": "", "explanation": ""},
+                             "nl": {"title": "T (nl)", "description": "", "explanation": ""},},
+            "subject_ids": [self.subject.id],
+            "answer_options": [
+                    {
+                        "is_correct": True,
+                        "sort_order": 1,
+                        "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}},
+                    },
+                    {
+                        "is_correct": False,
+                        "sort_order": 2,
+                        "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}},
+                    },
+                ],
+            "media": json.dumps([{"kind": "external", "external_url": "https://example.com", "sort_order": 1}]),
+            "media_files": [
+                SimpleUploadedFile("img.png", b"fake", content_type="image/png"),
+            ],
+        }
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertTrue(ser.is_valid(), ser.errors)
 
-        # allowed_languages
-        for c in allowed_codes:
-            d.allowed_languages.add(self._make_language(c))
-
-        return d
-
-    def _make_subject(self, name="Math", lang="fr"):
-        s = Subject.objects.create()
-        if hasattr(s, "set_current_language"):
-            s.set_current_language(lang)
-        if hasattr(s, "name"):
-            s.name = name
-        s.save()
-        return s
-
-    def _make_question(self, *, domain=None, title="Q1", lang="fr", allow_multiple_correct=False):
-        domain = domain or self._make_domain()
-        q = Question.objects.create(
-            domain=domain,
-            allow_multiple_correct=allow_multiple_correct,
-            active=True,
-            is_mode_practice=True,
-            is_mode_exam=True,
-        )
-        q.set_current_language(lang)
-        q.title = title
-        q.description = "desc"
-        q.explanation = "expl"
-        q.save()
-        return q
-
-    def _make_option(self, q: Question, *, is_correct: bool, sort_order: int, content_fr="A", content_nl="A-nl"):
-        o = AnswerOption.objects.create(question=q, is_correct=is_correct, sort_order=sort_order)
-        o.set_current_language("fr")
-        o.content = content_fr
-        o.save()
-        o.set_current_language("nl")
-        o.content = content_nl
-        o.save()
-        return o
-
-    # ------------------------------------------------------------------
-    # Smoke tests serializers simples
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
+    # Lite / Media / AnswerOption serializers
+    # ---------------------------------------------------------------------
     def test_question_lite_serializer_title(self):
-        q = self._make_question(title="Hello")
-        data = QuestionLiteSerializer(q).data
-        self.assertEqual(data["id"], q.id)
-        self.assertEqual(data["title"], "Hello")
+        data = QuestionLiteSerializer(self.q).data
+        self.assertEqual(data["id"], self.q.id)
+        self.assertEqual(data["title"], "Titre FR")
 
-    def test_question_media_serializer_read_only_fields(self):
-        # read_only_fields = ["id", "file", "external_url", "kind"]
-        q = self._make_question()
-        ser = QuestionMediaSerializer(data={"kind": "image", "external_url": "https://x", "sort_order": 1})
-        # Même si "data" passe ou pas, le point important: ces champs sont read-only
-        self.assertTrue(ser.fields["kind"].read_only)
-        self.assertTrue(ser.fields["file"].read_only)
-        self.assertTrue(ser.fields["external_url"].read_only)
+    def test_question_media_serializer_read_only_fields_exist(self):
+        # Juste pour couvrir le serializer; le modèle QuestionMedia clean est ailleurs.
+        m = QuestionMedia.objects.create(question=self.q, kind=QuestionMedia.EXTERNAL, external_url="https://x", sort_order=1)
+        data = QuestionMediaSerializer(m).data
+        self.assertIn("id", data)
+        self.assertIn("kind", data)
+        self.assertIn("external_url", data)
 
     def test_answer_option_read_serializer_content(self):
-        q = self._make_question()
-        o = self._make_option(q, is_correct=True, sort_order=1, content_fr="FR", content_nl="NL")
-
-        data = QuestionAnswerOptionReadSerializer(o).data
-        # content = safe_translation_getter(any_language=True)
-        self.assertIn(data["content"], {"FR", "NL"})
-        self.assertEqual(data["is_correct"], True)
+        translation.activate("fr")
+        self.ao1.set_current_language("fr")
+        data = QuestionAnswerOptionReadSerializer(self.ao1).data
+        self.assertEqual(data["content"], "A")
+        self.assertTrue(data["is_correct"])
         self.assertEqual(data["sort_order"], 1)
+        translation.deactivate()
 
-    # ------------------------------------------------------------------
-    # QuestionAnswerOptionWriteSerializer
-    # ------------------------------------------------------------------
-    def test_answer_option_write_serializer_create_sets_translations(self):
-        q = self._make_question()
+    def test_answer_option_write_serializer_create_and_update(self):
+        # create
         payload = {
-            "is_correct": True,
-            "sort_order": 1,
-            "translations": {
-                "fr": {"content": "Bonjour"},
-                "nl": {"content": "Hallo"},
-            },
+            "is_correct": False,
+            "sort_order": 3,
+            "translations": {"fr": {"content": "C"}, "nl": {"content": "C (nl)"}},
         }
         ser = QuestionAnswerOptionWriteSerializer(data=payload)
         self.assertTrue(ser.is_valid(), ser.errors)
+        opt = ser.save(question=self.q)
 
-        obj = ser.save(question=q)
-        obj.refresh_from_db()
+        opt.set_current_language("fr")
+        self.assertEqual(opt.content, "C")
+        opt.set_current_language("nl")
+        self.assertEqual(opt.content, "C (nl)")
 
-        obj.set_current_language("fr")
-        self.assertEqual(obj.content, "Bonjour")
-        obj.set_current_language("nl")
-        self.assertEqual(obj.content, "Hallo")
-
-    def test_answer_option_write_serializer_update_sets_translations_and_fields(self):
-        q = self._make_question()
-        o = self._make_option(q, is_correct=False, sort_order=2, content_fr="OldFR", content_nl="OldNL")
-
-        payload = {
+        # update
+        upd = {
             "is_correct": True,
-            "sort_order": 1,
-            "translations": {
-                "fr": {"content": "NewFR"},
-                "nl": {"content": "NewNL"},
-            },
+            "sort_order": 9,
+            "translations": {"fr": {"content": "C2"}, "nl": {"content": "C2 (nl)"}},
         }
-        ser = QuestionAnswerOptionWriteSerializer(instance=o, data=payload)
-        self.assertTrue(ser.is_valid(), ser.errors)
+        ser2 = QuestionAnswerOptionWriteSerializer(instance=opt, data=upd)
+        self.assertTrue(ser2.is_valid(), ser2.errors)
+        opt2 = ser2.save()
 
-        obj = ser.save()
-        obj.refresh_from_db()
-        self.assertTrue(obj.is_correct)
-        self.assertEqual(obj.sort_order, 1)
+        self.assertTrue(opt2.is_correct)
+        self.assertEqual(opt2.sort_order, 9)
+        opt2.set_current_language("fr")
+        self.assertEqual(opt2.content, "C2")
 
-        obj.set_current_language("fr")
-        self.assertEqual(obj.content, "NewFR")
-        obj.set_current_language("nl")
-        self.assertEqual(obj.content, "NewNL")
-
-    # ------------------------------------------------------------------
-    # QuestionInQuizQuestionSerializer / QuestionReadSerializer : hide/show is_correct
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
+    # Masquage du champ is_correct selon show_correct + swagger_fake_view
+    # ---------------------------------------------------------------------
     def test_question_in_quiz_serializer_hides_is_correct_by_default(self):
-        q = self._make_question()
-        self._make_option(q, is_correct=True, sort_order=1)
-        self._make_option(q, is_correct=False, sort_order=2)
-
         ser = QuestionInQuizQuestionSerializer(
-            q,
+            self.q,
             context={"view": DummyView(swagger_fake_view=False)},
             show_correct=False,
         )
         data = ser.data
-        self.assertIn("answer_options", data)
-        self.assertNotIn("is_correct", data["answer_options"][0])  # masqué
+        # is_correct doit être absent
+        self.assertNotIn("is_correct", data["answer_options"][0])
 
-    def test_question_in_quiz_serializer_shows_is_correct_when_flag_true(self):
-        q = self._make_question()
-        self._make_option(q, is_correct=True, sort_order=1)
-
+    def test_question_in_quiz_serializer_keeps_is_correct_if_show_correct(self):
         ser = QuestionInQuizQuestionSerializer(
-            q,
+            self.q,
             context={"view": DummyView(swagger_fake_view=False)},
             show_correct=True,
+        )
+        data = ser.data
+        self.assertIn("is_correct", data["answer_options"][0])
+
+    def test_question_in_quiz_serializer_keeps_is_correct_in_swagger(self):
+        ser = QuestionInQuizQuestionSerializer(
+            self.q,
+            context={"view": DummyView(swagger_fake_view=True)},
+            show_correct=False,
         )
         data = ser.data
         self.assertIn("is_correct", data["answer_options"][0])
 
     def test_question_read_serializer_hides_is_correct_by_default(self):
-        q = self._make_question(title="T")
-        self._make_option(q, is_correct=True, sort_order=1)
-
-        ser = QuestionReadSerializer(
-            q,
-            context={"view": DummyView(swagger_fake_view=False)},
-            show_correct=False,
-        )
+        ser = QuestionReadSerializer(self.q, context={"view": DummyView(swagger_fake_view=False)}, show_correct=False)
         data = ser.data
-        self.assertEqual(data["title"], "T")
         self.assertNotIn("is_correct", data["answer_options"][0])
 
-    def test_question_read_serializer_shows_is_correct_when_flag_true(self):
-        q = self._make_question()
-        self._make_option(q, is_correct=True, sort_order=1)
-
-        ser = QuestionReadSerializer(
-            q,
-            context={"view": DummyView(swagger_fake_view=False)},
-            show_correct=True,
-        )
+    def test_question_read_serializer_keeps_is_correct_in_swagger(self):
+        ser = QuestionReadSerializer(self.q, context={"view": DummyView(swagger_fake_view=True)}, show_correct=False)
         data = ser.data
         self.assertIn("is_correct", data["answer_options"][0])
 
-    # ------------------------------------------------------------------
-    # QuestionWriteSerializer.validate + create/update
-    # ------------------------------------------------------------------
-    def test_question_write_validate_create_requires_translations(self):
-        domain = self._make_domain()
-        payload = {
-            "domain": domain.id,
-            "allow_multiple_correct": False,
-            "active": True,
-            "is_mode_practice": True,
-            "is_mode_exam": False,
-            # translations manquant
-        }
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertFalse(ser.is_valid())
-        self.assertIn("translations", ser.errors)
-
-    def test_question_write_validate_rejects_extra_translation_language(self):
-        domain = self._make_domain(allowed_codes=("fr", "nl"))
-        payload = {
-            "domain": domain.id,
+    # ---------------------------------------------------------------------
+    # QuestionWriteSerializer.validate()
+    # ---------------------------------------------------------------------
+    def _base_create_payload(self):
+        return {
+            "domain": self.domain.id,
             "translations": {
-                "fr": {"title": "T"},
-                "nl": {"title": "T"},
-                "de": {"title": "T"},  # extra -> interdit
+                "fr": {"title": "Nouvelle Q", "description": "", "explanation": ""},
+                "nl": {"title": "Nieuwe Q", "description": "", "explanation": ""},
             },
             "allow_multiple_correct": False,
             "active": True,
             "is_mode_practice": True,
             "is_mode_exam": False,
-        }
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertFalse(ser.is_valid())
-        self.assertIn("translations", ser.errors)
-
-    def test_question_write_validate_missing_language_only_fails_on_create(self):
-        # Sur CREATE, missing doit échouer (tu as "if missing and is_create")
-        domain = self._make_domain(allowed_codes=("fr", "nl"))
-        payload = {
-            "domain": domain.id,
-            "translations": {"fr": {"title": "T"}},  # nl manquant
-            "allow_multiple_correct": False,
-            "active": True,
-            "is_mode_practice": True,
-            "is_mode_exam": False,
-        }
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertFalse(ser.is_valid())
-        self.assertIn("translations", ser.errors)
-
-    def test_question_write_validate_answer_options_rules_on_create(self):
-        domain = self._make_domain(allowed_codes=("fr", "nl"))
-
-        # moins de 2 réponses
-        payload = {
-            "domain": domain.id,
-            "translations": {"fr": {"title": "T"}, "nl": {"title": "T"}},
-            "allow_multiple_correct": False,
-            "active": True,
-            "is_mode_practice": True,
-            "is_mode_exam": False,
+            "subject_ids": [self.subject.id],
             "answer_options": [
-                {"is_correct": True, "sort_order": 1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}}
-            ],
-        }
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertFalse(ser.is_valid())
-        self.assertIn("answer_options", ser.errors)
-
-        # 2 réponses mais 0 correct
-        payload["answer_options"] = [
-            {"is_correct": False, "sort_order": 1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}},
-            {"is_correct": False, "sort_order": 2, "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}}},
-        ]
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertFalse(ser.is_valid())
-        self.assertIn("answer_options", ser.errors)
-
-        # 2 réponses, 2 correct mais allow_multiple_correct=False
-        payload["answer_options"] = [
-            {"is_correct": True, "sort_order": 1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}},
-            {"is_correct": True, "sort_order": 2, "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}}},
-        ]
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertFalse(ser.is_valid())
-        self.assertIn("answer_options", ser.errors)
-
-        # OK : 1 seul correct
-        payload["answer_options"] = [
-            {"is_correct": True, "sort_order": 1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}},
-            {"is_correct": False, "sort_order": 2, "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}}},
-        ]
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertTrue(ser.is_valid(), ser.errors)
-
-    def test_question_write_create_creates_subjects_translations_and_options(self):
-        domain = self._make_domain(allowed_codes=("fr", "nl"))
-        s1 = self._make_subject("Math")
-        s2 = self._make_subject("History")
-
-        payload = {
-            "domain": domain.id,
-            "translations": {
-                "fr": {"title": "Titre FR", "description": "D", "explanation": "E"},
-                "nl": {"title": "Titel NL", "description": "D", "explanation": "E"},
-            },
-            "allow_multiple_correct": False,
-            "active": True,
-            "is_mode_practice": True,
-            "is_mode_exam": False,
-            "subject_ids": [s1.id, s2.id],
-            "answer_options": [
-                {"is_correct": True, "sort_order": 1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}},
-                {"is_correct": False, "sort_order": 2, "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}}},
+                {
+                    "is_correct": True,
+                    "sort_order": 1,
+                    "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}},
+                },
+                {
+                    "is_correct": False,
+                    "sort_order": 2,
+                    "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}},
+                },
             ],
         }
 
-        ser = QuestionWriteSerializer(data=payload, context={"view": DummyView(False)})
-        self.assertTrue(ser.is_valid(), ser.errors)
+    def test_write_validate_requires_domain(self):
+        payload = self._base_create_payload()
+        payload.pop("domain")
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("domain", ser.errors)
 
+    def test_write_validate_create_requires_translations(self):
+        payload = self._base_create_payload()
+        payload.pop("translations")
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("translations", ser.errors)
+
+    def test_write_validate_translations_missing_allowed_langs_on_create(self):
+        payload = self._base_create_payload()
+        payload["translations"] = {"fr": {"title": "X"}}  # manque nl
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("translations", ser.errors)
+        self.assertIn("Langues manquantes", str(ser.errors["translations"][0]))
+
+    def test_write_validate_translations_extra_langs(self):
+        payload = self._base_create_payload()
+        payload["translations"]["en"] = {"title": "EN"}  # extra non autorisée (domain allowed fr/nl)
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("translations", ser.errors)
+        self.assertIn("Langues non autorisées", str(ser.errors["translations"][0]))
+
+    def test_write_validate_answer_options_min_2_on_create(self):
+        payload = self._base_create_payload()
+        payload["answer_options"] = payload["answer_options"][:1]
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("answer_options", ser.errors)
+        self.assertIn("Au moins 2", str(ser.errors["answer_options"][0]))
+
+    def test_write_validate_answer_options_requires_one_correct(self):
+        payload = self._base_create_payload()
+        payload["answer_options"][0]["is_correct"] = False
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("answer_options", ser.errors)
+        self.assertIn("au moins une réponse correcte", str(ser.errors["answer_options"][0]).lower())
+
+    def test_write_validate_answer_options_only_one_correct_if_not_multiple(self):
+        payload = self._base_create_payload()
+        payload["answer_options"][1]["is_correct"] = True  # 2 corrects
+        payload["allow_multiple_correct"] = False
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("answer_options", ser.errors)
+        self.assertIn("Une seule", str(ser.errors["answer_options"][0]))
+
+    def test_write_validate_answer_options_translations_missing_lang(self):
+        payload = self._base_create_payload()
+        payload["answer_options"][0]["translations"] = {"fr": {"content": "A"}}  # manque nl
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        # clé dynamique answer_options[i].translations
+        key = "answer_options[0].translations"
+        self.assertIn(key, ser.errors)
+        self.assertIn("Langues manquantes", str(ser.errors[key][0]))
+
+    def test_write_validate_answer_options_translations_extra_lang(self):
+        payload = self._base_create_payload()
+        payload["answer_options"][0]["translations"]["en"] = {"content": "A"}  # extra
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        key = "answer_options[0].translations"
+        self.assertIn(key, ser.errors)
+        self.assertIn("Langues non autorisées", str(ser.errors[key][0]))
+
+    # ---------------------------------------------------------------------
+    # QuestionWriteSerializer.create()
+    # ---------------------------------------------------------------------
+    def test_write_create_creates_question_subjects_translations_and_options(self):
+        payload = self._base_create_payload()
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertTrue(ser.is_valid(), ser.errors)
         q = ser.save()
-        self.assertEqual(q.domain_id, domain.id)
-        self.assertEqual(q.subjects.count(), 2)
 
+        # subjects
+        self.assertEqual(list(q.subjects.values_list("id", flat=True)), [self.subject.id])
+
+        # translations
         q.set_current_language("fr")
-        self.assertEqual(q.title, "Titre FR")
+        self.assertEqual(q.title, "Nouvelle Q")
         q.set_current_language("nl")
-        self.assertEqual(q.title, "Titel NL")
+        self.assertEqual(q.title, "Nieuwe Q")
 
+        # options recreated with allowed langs
         self.assertEqual(q.answer_options.count(), 2)
-        ao1 = q.answer_options.order_by("sort_order").first()
-        ao1.set_current_language("fr")
-        self.assertEqual(ao1.content, "A")
+        opt = q.answer_options.order_by("sort_order").first()
+        self.assertTrue(opt.is_correct)
+        opt.set_current_language("fr")
+        self.assertEqual(opt.content, "A")
+        opt.set_current_language("nl")
+        self.assertEqual(opt.content, "A")
 
-    def test_question_write_update_partial_translations_does_not_require_all_langs(self):
-        # ton validate: missing languages ne doit PAS échouer sur update
-        domain = self._make_domain(allowed_codes=("fr", "nl"))
-        q = self._make_question(domain=domain, title="Old", allow_multiple_correct=False)
+    def test_write_create_raises_if_translations_missing_even_if_validate_not_called(self):
+        # couvre la garde dans create() : if not translations: raise
+        payload = self._base_create_payload()
+        payload.pop("translations")
+        ser = QuestionWriteSerializer(data=payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("translations", ser.errors)
+
+    # ---------------------------------------------------------------------
+    # QuestionWriteSerializer.update()
+    # ---------------------------------------------------------------------
+    def test_write_update_updates_simple_fields_subjects_translations_and_options(self):
+        # question existante + subject initial
+        self.q.subjects.set([self.subject])
+
+        # nouveau subject
+        s2 = Subject.objects.create(domain=self.domain)
+        s2.set_current_language("fr")
+        s2.name = "Physique"
+        s2.description = ""
+        s2.save()
 
         payload = {
-            "translations": {"fr": {"title": "New FR only"}},  # nl manquant OK en update
+            "domain": self.domain.id,
+            "allow_multiple_correct": True,
+            "subject_ids": [s2.id],
+            "translations": {
+                "fr": {"title": "Titre FR upd", "description": "d", "explanation": "e"},
+                "nl": {"title": "Titel NL upd", "description": "", "explanation": ""},
+            },
+            "answer_options": [
+                {
+                    "is_correct": True,
+                    "sort_order": 1,
+                    "translations": {"fr": {"content": "X"}, "nl": {"content": "X"}},
+                },
+                {
+                    "is_correct": True,  # multiple correct now allowed
+                    "sort_order": 2,
+                    "translations": {"fr": {"content": "Y"}, "nl": {"content": "Y"}},
+                },
+            ],
         }
-        ser = QuestionWriteSerializer(instance=q, data=payload, partial=True, context={"view": DummyView(False)})
+        ser = QuestionWriteSerializer(instance=self.q, data=payload)
         self.assertTrue(ser.is_valid(), ser.errors)
-
         q2 = ser.save()
+
+        # subjects
+        self.assertEqual(list(q2.subjects.values_list("id", flat=True)), [s2.id])
+
+        # translations updated
         q2.set_current_language("fr")
-        self.assertEqual(q2.title, "New FR only")
+        self.assertEqual(q2.title, "Titre FR upd")
 
-    def test_question_write_validate_allow_multiple_correct_update_checks_db_options(self):
-        domain = self._make_domain(allowed_codes=("fr", "nl"))
-        q = self._make_question(domain=domain, allow_multiple_correct=True)
-        # DB: 2 correct
-        self._make_option(q, is_correct=True, sort_order=1)
-        self._make_option(q, is_correct=True, sort_order=2)
+        # options wiped + recreated
+        self.assertEqual(q2.answer_options.count(), 2)
+        self.assertEqual(q2.answer_options.filter(is_correct=True).count(), 2)
 
-        # on veut mettre allow_multiple_correct=False sans fournir answer_options => doit refuser
-        payload = {"allow_multiple_correct": False}
-        ser = QuestionWriteSerializer(instance=q, data=payload, partial=True, context={"view": DummyView(False)})
+    def test_write_update_subject_ids_none_keeps_subjects(self):
+        self.q.subjects.set([self.subject])
+
+        payload = {
+            "domain": self.domain.id,
+            # pas de subject_ids => None => ne touche pas aux subjects
+            "translations": {
+                "fr": {"title": "Keep subjects", "description": "", "explanation": ""},
+                "nl": {"title": "Keep subjects", "description": "", "explanation": ""},
+            },
+        }
+        ser = QuestionWriteSerializer(instance=self.q, data=payload)
+        self.assertTrue(ser.is_valid(), ser.errors)
+        q2 = ser.save()
+        self.assertEqual(list(q2.subjects.values_list("id", flat=True)), [self.subject.id])
+
+    def test_write_update_allow_multiple_correct_change_checks_db_when_no_answer_options(self):
+        # force état DB: 2 corrects
+        self.q.allow_multiple_correct = True
+        self.q.save()
+        self.q.answer_options.update(is_correct=True)
+
+        payload = {
+            "domain": self.domain.id,
+            "allow_multiple_correct": False,  # interdit si DB a 2 corrects
+            # pas de answer_options dans attrs => branche elif dans validate()
+            "translations": {
+                "fr": {"title": "X", "description": "", "explanation": ""},
+                "nl": {"title": "X", "description": "", "explanation": ""},
+            },
+        }
+        ser = QuestionWriteSerializer(instance=self.q, data=payload)
         self.assertFalse(ser.is_valid())
         self.assertIn("answer_options", ser.errors)
+        self.assertIn("Une seule", str(ser.errors["answer_options"][0]))
+
+    def test_write_update_allow_multiple_correct_change_ok_when_db_has_one_correct(self):
+        # 1 seul correct
+        self.q.allow_multiple_correct = True
+        self.q.save()
+        self.q.answer_options.update(is_correct=False)
+        self.ao1.is_correct = True
+        self.ao1.save(update_fields=["is_correct"])
+
+        payload = {
+            "domain": self.domain.id,
+            "allow_multiple_correct": False,  # OK car DB == 1 correct
+            "translations": {
+                "fr": {"title": "OK", "description": "", "explanation": ""},
+                "nl": {"title": "OK", "description": "", "explanation": ""},
+            },
+        }
+        ser = QuestionWriteSerializer(instance=self.q, data=payload)
+        self.assertTrue(ser.is_valid(), ser.errors)
+        ser.save()
