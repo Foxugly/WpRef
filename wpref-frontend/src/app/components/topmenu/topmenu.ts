@@ -11,6 +11,7 @@ import {SubjectService} from '../../services/subject/subject';
 import {QuestionService} from '../../services/question/question';
 import {QuizService} from '../../services/quiz/quiz';
 import {SupportedLanguage} from '../../../environments/language';
+import {DomainService} from '../../services/domain/domain';
 
 @Component({
   selector: 'app-topmenu',
@@ -32,6 +33,7 @@ export class TopmenuComponent {
   private questionService = inject(QuestionService);
   private quizService = inject(QuizService);
   private userService = inject(UserService);
+  private domainService = inject(DomainService);
 
   goQuizList(): void {
     this.quizService.goList();
@@ -39,6 +41,10 @@ export class TopmenuComponent {
 
   goSubjectList(): void {
     this.subjectService.goList();
+  }
+
+  goDomainList(): void {
+    this.domainService.goList();
   }
 
   goQuestionList(): void {
@@ -53,6 +59,11 @@ export class TopmenuComponent {
     {
       label: 'WpRef',
       icon: 'pi pi-home'
+    },
+    {
+      label: 'Domains',
+      icon: 'pi pi-folder',
+      command: () => this.goDomainList()
     },
     {
       label: 'Subjects',

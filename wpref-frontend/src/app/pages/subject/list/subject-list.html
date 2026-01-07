@@ -15,7 +15,6 @@
   <ng-template #header>
     <tr>
       <th>Nom</th>
-      <th>Slug</th>
       <th>Description</th>
       <th style="width:60px;">Actions</th>
     </tr>
@@ -23,8 +22,7 @@
   <ng-template #body let-s>
     <tr>
       <td>{{ s.name }}</td>
-      <td>{{ s.slug }}</td>
-      <td class="muted">{{ s.description }}</td>
+      <td class="muted"><div [innerHTML]="s.description | stripP"></div></td>
       <td class="row-actions">
         <p-button (click)="goEdit(s.id)" icon="pi pi-pencil" id="btn_edit_subject" severity="info" size="small"/>
         <p-button (click)="goDelete(s.id)" icon="pi pi-trash" id="btn_delete_subject" severity="danger" size="small"/>

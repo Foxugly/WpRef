@@ -9,4 +9,5 @@ urlpatterns = [
     path("user/", include(("customuser.api_urls", "user"), namespace="user-api")),
     path("domain/", include(("domain.api_urls", "domain"), namespace="domain-api")),
     path("lang/", include(("language.api_urls", "lang"), namespace="lang-api")),
+    path("translate/", include(("translation.api_urls", "translation"), namespace="translate-api")),
 ]

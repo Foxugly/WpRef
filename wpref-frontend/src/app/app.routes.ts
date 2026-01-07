@@ -12,6 +12,12 @@ import {ResetPassword} from './pages/auth/reset-password/reset-password';
 import {ChangePassword} from './pages/auth/change-password/change-password';
 import {Register} from './pages/auth/register/register';
 
+// DOMAIN
+import {DomainList} from './pages/domain/list/domain-list';
+import {DomainCreate} from './pages/domain/create/domain-create';
+import {DomainEdit} from './pages/domain/edit/domain-edit';
+import {DomainDelete} from './pages/domain/delete/domain-delete';
+
 // SUBJECT
 import {SubjectList} from './pages/subject/list/subject-list';
 import {SubjectCreate} from './pages/subject/create/subject-create';
@@ -31,6 +37,7 @@ import {QuizView} from './pages/quiz/view/quiz-view';
 import {QuizPlay} from './components/quiz-play/quiz-play';
 import {QuizQuestionView} from './pages/quiz/question-view/question-view';
 
+
 export const routes: Routes = [
   {path: '', redirectTo: 'subjects', pathMatch: 'full'},
   {path: 'login', component: Login},
@@ -40,6 +47,11 @@ export const routes: Routes = [
   {path: 'reset-password', component: ResetPassword},
   {path: 'change-password', component: ChangePassword},
   {path: 'register', component: Register},
+  // DOMAIN
+  {path: 'domain/list', component: DomainList, canActivate: [authGuard]},
+  {path: 'domain/add', component: DomainCreate, canActivate: [authGuard]},
+  {path: 'domain/:id/edit', component: DomainEdit, canActivate: [authGuard]},
+  {path: 'domain/:id/delete', component: DomainDelete, canActivate: [authGuard]},
   // SUBJECT
   {path: 'subject/list', component: SubjectList, canActivate: [authGuard]},
   {path: 'subject/add', component: SubjectCreate, canActivate: [authGuard]},

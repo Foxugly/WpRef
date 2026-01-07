@@ -57,7 +57,7 @@ class DomainViewSetTests(APITestCase):
     # Helpers URL
     # -------------------------
     def _list_url(self):
-        return reverse("api:domain-api:domain-list")
+        return reverse("api:domain-api:list")
 
     def _detail_url(self, domain_or_id):
         domain_id = domain_or_id.id if hasattr(domain_or_id, "id") else int(domain_or_id)

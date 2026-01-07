@@ -174,7 +174,7 @@ class SubjectViewSet(MyModelViewSet):
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return SubjectReadSerializer
-        elif self.action in ["detail"]:
+        elif self.action in ["details"]:
             return SubjectDetailSerializer
         return SubjectWriteSerializer
 
@@ -245,7 +245,7 @@ class SubjectViewSet(MyModelViewSet):
             output="200 + SubjectDetailSerializer | 404",
         )
         instance = self.get_object()
-        serializer = SubjectDetailSerializer(instance, context=self.get_serializer_context(), ).data
+        serializer = self.get_serializer(instance, context=self.get_serializer_context())
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
@@ -255,10 +255,12 @@ class SubjectViewSet(MyModelViewSet):
             input_expected="body JSON: SubjectSerializer (write fields)",
             output="201 + SubjectWriteSerializer | 400",
         )
-        response = super().create(request, *args, **kwargs)
-        instance = Subject.objects.get(pk=response.data["id"])
-        response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(),).data
-        return response
+        write_serializer = self.get_serializer(data=request.data)
+        write_serializer.is_valid(raise_exception=True)
+        instance = write_serializer.save()
+        read_serializer = SubjectReadSerializer(instance, context=self.get_serializer_context())
+        headers = self.get_success_headers(read_serializer.data)
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
         self._log_call(

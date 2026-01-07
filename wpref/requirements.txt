@@ -11,3 +11,4 @@ requests
 drf-nested-routers
 coverage
 django-parler
+django-environ

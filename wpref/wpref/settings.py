@@ -11,11 +11,17 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
 from django.utils.translation import gettext_lazy as _
-
+import environ
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env(
+    DEEPL_IS_FREE=(bool, False),
+)
+ENV_FILE = BASE_DIR / ".env"
+environ.Env.read_env(str(ENV_FILE))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -50,6 +56,7 @@ INSTALLED_APPS = [
     'quiz.apps.QuizConfig',
     'domain.apps.DomainConfig',
     'language.apps.LanguageConfig',
+    'translation.apps.TranslationConfig'
 ]
 
 MIDDLEWARE = [
@@ -192,3 +199,6 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+DEEPL_AUTH_KEY = env("DEEPL_AUTH_KEY", default="")
+DEEPL_IS_FREE = env("DEEPL_IS_FREE")

@@ -8,7 +8,6 @@ import {
   SubjectWriteRequestDto
 } from '../../api/generated';
 import{SubjectApi} from '../../api/generated';
-export type SubjectWritePayload = Pick<SubjectReadDto, 'name' | 'description'>;
 
 @Injectable({
   providedIn: 'root',
@@ -30,8 +29,8 @@ export class SubjectService {
     return this.api.subjectDetailsRetrieve({ subjectId: subjectId });
   }
 
-  create(payload: SubjectCreateRequestParams): Observable<SubjectReadDto> {
-    return this.api.subjectCreate(payload);
+  create(payload: SubjectWriteRequestDto): Observable<SubjectReadDto> {
+    return this.api.subjectCreate({subjectWriteRequestDto:payload});
   }
 
   update(subjectId: number, payload: SubjectWriteRequestDto): Observable<SubjectReadDto> {
@@ -63,10 +62,10 @@ export class SubjectService {
   }
 
   goEdit(subjectId: number): void {
-    this.router.navigate(ROUTES.question.edit(subjectId));
+    this.router.navigate(ROUTES.subject.edit(subjectId));
   }
 
   goDelete(subjectId: number): void {
-    this.router.navigate(ROUTES.question.delete(subjectId));
+    this.router.navigate(ROUTES.subject.delete(subjectId));
   }
 }

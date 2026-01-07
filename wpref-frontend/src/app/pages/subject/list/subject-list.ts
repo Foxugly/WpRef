@@ -6,11 +6,12 @@ import {InputTextModule} from 'primeng/inputtext';
 import {PaginatorModule} from 'primeng/paginator';
 import {TableModule} from 'primeng/table';
 import {SubjectReadDto} from '../../../api/generated';
+import {StripPPipe} from '../../../shared/pipes/strip-p.pipe';
 
 @Component({
   standalone: true,
   selector: 'app-subject-list',
-  imports: [FormsModule, Button, InputTextModule, PaginatorModule, TableModule],
+  imports: [FormsModule, Button, InputTextModule, PaginatorModule, TableModule, StripPPipe,],
   templateUrl: './subject-list.html',
   styleUrl: './subject-list.scss'
 })

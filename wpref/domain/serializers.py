@@ -123,7 +123,7 @@ class DomainWriteSerializer(serializers.ModelSerializer):
     # ---------------------------
     def create(self, validated_data):
         translations = validated_data.pop("translations")
-        codes = validated_data.pop("allowed_language_codes", None)
+        codes = validated_data.pop("allowed_languages", [])
         staff = validated_data.pop("staff", [])
         domain = Domain.objects.create(**validated_data)
         if staff:
@@ -136,7 +136,7 @@ class DomainWriteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         translations = validated_data.pop("translations", None)
-        codes = validated_data.pop("allowed_language_codes", None)
+        codes = validated_data.pop("allowed_languages", None)
         staff = validated_data.pop("staff", None)
 
         for attr, value in validated_data.items():
