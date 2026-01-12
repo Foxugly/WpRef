@@ -1,12 +1,15 @@
 import requests
 from django.conf import settings
 
+
 class DeepLError(Exception):
     pass
+
 
 def _deepl_base_url() -> str:
     is_free = getattr(settings, "DEEPL_IS_FREE", False)
     return "https://api-free.deepl.com" if is_free else "https://api.deepl.com"
+
 
 def deepl_translate_many(texts: list[str], source: str, target: str, fmt: str = "text") -> list[str]:
     """

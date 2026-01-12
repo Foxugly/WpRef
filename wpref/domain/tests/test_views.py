@@ -1,14 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import reverse
-
-from rest_framework import status
-from rest_framework.test import APITestCase, APIRequestFactory, force_authenticate
-
-from language.models import Language
 from domain.models import Domain
 from domain.views import DomainViewSet
-
+from language.models import Language
+from rest_framework import status
+from rest_framework.test import APITestCase, APIRequestFactory, force_authenticate
 
 User = get_user_model()
 
@@ -219,7 +216,7 @@ class DomainViewSetTests(APITestCase):
 
         payload = {
             "translations": {"fr": {"name": "Owned UPDATED", "description": "D"},
-                             "nl": {"name": "Owned NL", "description": ""},},
+                             "nl": {"name": "Owned NL", "description": ""}, },
             "allowed_language_codes": ["fr", "nl"],
             "active": False,
             "staff_ids": [self.owner.pk],  # ok

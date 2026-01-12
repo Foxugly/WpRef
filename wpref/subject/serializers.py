@@ -1,7 +1,10 @@
+from typing import List
+
+from drf_spectacular.utils import extend_schema_field
+from question.models import Question
 from rest_framework import serializers
 
 from .models import Subject
-from question.models import Question
 
 
 class QuestionInSubjectSerializer(serializers.ModelSerializer):
@@ -14,8 +17,11 @@ class QuestionInSubjectSerializer(serializers.ModelSerializer):
             "title",
         ]
 
-    def get_title(self, obj: Question) -> str:
-        return obj.safe_translation_getter("title", any_language=True) or ""
+    def get_title(self, obj: Question) -> dict:
+        data = {}
+        for t in obj.domain.translations.all():
+            data[t.language_code] = {"title": t.title or "", }
+        return data
 
 
 class SubjectWriteSerializer(serializers.ModelSerializer):
@@ -31,7 +37,7 @@ class SubjectWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subject
-        fields = ["translations", "domain"]
+        fields = ["translations", "domain", "active"]
 
         # ---------------------------
         # helpers
@@ -91,37 +97,45 @@ class SubjectWriteSerializer(serializers.ModelSerializer):
 
         return attrs
 
+
 class SubjectReadSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
-    description = serializers.SerializerMethodField()
+    translations = serializers.SerializerMethodField()
 
     class Meta:
         model = Subject
-        fields = ["id", "name", "description", "domain"]
+        fields = ["id", "domain", "translations"]
+        read_only_fields = fields
 
-    def get_name(self, obj: Subject) -> str:
-        return obj.safe_translation_getter("name", any_language=True) or ""
-
-    def get_description(self, obj: Subject) -> str:
-        return obj.safe_translation_getter("description", any_language=True) or ""
+    def get_translations(self, obj: Subject) -> dict:
+        data = {}
+        # Parler: obj.translations est le related manager vers SubjectTranslation
+        for t in obj.translations.all():
+            data[t.language_code] = {
+                "name": t.name or "",
+                "description": t.description or "",
+            }
+        return data
 
 
 class SubjectDetailSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
-    description = serializers.SerializerMethodField()
+    translations = serializers.SerializerMethodField()
     questions = serializers.SerializerMethodField()
 
     class Meta:
         model = Subject
-        fields = ["id", "name", "description", "domain", "questions"]
+        fields = ["id", "active", "domain", "translations", "questions"]
 
-    def get_name(self, obj: Subject) -> str:
-        return obj.safe_translation_getter("name", any_language=True) or ""
+    def get_translations(self, obj: Subject) -> dict:
+        data = {}
+        # Parler: obj.translations est le related manager vers SubjectTranslation
+        for t in obj.translations.all():
+            data[t.language_code] = {
+                "name": t.name or "",
+                "description": t.description or "",
+            }
+        return data
 
-    def get_description(self, obj: Subject) -> str:
-        return obj.safe_translation_getter("description", any_language=True) or ""
-
-    def get_questions(self, obj: Subject) -> str:
+    @extend_schema_field(QuestionInSubjectSerializer(many=True))
+    def get_questions(self, obj: Subject) -> List[dict]:
         qs = obj.questions.all().filter(active=True).order_by("id")
         return QuestionInSubjectSerializer(qs, many=True, context=self.context).data
-

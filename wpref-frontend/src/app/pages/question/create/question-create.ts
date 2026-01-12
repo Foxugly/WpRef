@@ -1,6 +1,6 @@
-import {Component, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
-import {QuestionCreatePayload, QuestionService} from '../../../services/question/question';
+import {QuestionService} from '../../../services/question/question';
 import {SubjectService} from '../../../services/subject/subject';
 import {Editor} from 'primeng/editor';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -11,6 +11,8 @@ import {MultiSelectModule} from 'primeng/multiselect';
 import {PanelModule} from 'primeng/panel';
 import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/media-selector/media-selector';
 import {QuestionCreateRequestParams, SubjectReadDto} from '../../../api/generated';
+import {UserService} from '../../../services/user/user';
+import {selectTranslation} from '../../../shared/i18n/select-translation';
 
 
 @Component({
@@ -55,14 +57,25 @@ export class QuestionCreate implements OnInit {
   });
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
+  private userService: UserService = inject(UserService);
+  currentLang = computed(() => this.userService.currentLang);
 
   // ------------- Getters pratiques -------------
 
   get subjectOptions(): { name: string; code: number }[] {
-    return this.subjects().map((s) => ({
-      name: s.name,
-      code: s.id,
-    }));
+    const lang = this.currentLang(); // ou this.currentLang si ce n’est pas un signal
+
+    return this.subjects().map((s: SubjectReadDto) => {
+      const t = selectTranslation<{ name: string }>(
+        s.translations as Record<string, { name: string }>,
+        lang,
+      );
+
+      return {
+        name: t?.name ?? '',
+        code: s.id,
+      };
+    });
   }
 
 

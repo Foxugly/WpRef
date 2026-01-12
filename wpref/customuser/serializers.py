@@ -2,13 +2,10 @@ from typing import List
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import inline_serializer, extend_schema_field
+from domain.models import Domain
+from drf_spectacular.utils import inline_serializer
 from quiz.models import Quiz
 from rest_framework import serializers
-
-from .models import CustomUser
-from domain.models import Domain
 
 User = get_user_model()
 
@@ -48,6 +45,7 @@ class CustomUserReadSerializer(serializers.ModelSerializer):
 
     def get_managed_domain_ids(self, obj) -> List[int]:
         return list(obj.managed_domains.values_list("id", flat=True))
+
 
 class CustomUserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)

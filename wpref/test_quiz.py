@@ -58,7 +58,8 @@ def auth_headers(token: str) -> Dict[str, str]:
 # 1. Créer des Questions
 # ============================================================
 
-def create_question_as_admin(token: str, title: str, content: str, options: List[Dict[str, Any]], media: List[Dict[str, Any]]) -> Dict[str, Any]:
+def create_question_as_admin(token: str, title: str, content: str, options: List[Dict[str, Any]],
+                             media: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Crée une Question avec quelques AnswerOptions.
     On suppose un serializer de type :
@@ -196,7 +197,7 @@ def get_quiz_question(token: str, quiz_id: int) -> Dict[str, Any]:
     return data
 
 
-def get_question_detail(token: str, quiz_id:int, question_order: int) -> Dict[str, Any]:
+def get_question_detail(token: str, quiz_id: int, question_order: int) -> Dict[str, Any]:
     """
     GET /api/question/{id}/
 
@@ -209,7 +210,7 @@ def get_question_detail(token: str, quiz_id:int, question_order: int) -> Dict[st
     payload = {
         "question_order": question_order,
     }
-    url = get_url(PATH_QUIZ_QUESTION.format(quiz_id=quiz_id)) # TODO intégrer quiz_id
+    url = get_url(PATH_QUIZ_QUESTION.format(quiz_id=quiz_id))  # TODO intégrer quiz_id
     resp = requests.get(url, payload=payload, headers=auth_headers(token))
     if resp.status_code != 200:
         raise RuntimeError(f"Erreur get Question {question_order}: {resp.status_code} {resp.text}")
@@ -261,7 +262,6 @@ def answer_all_questions_randomly(token: str, quiz_id: int) -> None:
     """
     quiz_questions = get_quiz_question(token, quiz_id)
     print(f"Le template contient {len(quiz_questions)} questions.")
-
 
     for i, qq in enumerate(quiz_questions, start=1):
         print(qq)
@@ -340,7 +340,7 @@ def main():
             {"content": "4", "is_correct": True},
             {"content": "5", "is_correct": False},
         ],
-        media = []
+        media=[]
     )
 
     # 3) Créer un QuizTemplate

@@ -5,12 +5,11 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
-
 from domain.models import Domain
 from language.models import Language
 from question.models import Question, AnswerOption, QuestionMedia
+from rest_framework import status
+from rest_framework.test import APITestCase
 from subject.models import Subject
 
 User = get_user_model()
@@ -77,14 +76,14 @@ class QuestionViewSetTests(APITestCase):
         return s
 
     def _mk_question(
-        self,
-        domain: Domain,
-        *,
-        title_fr="Q FR",
-        title_nl="Q NL",
-        allow_multiple_correct=False,
-        with_options=True,
-        with_subjects=False,
+            self,
+            domain: Domain,
+            *,
+            title_fr="Q FR",
+            title_nl="Q NL",
+            allow_multiple_correct=False,
+            with_options=True,
+            with_subjects=False,
     ) -> Question:
         q = Question.objects.create(
             domain=domain,
@@ -155,8 +154,8 @@ class QuestionViewSetTests(APITestCase):
     def _payload_create_media(self, domain: Domain, subject_ids=None, *, title_fr="T FR", title_nl="T NL"):
         d = self._payload_create(domain, subject_ids)
         d["media"] = [
-                {"kind": "external", "external_url": "https://example.com/1", "sort_order": 1},
-            ]
+            {"kind": "external", "external_url": "https://example.com/1", "sort_order": 1},
+        ]
         return d
 
     def _payload_to_multipart(self, payload: dict) -> dict:
@@ -291,7 +290,8 @@ class QuestionViewSetTests(APITestCase):
         answer_options = json.dumps(
             [
                 {"is_correct": True, "sort_order": 1, "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}}},
-                {"is_correct": False, "sort_order": 2, "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}}},
+                {"is_correct": False, "sort_order": 2,
+                 "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}}},
             ]
         )
         media = json.dumps([{"kind": "external", "external_url": "https://example.com", "sort_order": 10}])

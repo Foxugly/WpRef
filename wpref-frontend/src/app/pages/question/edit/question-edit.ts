@@ -1,4 +1,4 @@
-import {Component, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
 import {QuestionService,} from '../../../services/question/question';
@@ -14,10 +14,12 @@ import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/me
 import {
   QuestionAnswerOptionReadDto,
   QuestionMediaDto,
-  QuestionMultipartWriteRequestDto,
-  QuestionReadDto, QuestionUpdateRequestParams,
+  QuestionReadDto,
+  QuestionUpdateRequestParams,
   SubjectReadDto
 } from '../../../api/generated';
+import {UserService} from '../../../services/user/user';
+import {selectTranslation} from '../../../shared/i18n/select-translation';
 
 @Component({
   standalone: true,
@@ -61,12 +63,23 @@ export class QuestionEdit implements OnInit {
   private route = inject(ActivatedRoute);
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
+  private userService: UserService = inject(UserService);
+  currentLang = computed(() => this.userService.currentLang);
 
   get subjectOptions(): { name: string; code: number }[] {
-    return this.subjects().map((s) => ({
-      name: s.name,
-      code: s.id,
-    }));
+    const lang = this.currentLang(); // ou this.currentLang si ce n’est pas un signal
+
+    return this.subjects().map((s: SubjectReadDto) => {
+      const t = selectTranslation<{ name: string }>(
+        s.translations as Record<string, { name: string }>,
+        lang,
+      );
+
+      return {
+        name: t?.name ?? '',
+        code: s.id,
+      };
+    });
   }
 
   get answerOptions(): FormArray {
@@ -124,7 +137,7 @@ export class QuestionEdit implements OnInit {
       return;
     }
     this.saving.set(true);
-    this.questionService.update(this.form.value as  QuestionUpdateRequestParams).subscribe({
+    this.questionService.update(this.form.value as QuestionUpdateRequestParams).subscribe({
       next: () => {
         this.saving.set(false);
         this.success.set('Question mise à jour avec succès.');

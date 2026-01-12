@@ -143,6 +143,7 @@ class QuestionAnswerOptionWriteSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 class QuestionInQuizQuestionSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
     answer_options = serializers.SerializerMethodField()

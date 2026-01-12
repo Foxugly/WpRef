@@ -2,57 +2,62 @@ from typing import List
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from drf_spectacular.utils import extend_schema_field
 from language.models import Language
 from language.serializers import LanguageReadSerializer
 from rest_framework import serializers
 
 from .models import Domain
+from subject.serializers import SubjectReadSerializer
 
 User = get_user_model()
 LANG_CODES = {code for code, _ in settings.LANGUAGES}
 
 
 class DomainReadSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
-    description = serializers.SerializerMethodField()
-    allowed_languages = LanguageReadSerializer(many=True, read_only=True)
-
-    owner_username = serializers.CharField(source="owner.username", read_only=True)
-    staff_usernames = serializers.SerializerMethodField(read_only=True)
+    translations = serializers.SerializerMethodField()
+    allowed_languages = serializers.SerializerMethodField()
+    owner = serializers.SerializerMethodField()
+    staff = serializers.SerializerMethodField()
 
     class Meta:
         model = Domain
         fields = [
             "id",
-            "name",
-            "description",
+            "translations",
             "allowed_languages",
             "active",
             "owner",
-            "owner_username",
-            "staff_usernames",
+            "staff",
             "created_at",
             "updated_at",
         ]
         read_only_fields = fields
-        extra_kwargs = {
-            "owner": {"read_only": True}
-        }
+        extra_kwargs = {"owner": {"read_only": True}}
 
-    def get_name(self, obj: Domain) -> str:
-        return obj.safe_translation_getter("name", any_language=True) or ""
+    def get_translations(self, obj: Domain) -> dict:
+        data = {}
+        for t in obj.translations.all():
+            data[t.language_code] = {"name": t.name or "", "description": t.description or "", }
+        return data
 
-    def get_description(self, obj: Domain) -> str:
-        return obj.safe_translation_getter("description", any_language=True) or ""
+    def get_owner(self, obj: Domain) -> dict:
+        return {"id": obj.owner_id, "username": obj.owner.username, }
 
-    def get_staff_usernames(self, obj: Domain) -> List[str]:
-        return list(obj.staff.values_list("username", flat=True))
+    def get_staff(self, obj: Domain) -> list[dict]:
+        return [{"id": u.id, "username": u.username} for u in obj.staff.all()]
+
+    @extend_schema_field(LanguageReadSerializer(many=True))
+    def get_allowed_languages(self, obj:Domain) -> List[dict]:
+        qs = obj.allowed_languages.all().filter(active=True).order_by("id")
+        return LanguageReadSerializer(qs, many=True, context=self.context).data
 
 
 class DomainWriteSerializer(serializers.ModelSerializer):
     allowed_languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, required=True, )
-    translations = serializers.DictField(child=serializers.DictField(),write_only=True,required=True,)
-    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(),many=True,required=True,)
+    translations = serializers.DictField(child=serializers.DictField(), write_only=True, required=True, )
+    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=True, )
 
     class Meta:
         model = Domain
@@ -62,7 +67,7 @@ class DomainWriteSerializer(serializers.ModelSerializer):
             "active",
             "staff",
         ]
-        #read_only_fields = ["id"]
+        # read_only_fields = ["id"]
 
     # ---------------------------
     # helpers
@@ -123,33 +128,31 @@ class DomainWriteSerializer(serializers.ModelSerializer):
     # ---------------------------
     def create(self, validated_data):
         translations = validated_data.pop("translations")
-        codes = validated_data.pop("allowed_languages", [])
+        langs = validated_data.pop("allowed_languages", [])
         staff = validated_data.pop("staff", [])
-        domain = Domain.objects.create(**validated_data)
-        if staff:
-            domain.staff.set(staff)
-        if codes is not None:
-            langs = list(Language.objects.filter(code__in=codes))
-            domain.allowed_languages.set(langs)
+        with transaction.atomic():
+            domain = Domain.objects.create(**validated_data)
+            if staff:
+                domain.staff.set(staff)
+            if len(langs):
+                domain.allowed_languages.set(langs)
         self._apply_translations(domain, translations)
         return domain
 
     def update(self, instance, validated_data):
         translations = validated_data.pop("translations", None)
-        codes = validated_data.pop("allowed_languages", None)
+        langs = validated_data.pop("allowed_languages", None)
         staff = validated_data.pop("staff", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        with transaction.atomic():
+            if staff is not None:
+                instance.staff.set(staff)
 
-        if staff is not None:
-            instance.staff.set(staff)
-
-        if codes is not None:
-            langs = list(Language.objects.filter(code__in=codes))
-            instance.allowed_languages.set(langs)
-
+            if len(langs):
+                instance.allowed_languages.set(langs)
 
         if translations is not None:
             self._apply_translations(instance, translations)
@@ -162,3 +165,28 @@ class DomainPartialSerializer(DomainWriteSerializer):
     translations = serializers.DictField(child=serializers.DictField(), write_only=True, required=False, )
     staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False, )
     active = serializers.BooleanField(required=False)
+
+
+class DomainDetailSerializer(DomainReadSerializer):
+    subjects = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Domain
+        fields = [
+            "id",
+            "translations",
+            "allowed_languages",
+            "active",
+            "owner",
+            "staff",
+            "created_at",
+            "updated_at",
+            "subjects",
+        ]
+        read_only_fields = fields
+        extra_kwargs = {"owner": {"read_only": True}}
+
+    @extend_schema_field(SubjectReadSerializer(many=True))
+    def get_subjects(self, obj: Domain) -> List[dict]:
+        qs = obj.subjects.filter(active=True).order_by("id")
+        return SubjectReadSerializer(qs, many=True, context=self.context).data

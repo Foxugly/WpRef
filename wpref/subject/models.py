@@ -14,6 +14,7 @@ class Subject(TranslatableModel):
         on_delete=models.PROTECT,
         related_name="subjects", blank=True, null=True
     )
+    active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         ordering = ["-pk"]

@@ -3,10 +3,9 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from domain.models import Domain
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from domain.models import Domain
 from subject.models import Subject
 
 User = get_user_model()
@@ -202,8 +201,8 @@ class SubjectViewSetTests(APITestCase):
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         data = r.json()
         self.assertIn("id", data)
-        self.assertIn("name", data)          # read serializer
-        self.assertIn("description", data)   # read serializer
+        self.assertIn("name", data)  # read serializer
+        self.assertIn("description", data)  # read serializer
         self.assertEqual(data["domain"], self.domain.id)
 
         created = Subject.objects.get(pk=data["id"])
@@ -343,4 +342,3 @@ class SubjectViewSetTests(APITestCase):
             r = self.client.delete(self._detail_url(s))
             self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
             mocked_destroy.assert_called()
-

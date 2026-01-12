@@ -1,5 +1,6 @@
 # lang/admin.py
 from django.contrib import admin
+
 from .models import Language
 
 
@@ -10,4 +11,3 @@ class LangAdmin(admin.ModelAdmin):
     search_fields = ("code", "name",)
     ordering = ("code",)
     list_editable = ("active",)
-

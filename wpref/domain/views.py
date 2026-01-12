@@ -2,13 +2,15 @@ from django.db.models import Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from wpref.tools import MyModelViewSet
 
 from .models import Domain
 from .permissions import IsDomainOwnerOrStaff
-from .serializers import DomainReadSerializer, DomainWriteSerializer, DomainPartialSerializer
+from .serializers import DomainReadSerializer, DomainWriteSerializer, DomainPartialSerializer, DomainDetailSerializer
+from wpref.tools import ErrorDetailSerializer
 
 
 @extend_schema_view(
@@ -42,6 +44,25 @@ from .serializers import DomainReadSerializer, DomainWriteSerializer, DomainPart
         responses={
             status.HTTP_200_OK: DomainReadSerializer,
             status.HTTP_404_NOT_FOUND: OpenApiResponse(description="Not found (domain non visible ou inexistant)."),
+        },
+    ),
+    details=extend_schema(
+        tags=["Domain"],
+        summary="Récupérer un domaine avec détails",
+        parameters=[
+            OpenApiParameter(
+                name="domain_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                required=True,
+                description="ID du domaine.",
+            )
+        ],
+        responses={
+            200: DomainDetailSerializer,
+            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
+            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
+            404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
         },
     ),
     create=extend_schema(
@@ -146,7 +167,9 @@ class DomainViewSet(MyModelViewSet):
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return DomainReadSerializer
-        if self.action == "partial_update":
+        elif self.action in ["details"]:
+            return DomainDetailSerializer
+        elif self.action == "partial_update":
             return DomainPartialSerializer
         return DomainWriteSerializer
 
@@ -195,3 +218,16 @@ class DomainViewSet(MyModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
+
+    @action(detail=True, methods=["get"], url_path="details")
+    def details(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="details",
+            endpoint="GET /api/domain/{domain_id}/details/",
+            input_expected="path domain_id, body vide",
+            output="200 + DomainDetailSerializer | 404",
+        )
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, context=self.get_serializer_context())
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

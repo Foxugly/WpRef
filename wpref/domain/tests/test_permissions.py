@@ -4,10 +4,9 @@ from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from rest_framework.test import APITestCase, APIRequestFactory
-
 from domain.models import Domain
 from domain.permissions import IsDomainOwnerOrStaff
+from rest_framework.test import APITestCase, APIRequestFactory
 
 User = get_user_model()
 

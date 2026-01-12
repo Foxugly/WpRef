@@ -6,17 +6,17 @@ from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
     OpenApiParameter,
     OpenApiResponse,
-    OpenApiTypes,
 )
 from quiz.models import Quiz
 from rest_framework import status, mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import GenericAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from wpref.tools import ErrorDetailSerializer
@@ -111,7 +111,7 @@ class CustomUserViewSet(
 ):
     lookup_field = "pk"
     lookup_url_kwarg = "user_id"
-    queryset = CustomUser.objects.all().order_by("id")
+    queryset = User.objects.all().order_by("id")
     lookup_value_regex = r"\d+"  # ✅ empêche 'me' d'être capturé comme pk
 
     def get_permissions(self):
@@ -120,7 +120,7 @@ class CustomUserViewSet(
         if self.action == "list":
             return [IsAdminUser()]
         # retrieve/update/partial_update
-        if self.action in ("me" , "set_current_domain"):
+        if self.action in ("me", "set_current_domain"):
             return [IsSelf()]
         return [IsSelfOrStaffOrSuperuser()]
 
@@ -146,7 +146,8 @@ class CustomUserViewSet(
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(CustomUserReadSerializer(request.user, context={"request": request}).data, status=status.HTTP_200_OK)
+        return Response(CustomUserReadSerializer(request.user, context={"request": request}).data,
+                        status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], url_path="me/current-domain")
     def set_current_domain(self, request):
@@ -191,7 +192,7 @@ class CustomUserViewSet(
 class UserQuizListView(GenericAPIView):
     permission_classes = [IsSelfOrStaffOrSuperuser]
     serializer_class = QuizSimpleSerializer
-    queryset = CustomUser.objects.none()
+    queryset = User.objects.none()
     lookup_field = "pk"
     lookup_url_kwarg = "user_id"
 
@@ -201,7 +202,7 @@ class UserQuizListView(GenericAPIView):
         responses={200: QuizSimpleSerializer(many=True)},
     )
     def get(self, request, pk):
-        user = get_object_or_404(CustomUser, pk=pk)
+        user = get_object_or_404(User, pk=pk)
 
         # sécurité basique : un user ne voit que ses quiz, sauf si staff
         if not request.user.is_staff and request.user != user:
@@ -344,4 +345,3 @@ class PasswordChangeView(GenericAPIView):
 
         return Response({"detail": "Mot de passe modifié avec succès."},
                         status=status.HTTP_200_OK)
-

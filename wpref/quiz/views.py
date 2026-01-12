@@ -19,6 +19,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from subject.models import Subject
+from wpref.tools import ErrorDetailSerializer
 from wpref.tools import MyModelViewSet
 
 from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
@@ -29,7 +30,6 @@ from .serializers import (
     QuizQuestionAnswerWriteSerializer, GenerateFromSubjectsInputSerializer, BulkCreateFromTemplateInputSerializer,
     CreateQuizInputSerializer
 )
-from wpref.tools import ErrorDetailSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,6 @@ class QuizTemplateViewSet(MyModelViewSet):
             output="200 + QuizTemplateSerializer | 400 | 404",
             extra={"pk": kwargs.get("qt_id")},
         )
-        print("update")
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):

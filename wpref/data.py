@@ -418,28 +418,28 @@ QUIZZES_DEF: List[Dict[str, Any]] = [
         "description": "Quiz d’entraînement sur les bases de Scrum.",
         "mode": "practice",
         "question_indexes": [0, 1, 2, 3, 4],
-        "domain":"Scrum",
+        "domain": "Scrum",
     },
     {
         "title": "Django Practice 1",
         "description": "Quiz d’entraînement sur Django (modèles et API).",
         "mode": "practice",
         "question_indexes": [10, 11, 12, 13, 14],
-        "domain":"Django",
+        "domain": "Django",
     },
     {
         "title": "Scrum Exam 1",
         "description": "Quiz d’examen sur Scrum.",
         "mode": "exam",
         "question_indexes": [5, 6, 7, 8, 9],
-        "domain":"Scrum",
+        "domain": "Scrum",
     },
     {
         "title": "Django Exam 1",
         "description": "Quiz d’examen sur Django.",
         "mode": "exam",
         "question_indexes": [15, 16, 17, 18, 19],
-        "domain":"Django",
+        "domain": "Django",
     },
 ]
 
@@ -474,7 +474,7 @@ def load_openapi_paths(openapi_path: str) -> Dict[str, str]:
         "token": None,
         "subject": None,
         "question": None,
-        "domain":None,
+        "domain": None,
         "quiz": None,
         "user": None,
     }
@@ -577,6 +577,7 @@ def find_subject_by_name(
 
     return None
 
+
 def create_subjects(
         base_url: str,
         subject_path: str,
@@ -606,7 +607,7 @@ def create_subjects(
         payload = {
             "name": name,
             "description": description,
-            "domain":domain["id"],
+            "domain": domain["id"],
         }
         url = get_url(base_url, subject_path)
         resp = requests.post(url, json=payload, headers=headers)
@@ -619,7 +620,6 @@ def create_subjects(
         print(f" - Subject créé: {data['id']} {data['name']}")
 
     return result
-
 
 
 # ============================================================
@@ -670,7 +670,7 @@ def find_domain_by_name(
 
 
 def create_domains(
-base_url: str,
+        base_url: str,
         domain_path: str,
         token: str,
 ) -> Dict[str, Dict[str, Any]]:
@@ -885,7 +885,7 @@ def create_quiz(
         title: str,
         description: str,
         mode: str,
-        domain:str,
+        domain: str,
         max_questions: int = 5,
 ) -> Dict[str, Any]:
     """

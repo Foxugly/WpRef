@@ -9,6 +9,8 @@ import {
 } from '../../api/generated';
 import{SubjectApi} from '../../api/generated';
 
+export type SubjectTranslationDto = { name: string; description: string };
+
 @Injectable({
   providedIn: 'root',
 })

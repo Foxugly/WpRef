@@ -8,7 +8,6 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
-
 from domain.models import Domain
 from question.models import Question, AnswerOption
 from quiz.constants import VISIBILITY_IMMEDIATE, VISIBILITY_NEVER, VISIBILITY_SCHEDULED
@@ -154,7 +153,8 @@ class QuizModelsTests(TestCase):
         self.assertTrue(qt.can_answer)
 
     def test_quiztemplate_can_answer_not_permanent_started_at_none_false(self):
-        qt = QuizTemplate.objects.create(title="Sched", domain=self.domain, active=True, permanent=False, started_at=None)
+        qt = QuizTemplate.objects.create(title="Sched", domain=self.domain, active=True, permanent=False,
+                                         started_at=None)
         self.assertFalse(qt.can_answer)
 
     def test_quiztemplate_can_answer_not_permanent_no_ended_at_true(self):
@@ -313,7 +313,8 @@ class QuizModelsTests(TestCase):
 
     def test_quiz_save_sets_ended_at_with_duration_no_template_end(self):
         now = timezone.now()
-        qt = QuizTemplate.objects.create(title="Dur2", domain=self.domain, with_duration=True, duration=10, ended_at=None)
+        qt = QuizTemplate.objects.create(title="Dur2", domain=self.domain, with_duration=True, duration=10,
+                                         ended_at=None)
         quiz = Quiz.objects.create(quiz_template=qt, user=self.user, domain=self.domain)
         quiz.started_at = now
         quiz.save()

@@ -8,7 +8,6 @@ import {environment} from '../environments/environment';
 
 // Petit helper pour savoir si l’URL vise notre backend API
 function isApiUrl(url: string): boolean {
-  console.log("isApiUrl", url);
 
   const base = environment.apiBaseUrl.replace(/\/+$/, ''); // enlever les / de fin
   const cleaned = url.replace(/\/+$/, '');

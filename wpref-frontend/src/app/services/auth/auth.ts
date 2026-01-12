@@ -57,13 +57,11 @@ export class AuthService {
   }
 
   getToken(payload: TokenObtainPairRequestDto): Observable<TokenObtainPairDto> {
-    console.log("getToken");
     return this.tokenApi.tokenCreate({tokenObtainPairRequestDto: payload});
   }
 
 
   login(username: string, password: string, remember = false): Observable<CustomUserReadDto> {
-    console.log("login");
     const payload: TokenObtainPairRequestDto = {username, password};
     return this.getToken(payload).pipe(
       tap((dto: TokenObtainPairDto) => {

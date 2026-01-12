@@ -271,7 +271,6 @@ export class SubjectCreate implements OnInit {
     }
 
     const payload: SubjectWriteRequestDto = this.buildPayload();
-    console.log(payload);
     this.loading.set(true);
 
     this.subjectService.create(payload).subscribe({

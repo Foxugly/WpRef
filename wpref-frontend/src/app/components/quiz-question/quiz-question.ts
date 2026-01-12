@@ -110,8 +110,6 @@ export class QuizQuestionComponent implements OnChanges {
         this.selectedRadioId = ids.length ? ids[0] : null;
       }
     }
-    console.log('ngOnChanges', this.quizNavItem.index, this.quizNavItem.selectedOptionIds, this.selectedOptionIds);
-
   }
 
 

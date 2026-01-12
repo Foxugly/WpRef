@@ -2,7 +2,7 @@
   <div class="title">Supprimer un subject</div>
   <div class="card">
     @if (subject()) {
-      <p>Es-tu sûr de vouloir supprimer <b>{{ subject()!.name }}</b> ?</p>
+      <p>Es-tu sûr de vouloir supprimer <b>{{ getName(subject()) }}</b> ?</p>
       <div class="actions">
         <p-button id="btn_delete" label="Supprimer" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
         <p-button id="btn_back" label="Annuler" routerLink="/subject/list" severity="secondary"/>

@@ -274,7 +274,6 @@ class SubjectViewSet(MyModelViewSet):
         response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(), ).data
         return response
 
-
     def partial_update(self, request, *args, **kwargs):
         self._log_call(
             method_name="partial_update",
@@ -282,7 +281,7 @@ class SubjectViewSet(MyModelViewSet):
             input_expected="path subject_id + body JSON partiel (SubjectSerializer)",
             output="200 + SubjectReadSerializer | 400 | 404",
         )
-        response =  super().partial_update(request, *args, **kwargs)
+        response = super().partial_update(request, *args, **kwargs)
         instance = Subject.objects.get(pk=response.data["id"])
         response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(), ).data
         return response

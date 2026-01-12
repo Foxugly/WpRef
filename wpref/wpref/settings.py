@@ -11,8 +11,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-from django.utils.translation import gettext_lazy as _
+
 import environ
+from django.utils.translation import gettext_lazy as _
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,7 +23,6 @@ env = environ.Env(
 )
 ENV_FILE = BASE_DIR / ".env"
 environ.Env.read_env(str(ENV_FILE))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -153,7 +154,7 @@ SPECTACULAR_SETTINGS = {
     # Le bouton Authorize persiste votre token entre les refresh
     "SWAGGER_UI_SETTINGS": {"persistAuthorization": True},
     # Appliquer le schéma de sécu par défaut à tous les endpoints
-   # "SECURITY": [{"jwtAuth": []}],
+    # "SECURITY": [{"jwtAuth": []}],
     "ENUM_NAME_OVERRIDES": {
         "VisibilityEnum": "quiz.constants.VISIBILITY_CHOICES",
     },

@@ -21,8 +21,8 @@
   </ng-template>
   <ng-template #body let-s>
     <tr>
-      <td>{{ s.name }}</td>
-      <td class="muted"><div [innerHTML]="s.description | stripP"></div></td>
+      <td>{{ getName(s) }}</td>
+      <td class="muted"><div [innerHTML]="getDescription(s)  | stripP"></div></td>
       <td class="row-actions">
         <p-button (click)="goEdit(s.id)" icon="pi pi-pencil" id="btn_edit_subject" severity="info" size="small"/>
         <p-button (click)="goDelete(s.id)" icon="pi pi-trash" id="btn_delete_subject" severity="danger" size="small"/>

@@ -1,123 +1,179 @@
-// Variables cohérentes avec le style précédent
-$color-border: #e5e7eb;
-$color-muted: #6b7280;
-$color-bg: #ffffff;
-$color-primary: #2563eb;
-$color-secondary: #000000;
-$color-primary-hover: #2563eb;
-$radius: 8px;
-$shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+$border: #e5e7eb;
+$muted: #6b7280;
+$bg: #ffffff;
+$surface: #ffffff;
+$radius: 12px;
+$shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 
 .page {
-  max-width: 960px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 1.5rem 0;
-
-  .title {
-    text-align: center;
-    margin: 0 0 1.25rem;
-    font-size: 1.6rem;
-    font-weight: 600;
-    color: $color-secondary;
-  }
-}
-
-// ---- CARD FORM ----
-form.card {
+  padding: 1.25rem 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: $color-bg;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  padding: 1.5rem;
-  box-shadow: $shadow;
+}
 
-  label {
-    font-weight: 500;
+.header-line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  .header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .title {
+    margin: 0;
+    font-size: 1.55rem;
+    font-weight: 650;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    margin: 0;
     font-size: 0.95rem;
-    margin-bottom: -0.5rem; // rapproche label et input
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+}
+
+.card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius;
+  box-shadow: $shadow;
+  padding: 1rem;
+
+  .muted {
+    color: $muted;
+  }
+}
+
+.form-card {
+  padding: 1rem 1rem 0.85rem;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  .card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 650;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.badge {
+  font-size: 0.8rem;
+  color: $muted;
+  border: 1px solid $border;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.tabs {
+  margin-top: 0.25rem;
+}
+
+.lang-panel {
+  padding: 0.5rem 0.25rem 0.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+
+  .field--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  .field-label {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #111827;
   }
 
   .field-error {
     color: #d14343;
     font-size: 0.85rem;
-    margin-top: -0.5rem;
   }
 }
 
-
-.header-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-// ---- CARD ----
-.card {
-  background: $color-bg;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  padding: 1.25rem;
-  box-shadow: $shadow;
-
-  .muted {
-    color: $color-muted;
-  }
-}
-
-.actions {
+.footer-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-
-  p-button {
-    margin-left: 0.25rem;
-  }
+  padding-top: 0.9rem;
+  border-top: 1px solid $border;
+  margin-top: 1rem;
 }
 
-// ---- TABLE ----
 .table {
   width: 100%;
   border-collapse: collapse;
 
-  thead {
+  thead th {
+    text-align: left;
+    padding: 0.65rem 0.65rem;
+    font-size: 0.82rem;
+    color: $muted;
     background: #f9fafb;
-
-    th {
-      text-align: left;
-      padding: 0.75rem;
-      font-size: 0.85rem;
-      color: $color-muted;
-      border-bottom: 1px solid $color-border;
-    }
+    border-bottom: 1px solid $border;
   }
 
-  tbody tr {
-    border-bottom: 1px solid $color-border;
-
-    &:hover {
-      background: #f3f4f6;
-    }
-
-    td {
-      padding: 0.25rem;
-      font-size: 0.9rem;
-
-      &.muted {
-        color: $color-muted;
-      }
-    }
+  tbody td {
+    padding: 0.6rem 0.65rem;
+    border-bottom: 1px solid $border;
+    vertical-align: middle;
   }
+
+  tbody tr:hover {
+    background: #f9fafb;
+  }
+}
+
+.col-actions {
+  width: 140px;
+  text-align: right;
 }
 
 .row-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
 
-  p-button {
-    margin-left: 0.25rem;
-  }
+.empty-state {
+  margin: 0.5rem 0 0;
+}
+
+.truncate {
+  max-width: 650px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

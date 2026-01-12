@@ -1,12 +1,14 @@
-import {Component, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {SubjectService} from '../../../services/subject/subject';
+import {SubjectService, SubjectTranslationDto} from '../../../services/subject/subject';
 import {Button} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {PaginatorModule} from 'primeng/paginator';
 import {TableModule} from 'primeng/table';
-import {SubjectReadDto} from '../../../api/generated';
+import {LanguageEnumDto, SubjectReadDto} from '../../../api/generated';
 import {StripPPipe} from '../../../shared/pipes/strip-p.pipe';
+import {selectTranslation } from '../../../shared/i18n/select-translation';
+import {UserService} from '../../../services/user/user';
 
 @Component({
   standalone: true,
@@ -16,11 +18,27 @@ import {StripPPipe} from '../../../shared/pipes/strip-p.pipe';
   styleUrl: './subject-list.scss'
 })
 export class SubjectList implements OnInit {
-  private subjectService = inject(SubjectService);
-
+  private subjectService : SubjectService = inject(SubjectService);
+  private userService : UserService = inject(UserService);
   subjects = signal<SubjectReadDto[]>([]);
   q = signal('');
+  currentLang = computed(():LanguageEnumDto => this.userService.currentLang);
 
+  getName(d: SubjectReadDto): string {
+    const t = selectTranslation<SubjectTranslationDto>(
+      d.translations as unknown as Record<string, SubjectTranslationDto>,
+      this.currentLang(),
+    );
+    return t?.name ?? '';
+  }
+
+  getDescription(d: SubjectReadDto): string {
+    const t = selectTranslation<SubjectTranslationDto>(
+      d.translations as unknown as Record<string, SubjectTranslationDto>,
+      this.currentLang(),
+    );
+    return t?.description ?? '';
+  }
   // 📌 Pagination
   first = 0;  // index de départ
   rows = 10;  // nombre de lignes par page

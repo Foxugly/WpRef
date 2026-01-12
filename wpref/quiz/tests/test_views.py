@@ -6,17 +6,15 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.test import APITestCase
-
 from domain.models import Domain
 from question.models import Question, AnswerOption, QuestionSubject
 from quiz.constants import VISIBILITY_IMMEDIATE, VISIBILITY_NEVER
 from quiz.models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
-from subject.models import Subject
-
 from quiz.views import QuizTemplateQuizQuestionViewSet, QuizQuestionAnswerViewSet, QuizViewSet
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.test import APITestCase
+from subject.models import Subject
 
 User = get_user_model()
 
@@ -363,9 +361,8 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self._auth(self.u1)
 
         with patch("quiz.views.QuizTemplateViewSet.paginate_queryset", return_value=[self.qt_ok]) as _pg, \
-             patch("quiz.views.QuizTemplateViewSet.get_paginated_response",
-                   side_effect=lambda data: Response({"results": data})) as _gpr:
-
+                patch("quiz.views.QuizTemplateViewSet.get_paginated_response",
+                      side_effect=lambda data: Response({"results": data})) as _gpr:
             res = self.client.get(self.qt_list_url)
             self.assertEqual(res.status_code, status.HTTP_200_OK)
             self.assertIn("results", res.data)

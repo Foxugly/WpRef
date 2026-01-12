@@ -1,8 +1,15 @@
 // src/app/services/user.service.ts
 import {computed, Injectable, signal} from '@angular/core';
 import {BehaviorSubject, Observable, tap} from 'rxjs';
-import {CustomUserReadDto, LanguageEnumDto, UserApi, UserMePartialUpdateRequestParams} from '../../api/generated';
+import {
+  CustomUserReadDto,
+  LanguageEnumDto, SubjectApi,
+  SubjectReadDto,
+  UserApi,
+  UserMePartialUpdateRequestParams
+} from '../../api/generated';
 import {isSupportedLanguage, SupportedLanguage} from '../../../environments/language';
+import {Router} from '@angular/router';
 
 
 @Injectable({providedIn: 'root'})
@@ -24,6 +31,10 @@ export class UserService {
 
   get currentLang(): SupportedLanguage {
     return this._lang$.value;
+  }
+
+  list(): Observable<CustomUserReadDto[]> {
+    return this.userApi.userList();
   }
 
   /** Met à jour la langue côté frontend (Subject + localStorage + <html lang>) */

@@ -6,7 +6,6 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models.deletion import ProtectedError
 from django.test import TestCase, override_settings
-
 from domain.models import Domain, settings_language_codes
 from language.models import Language
 

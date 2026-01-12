@@ -8,12 +8,8 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.utils import translation
-from rest_framework.exceptions import ValidationError as DRFValidationError
-
 from domain.models import Domain
 from language.models import Language
-from subject.models import Subject
-
 from question.models import Question, AnswerOption, QuestionMedia
 from question.serializers import (
     QuestionLiteSerializer,
@@ -24,6 +20,7 @@ from question.serializers import (
     QuestionReadSerializer,
     QuestionWriteSerializer,
 )
+from subject.models import Subject
 
 User = get_user_model()
 
@@ -84,7 +81,7 @@ class QuestionSerializersTests(TestCase):
     # Inline serializer (multipart schema)
     # ---------------------------------------------------------------------
     def test_question_multipart_write_serializer_requires_translations(self):
-        ser = QuestionWriteSerializer(data={"domain": self.domain.id,})
+        ser = QuestionWriteSerializer(data={"domain": self.domain.id, })
         self.assertFalse(ser.is_valid())
         self.assertIn("translations", ser.errors)
 
@@ -92,20 +89,20 @@ class QuestionSerializersTests(TestCase):
         payload = {
             "domain": self.domain.id,
             "translations": {"fr": {"title": "T", "description": "", "explanation": ""},
-                             "nl": {"title": "T (nl)", "description": "", "explanation": ""},},
+                             "nl": {"title": "T (nl)", "description": "", "explanation": ""}, },
             "subject_ids": [self.subject.id],
             "answer_options": [
-                    {
-                        "is_correct": True,
-                        "sort_order": 1,
-                        "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}},
-                    },
-                    {
-                        "is_correct": False,
-                        "sort_order": 2,
-                        "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}},
-                    },
-                ],
+                {
+                    "is_correct": True,
+                    "sort_order": 1,
+                    "translations": {"fr": {"content": "A"}, "nl": {"content": "A"}},
+                },
+                {
+                    "is_correct": False,
+                    "sort_order": 2,
+                    "translations": {"fr": {"content": "B"}, "nl": {"content": "B"}},
+                },
+            ],
             "media": json.dumps([{"kind": "external", "external_url": "https://example.com", "sort_order": 1}]),
             "media_files": [
                 SimpleUploadedFile("img.png", b"fake", content_type="image/png"),
@@ -124,7 +121,8 @@ class QuestionSerializersTests(TestCase):
 
     def test_question_media_serializer_read_only_fields_exist(self):
         # Juste pour couvrir le serializer; le modèle QuestionMedia clean est ailleurs.
-        m = QuestionMedia.objects.create(question=self.q, kind=QuestionMedia.EXTERNAL, external_url="https://x", sort_order=1)
+        m = QuestionMedia.objects.create(question=self.q, kind=QuestionMedia.EXTERNAL, external_url="https://x",
+                                         sort_order=1)
         data = QuestionMediaSerializer(m).data
         self.assertIn("id", data)
         self.assertIn("kind", data)

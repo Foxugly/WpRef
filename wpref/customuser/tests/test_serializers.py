@@ -1,8 +1,7 @@
 from unittest.mock import patch
 
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-
+from django.test import TestCase
 from quiz.models import Quiz, QuizTemplate
 
 from ..serializers import (
@@ -184,7 +183,6 @@ class PasswordChangeSerializerTests(TestCase):
         serializer = PasswordChangeSerializer(data={"old_password": "x"})
         self.assertFalse(serializer.is_valid())
         self.assertIn("new_password", serializer.errors)
-
 
 # class MeSerializerTests(TestCase):
 #     def setUp(self):

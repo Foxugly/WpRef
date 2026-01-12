@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
-
 from domain.models import Domain
 from question.models import Question, AnswerOption
 from quiz.constants import (

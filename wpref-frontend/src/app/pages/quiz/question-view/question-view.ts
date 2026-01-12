@@ -126,8 +126,6 @@ export class QuizQuestionView implements OnInit {
   }
 
   protected changeQuestion(index: number): void {
-    console.log("ChangeQuestion", index);
-    console.log(this.quizNavItems());
     const item = this.quizNavItems().find(q => q.index === index);
     if (!item) {
       console.warn("QuestionNavItem introuvable pour index", index);
@@ -196,16 +194,10 @@ export class QuizQuestionView implements OnInit {
     items.forEach(item => {
       this.quizService.getAnswer(quizId, item.index).subscribe({
         next: (answer: QuizQuestionAnswerDto) => {
-          console.log("answer");
-          console.log(answer);
           const selectedIds = answer.selected_options;
-
           if (selectedIds.length === 0) {
-            // rien de coché pour cette question → on ne touche pas
             return;
           }
-
-          // Met à jour la liste complète
           this.quizNavItems.update(current =>
             current.map(navItem =>
               navItem.index === item.index
@@ -242,7 +234,6 @@ export class QuizQuestionView implements OnInit {
 
 
   private buildQuestionNavItems(questions: QuizQuestionReadDto[]): void {
-    console.log("buildQuestionNavItems");
     // @ts-ignore
     const navItems: QuizNavItem[] = questions.map((qq: QuizQuestionRead, idx: number) => ({
       index: qq.sort_order,

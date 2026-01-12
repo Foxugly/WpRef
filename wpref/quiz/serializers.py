@@ -38,7 +38,6 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
 
     question = QuestionInQuizQuestionSerializer(read_only=True)
 
-
     class Meta:
         model = QuizQuestion
         fields = [
@@ -155,6 +154,7 @@ class QuizQuestionReadSerializer(serializers.ModelSerializer):
         model = QuizQuestion
         fields = ["id", "question", "sort_order", "weight"]
 
+
 class QuizSerializer(serializers.ModelSerializer):
     """
     Représente une session de quiz (Quiz).
@@ -229,13 +229,13 @@ class QuizSerializer(serializers.ModelSerializer):
         return obj._answers_cache
 
     @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_total_answers(self, obj)->int:
+    def get_total_answers(self, obj) -> int:
         if not self._can_show_result(obj):
             return None
         return self._answers_qs(obj).count()
 
     @extend_schema_field(serializers.IntegerField(allow_null=True))
-    def get_correct_answers(self, obj)-> int:
+    def get_correct_answers(self, obj) -> int:
         if not self._can_show_result(obj):
             return None
         return self._answers_qs(obj).filter(is_correct=True).count()

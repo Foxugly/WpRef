@@ -6,9 +6,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from django.test import TestCase, override_settings
-
 from domain.models import Domain
 from language.models import Language
 
@@ -137,10 +135,10 @@ class CustomUserModelTests(TestCase):
     def test_get_manageable_domains_for_normal_user_filters_owner_or_staff(self):
         qs = self.owner.get_manageable_domains(active_only=False)
         ids = set(qs.values_list("id", flat=True))
-        self.assertIn(self.d_active_owned.id, ids)      # owner
-        self.assertIn(self.d_inactive_owned.id, ids)    # owner même si inactive car active_only=False
-        self.assertIn(self.d_active_staffed.id, ids)    # staff membership
-        self.assertNotIn(self.d_other_only.id, ids)     # pas visible
+        self.assertIn(self.d_active_owned.id, ids)  # owner
+        self.assertIn(self.d_inactive_owned.id, ids)  # owner même si inactive car active_only=False
+        self.assertIn(self.d_active_staffed.id, ids)  # staff membership
+        self.assertNotIn(self.d_other_only.id, ids)  # pas visible
 
     def test_get_visible_domains_is_alias_of_get_manageable_domains(self):
         qs1 = self.owner.get_manageable_domains(active_only=True)

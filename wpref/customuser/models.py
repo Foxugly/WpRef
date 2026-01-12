@@ -1,11 +1,10 @@
-from django.conf import settings
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import QuerySet, Q
-
 from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import ValidationError
 
 
 class CustomUser(AbstractUser):
@@ -176,4 +175,3 @@ class CustomUser(AbstractUser):
     @property
     def has_current_domain(self) -> bool:
         return self.current_domain_id is not None
-

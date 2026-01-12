@@ -1,4 +1,4 @@
-import {Component, EventEmitter, inject, Input, OnInit, Output, signal} from '@angular/core';
+import {Component, computed, EventEmitter, inject, Input, OnInit, Output, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormBuilder, FormGroup, ReactiveFormsModule} from '@angular/forms';
 
@@ -12,6 +12,8 @@ import {CardModule} from 'primeng/card';
 import {SubjectService} from '../../../services/subject/subject';
 import {QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
 import {SubjectReadDto} from '../../../api/generated';
+import {UserService} from '../../../services/user/user';
+import {selectTranslation} from '../../../shared/i18n/select-translation';
 
 @Component({
   standalone: true,
@@ -31,6 +33,8 @@ export class QuizSubjectForm implements OnInit {
   @Output() subjectsChange = new EventEmitter<number[]>();
   subjects = signal<SubjectReadDto[]>([]);
   private subjectService = inject(SubjectService);
+  private userService: UserService = inject(UserService);
+  currentLang = computed(() => this.userService.currentLang);
   private fb = inject(FormBuilder);
   // Formulaire principal
   form: FormGroup = this.fb.group({
@@ -54,10 +58,19 @@ export class QuizSubjectForm implements OnInit {
   }
 
   get subjectOptions(): { name: string; code: number }[] {
-    return this.subjects().map((s) => ({
-      name: s.name,
-      code: s.id,
-    }));
+    const lang = this.currentLang(); // ou this.currentLang si ce n’est pas un signal
+
+    return this.subjects().map((s: SubjectReadDto) => {
+      const t = selectTranslation<{ name: string }>(
+        s.translations as Record<string, { name: string }>,
+        lang,
+      );
+
+      return {
+        name: t?.name ?? '',
+        code: s.id,
+      };
+    });
   }
 
   submitForm(): void {

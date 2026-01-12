@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
-
 from domain.models import Domain
 from domain.serializers import DomainReadSerializer, DomainWriteSerializer
 from language.models import Language
@@ -342,7 +341,7 @@ class DomainSerializersTests(TestCase):
         with patch("domain.serializers.LANG_CODES", {"fr", "zz"}):
             payload = {
                 "translations": {"fr": {"name": "Nom FR", "description": ""},
-                                 "zz": {"name": "Nom ZZ", "description": ""},  },
+                                 "zz": {"name": "Nom ZZ", "description": ""}, },
                 "allowed_language_codes": ["fr", "zz"],  # zz autorisé mais pas en DB
                 "active": True,
             }

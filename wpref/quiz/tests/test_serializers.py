@@ -3,9 +3,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
-from rest_framework.test import APIRequestFactory
-from rest_framework import serializers
-
 from domain.models import Domain
 from question.models import Question, AnswerOption
 from quiz.constants import VISIBILITY_IMMEDIATE, VISIBILITY_NEVER, VISIBILITY_SCHEDULED
@@ -22,6 +19,7 @@ from quiz.serializers import (
     QuizSerializer,
     QuizQuestionAnswerWriteSerializer,
 )
+from rest_framework.test import APIRequestFactory
 
 User = get_user_model()
 
@@ -356,8 +354,8 @@ class QuizSerializerTests(TestCase):
             mode=QuizTemplate.MODE_EXAM,
             permanent=True,
             active=True,
-            detail_visibility=VISIBILITY_NEVER,   # détails interdits
-            result_visibility=VISIBILITY_NEVER,   # résultat interdit
+            detail_visibility=VISIBILITY_NEVER,  # détails interdits
+            result_visibility=VISIBILITY_NEVER,  # résultat interdit
         )
 
         self.q1 = make_question(self.domain, "Q1", active=True)
@@ -596,8 +594,8 @@ class QuizQuestionAnswerWriteSerializerTests(TestCase):
             instance=ans,
             data={
                 "selected_options": [self.o12.id],
-                "question_id": self.q2.id,        # tentative de changer la question -> doit être ignoré
-                "question_order": 2,              # tentative -> ignoré
+                "question_id": self.q2.id,  # tentative de changer la question -> doit être ignoré
+                "question_order": 2,  # tentative -> ignoré
             },
             context={"quiz": self.quiz},
             partial=True,
@@ -606,7 +604,7 @@ class QuizQuestionAnswerWriteSerializerTests(TestCase):
         updated = s.save()
 
         self.assertEqual(updated.quizquestion_id, self.qq1.id)  # inchangé
-        self.assertEqual(updated.question_order, 1)             # inchangé
+        self.assertEqual(updated.question_order, 1)  # inchangé
         self.assertEqual(list(updated.selected_options.values_list("id", flat=True)), [self.o12.id])
 
     def test_update_when_selected_options_absent_does_not_change_m2m(self):

@@ -1,9 +1,7 @@
 # domain/admin.py
 from django.contrib import admin
-from django.contrib.admin import ModelAdmin
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
-
 from parler.admin import TranslatableAdmin
 
 from .models import Domain
@@ -58,9 +56,9 @@ class DomainAdmin(TranslatableAdmin):
         # Parler: prefetch translations + éviter N+1 owner + counts M2M
         return (
             qs.select_related("owner")
-              .prefetch_related("translations", "allowed_languages", "staff")
-              .annotate(_allowed_lang_count=Count("allowed_languages", distinct=True))
-              .annotate(_staff_count=Count("staff", distinct=True))
+            .prefetch_related("translations", "allowed_languages", "staff")
+            .annotate(_allowed_lang_count=Count("allowed_languages", distinct=True))
+            .annotate(_staff_count=Count("staff", distinct=True))
         )
 
     @admin.display(description=_("Name"))
