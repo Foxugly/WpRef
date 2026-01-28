@@ -6,7 +6,16 @@ import {PasswordModule} from 'primeng/password';
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {AuthService} from '../../../services/auth/auth';
 import {PasswordChangeRequestDto} from '../../../api/generated';
+import {environment} from '../../../../environments/environment';
 
+(window as any).__APP__ = {
+  name: environment.appName,
+  author: environment.author,
+  year: environment.year,
+  logoSvg : environment.logoSvg,
+  logoIco : environment.logoIco,
+  logoPng : environment.logoPng,
+};
 
 @Component({
   selector: 'app-change-password',
@@ -16,6 +25,7 @@ import {PasswordChangeRequestDto} from '../../../api/generated';
   styleUrl: './change-password.scss',
 })
 export class ChangePassword {
+  app = window.__APP__!;
   form!: FormGroup;
   submitted = false;
   isSubmitting = false;

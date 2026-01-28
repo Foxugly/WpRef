@@ -1,0 +1,17 @@
+/* src/styles/_tokens.scss */
+
+/* SCSS tokens */
+$border: #e5e7eb;
+$muted: #6b7280;
+$surface: #ffffff;
+$radius: 12px;
+$shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+
+/* Optionnel : CSS vars pour usage dans des composants sans @use */
+:root {
+  --border: #{$border};
+  --muted: #{$muted};
+  --surface: #{$surface};
+  --radius: #{$radius};
+  --shadow: #{$shadow};
+}

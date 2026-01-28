@@ -10,6 +10,7 @@ import {ButtonModule} from 'primeng/button';
 import {CheckboxModule} from 'primeng/checkbox';
 import {MessageModule} from 'primeng/message';
 
+
 @Component({
   standalone: true,
   selector: 'app-login',
@@ -18,6 +19,7 @@ import {MessageModule} from 'primeng/message';
   styleUrl: './login.scss'
 })
 export class Login {
+  app = window.__APP__!;
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);

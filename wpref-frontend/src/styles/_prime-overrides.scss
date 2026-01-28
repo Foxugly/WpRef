@@ -1,0 +1,35 @@
+/* src/styles/_prime-overrides.scss */
+
+/* SelectButton centered (hook class) */
+.lang-select {
+  display: inline-flex;
+}
+
+/* Inputs full width in meta-value */
+.meta-value input.p-inputtext {
+  width: 100%;
+}
+
+.meta-value .p-select {
+  width: 100%;
+}
+
+.meta-value .p-multiselect {
+  width: 100%;
+}
+
+/* Editor PrimeNG full width */
+.meta-value .p-editor {
+  width: 100%;
+}
+
+/* Editor compact ~ 2 lignes (hook class) */
+.editor-compact .p-editor-container .p-editor-content {
+  min-height: 90px;
+}
+
+/* PickList sizing (global) */
+.card .p-picklist {
+  width: 100%;
+  max-width: 900px;
+}

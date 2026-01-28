@@ -7,7 +7,7 @@ from drf_spectacular.utils import (
     OpenApiTypes,
 )
 from rest_framework import filters
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, AllowAny
 from wpref.tools import ErrorDetailSerializer, MyModelViewSet
 
 from .models import Language
@@ -56,7 +56,6 @@ from .serializers import LanguageReadSerializer, LanguageWriteSerializer
         ],
         responses={
             200: LanguageReadSerializer(many=True),
-            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
         },
     ),
     retrieve=extend_schema(
@@ -74,7 +73,6 @@ from .serializers import LanguageReadSerializer, LanguageWriteSerializer
         responses={
             200: LanguageReadSerializer,
             404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
-            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
         },
     ),
     create=extend_schema(
@@ -147,15 +145,20 @@ from .serializers import LanguageReadSerializer, LanguageWriteSerializer
     ),
 )
 class LanguageViewSet(MyModelViewSet):
-    queryset = Language.objects.all().order_by("code")
-    permission_classes = [IsAdminUser]
+    queryset = Language.objects.all()
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["active", "code"]
     search_fields = ["code", "name"]
     ordering_fields = ["code", "name", "id"]
     ordering = ["code"]
     lookup_field = "pk"
     lookup_url_kwarg = "lang_id"
+
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [AllowAny()]
+        return [IsAdminUser()]
 
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:

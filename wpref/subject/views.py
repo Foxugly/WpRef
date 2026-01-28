@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
                 "Liste paginée des sujets.\n\n"
                 "Supporte :\n"
                 "- `search` (filtre name__icontains)\n"
-                "- `name`, `subject_id` via DjangoFilterBackend\n"
+                "- `active`, `domain` via DjangoFilterBackend\n"
         ),
         parameters=[
             OpenApiParameter(
@@ -37,13 +37,6 @@ logger = logging.getLogger(__name__)
                 location=OpenApiParameter.QUERY,
                 required=False,
                 description="Recherche simple (name__icontains).",
-            ),
-            OpenApiParameter(
-                name="name",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Filtre exact (via DjangoFilterBackend).",
             ),
         ],
         responses={
@@ -167,7 +160,7 @@ class SubjectViewSet(MyModelViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectReadSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = []
+    filterset_fields = ["active", "domain"]
     lookup_field = "pk"
     lookup_url_kwarg = "subject_id"
 
@@ -179,7 +172,7 @@ class SubjectViewSet(MyModelViewSet):
         return SubjectWriteSerializer
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "details"]:
             return [IsAuthenticated()]
         return [IsAdminUser()]
 
@@ -188,21 +181,17 @@ class SubjectViewSet(MyModelViewSet):
     # ==========================================================
 
     def get_queryset(self):
-        """
-        Optimisation:
-        - Si retrieve => on précharge les relations utiles au detail serializer
-        - Sinon => queryset simple
-        """
-        qs = Subject.objects.all()
+        qs = Subject.objects.all().select_related("domain")
 
-        if self.action == "retrieve":
-            # ⚠️ adapte les prefetch/select_related en fonction de tes relations réelles
-            # Exemple si Subject -> questions (m2m ou reverse FK) et Question -> answer_options/media
+        if self.action in ["retrieve", "details"]:
             qs = qs.prefetch_related(
-                "questions",
-                "questions__answer_options",
-                "questions__media",
+                "domain__translations",  # parler translations du Domain (pour domain_name)
+                "questions",  # M2M via related_name="questions"
+                "questions__translations",  # parler translations de Question (pour title)
             )
+            # optionnel (si tu veux éviter N+1 si ailleurs tu enrichis):
+            # qs = qs.prefetch_related("questions__answer_options", "questions__media")
+
         return qs
 
     # ==========================================================
@@ -213,7 +202,7 @@ class SubjectViewSet(MyModelViewSet):
         self._log_call(
             method_name="list",
             endpoint="GET /api/subject/",
-            input_expected="query params (search?, name?), body vide",
+            input_expected="query params (search?, active?, domain?), body vide",
             output="200 + [SubjectSerializer] (paginé si pagination activée)",
         )
         qs = self.filter_queryset(self.get_queryset())
@@ -266,13 +255,19 @@ class SubjectViewSet(MyModelViewSet):
         self._log_call(
             method_name="update",
             endpoint="PUT /api/subject/{subject_id}/",
-            input_expected="path subject_id + body JSON complet (SubjectSerializer)",
-            output="200 + SubjecReadSerializer | 400 | 404",
+            input_expected="path subject_id + body JSON complet (SubjectWriteSerializer)",
+            output="200 + SubjectReadSerializer | 400 | 404",
         )
-        response = super().update(request, *args, **kwargs)
-        instance = Subject.objects.get(pk=response.data["id"])
-        response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(), ).data
-        return response
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+
+        write_serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        write_serializer.is_valid(raise_exception=True)
+        self.perform_update(write_serializer)
+
+        instance.refresh_from_db()
+        data = SubjectReadSerializer(instance, context=self.get_serializer_context(), ).data
+        return Response(data, status=status.HTTP_200_OK)
 
     def partial_update(self, request, *args, **kwargs):
         self._log_call(
@@ -281,10 +276,8 @@ class SubjectViewSet(MyModelViewSet):
             input_expected="path subject_id + body JSON partiel (SubjectSerializer)",
             output="200 + SubjectReadSerializer | 400 | 404",
         )
-        response = super().partial_update(request, *args, **kwargs)
-        instance = Subject.objects.get(pk=response.data["id"])
-        response.data = SubjectReadSerializer(instance, context=self.get_serializer_context(), ).data
-        return response
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         self._log_call(

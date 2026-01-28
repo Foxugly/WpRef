@@ -16,6 +16,7 @@ def deepl_translate_many(texts: list[str], source: str, target: str, fmt: str = 
     Appelle DeepL pour traduire plusieurs textes en une requête.
     Retourne la liste traduite dans le même ordre.
     """
+    print("DEEPL", texts, source, target, fmt)
     if not settings.DEEPL_AUTH_KEY:
         raise DeepLError("DEEPL_AUTH_KEY is not configured")
 
@@ -49,4 +50,6 @@ def deepl_translate_many(texts: list[str], source: str, target: str, fmt: str = 
     payload = resp.json()
     translations = payload.get("translations") or []
     # On renvoie dans le même ordre
-    return [t.get("text", "") for t in translations]
+    out = [t.get("text", "") for t in translations]
+    print(out)
+    return out

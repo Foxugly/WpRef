@@ -13,6 +13,10 @@ def settings_language_codes() -> set[str]:
 
 
 class Domain(TranslatableModel):
+    """
+        Domain represents a logical grouping of subjects and questions,
+        with multilingual support and language restrictions.
+    """
     translations = TranslatedFields(
         name=models.CharField(_("name"), max_length=120),
         description=models.TextField(_("description"), blank=True),
@@ -47,6 +51,9 @@ class Domain(TranslatableModel):
         return self.safe_translation_getter("name", any_language=True) or f"Domain#{self.pk}"
 
     def clean(self):
+        super().clean()
+        if not self.pk:
+            return
         valid = settings_language_codes()
         codes = set(self.allowed_languages.values_list("code", flat=True))
 
@@ -55,3 +62,7 @@ class Domain(TranslatableModel):
             raise ValidationError(
                 {"allowed_languages": [f"Invalid language code(s): {', '.join(invalid)}"]}
             )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

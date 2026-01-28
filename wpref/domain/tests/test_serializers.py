@@ -1,356 +1,356 @@
-# domain/tests/tests_serializers.py
-from unittest.mock import patch
+from __future__ import annotations
+
+from django.test import TestCase
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.test import APIRequestFactory
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+
 from domain.models import Domain
-from domain.serializers import DomainReadSerializer, DomainWriteSerializer
+from domain.serializers import (
+    DomainDetailSerializer,
+    DomainPartialSerializer,
+    DomainReadSerializer,
+    DomainWriteSerializer,
+)
+from subject.models import Subject
 from language.models import Language
 
 User = get_user_model()
 
 
-@override_settings(LANGUAGES=(("fr", "Français"), ("nl", "Nederlands"), ("en", "English")))
-class DomainSerializersTests(TestCase):
-    def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="pass")
-        self.staff1 = User.objects.create_user(username="staff1", password="pass")
-        self.staff2 = User.objects.create_user(username="staff2", password="pass")
+class DomainSerializersTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.factory = APIRequestFactory()
 
-        self.lang_fr = Language.objects.create(code="fr", name="Français", active=True)
-        self.lang_nl = Language.objects.create(code="nl", name="Nederlands", active=True)
-        self.lang_en = Language.objects.create(code="en", name="English", active=True)
+        cls.owner = User.objects.create_user(username="owner", password="x")
+        cls.staff1 = User.objects.create_user(username="staff1", password="x")
+        cls.staff2 = User.objects.create_user(username="staff2", password="x")
 
-        # patch stable des codes autorisés (car LANG_CODES est évalué à l'import)
-        self._patch_lang_codes = patch("domain.serializers.LANG_CODES", {"fr", "nl", "en"})
-        self._patch_lang_codes.start()
-        self.addCleanup(self._patch_lang_codes.stop)
+        cls.lang_fr = Language.objects.create(code="fr", name="Français", active=True)
+        cls.lang_nl = Language.objects.create(code="nl", name="Nederlands", active=True)
+        cls.lang_en_inactive = Language.objects.create(code="en", name="English", active=False)
+
+        cls.domain = Domain.objects.create(owner=cls.owner, active=True)
+        cls.domain.allowed_languages.set([cls.lang_fr, cls.lang_nl, cls.lang_en_inactive])
+        cls.domain.staff.set([cls.staff1, cls.staff2])
+
+        # Parler translations
+        cls.domain.set_current_language("fr")
+        cls.domain.name = "Domaine FR"
+        cls.domain.description = "Desc FR"
+        cls.domain.save()
+
+        cls.domain.set_current_language("nl")
+        cls.domain.name = "Domein NL"
+        cls.domain.description = "Desc NL"
+        cls.domain.save()
 
     # -------------------------
     # DomainReadSerializer
     # -------------------------
-    def test_read_serializer_returns_name_description_or_empty_and_allowed_languages(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.set([self.lang_fr])
+    def test_domain_read_serializer_outputs_expected_fields(self):
+        s = DomainReadSerializer(instance=self.domain, context={"request": self.factory.get("/")})
+        data = s.data
 
-        data = DomainReadSerializer(d).data
-        self.assertEqual(data["name"], "")
-        self.assertEqual(data["description"], "")
-        self.assertEqual(len(data["allowed_languages"]), 1)
-        self.assertEqual(data["allowed_languages"][0]["code"], "fr")
-
-        d.set_current_language("fr")
-        d.name = "Domaine FR"
-        d.description = "Desc FR"
-        d.save()
-
-        data = DomainReadSerializer(d).data
-        self.assertEqual(data["name"], "Domaine FR")
-        self.assertEqual(data["description"], "Desc FR")
-
-    def test_read_serializer_owner_username_and_staff_usernames(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.set([self.lang_fr, self.lang_nl])
-        d.staff.add(self.staff1, self.staff2)
-
-        data = DomainReadSerializer(d).data
-        self.assertEqual(data["owner_username"], "owner")
-        self.assertEqual(set(data["staff_usernames"]), {"staff1", "staff2"})
-
-    def test_read_serializer_staff_usernames_empty_list_when_no_staff(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        data = DomainReadSerializer(d).data
-        self.assertEqual(data["staff_usernames"], [])
-
-    # -------------------------
-    # validate_allowed_language_codes
-    # -------------------------
-    def test_validate_allowed_language_codes_rejects_none_or_blank_items(self):
-        payload = {
-            "translations": {"fr": {"name": "Nom", "description": ""}},
-            "allowed_language_codes": [None, "", "   "],
-            "active": True,
+        expected_fields = {
+            "id",
+            "translations",
+            "allowed_languages",
+            "active",
+            "owner",
+            "staff",
+            "created_at",
+            "updated_at",
         }
-        s = DomainWriteSerializer(data=payload)
+        self.assertSetEqual(set(data.keys()), expected_fields)
+
+        # translations
+        self.assertIn("fr", data["translations"])
+        self.assertIn("nl", data["translations"])
+        self.assertEqual(data["translations"]["fr"]["name"], "Domaine FR")
+        self.assertEqual(data["translations"]["nl"]["name"], "Domein NL")
+
+        # owner/staff
+        self.assertEqual(data["owner"]["id"], self.owner.id)
+        self.assertEqual(data["owner"]["username"], self.owner.username)
+
+        staff_usernames = {u["username"] for u in data["staff"]}
+        self.assertSetEqual(staff_usernames, {self.staff1.username, self.staff2.username})
+
+    def test_domain_read_serializer_allowed_languages_filters_active(self):
+        s = DomainReadSerializer(instance=self.domain, context={"request": self.factory.get("/")})
+        data = s.data
+
+        # serializer filters active=True and orders by id
+        returned_codes = [lang["code"] for lang in data["allowed_languages"]]
+        self.assertIn("fr", returned_codes)
+        self.assertIn("nl", returned_codes)
+        self.assertNotIn("en", returned_codes)
+
+    def test_domain_read_serializer_is_read_only(self):
+        s = DomainReadSerializer(data={"active": False}, context={"request": self.factory.get("/")})
         self.assertFalse(s.is_valid())
+        self.assertIn("non_field_errors", s.errors)
 
-        self.assertIn("allowed_language_codes", s.errors)
-        # DRF renvoie des erreurs indexées
-        self.assertIn(0, s.errors["allowed_language_codes"])
-        self.assertIn(1, s.errors["allowed_language_codes"])
-        self.assertIn(2, s.errors["allowed_language_codes"])
-
-    def test_validate_allowed_language_codes_dedup_and_lower_strip(self):
+    # -------------------------
+    # DomainWriteSerializer - validation
+    # -------------------------
+    def test_domain_write_serializer_requires_translations(self):
         payload = {
+            "allowed_languages": [self.lang_fr.id],
+            "active": True,
+            "staff": [self.staff1.id],
+        }
+        request = self.factory.post("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainWriteSerializer(data=payload, context={"request": request})
+        self.assertFalse(s.is_valid())
+        self.assertIn("translations", s.errors)
+
+    def test_domain_write_serializer_rejects_unknown_translation_codes(self):
+        payload = {
+            "allowed_languages": [self.lang_fr.id],
+            "translations": {"xx": {"name": "X", "description": ""}},
+            "active": True,
+            "staff": [self.staff1.id],
+        }
+        request = self.factory.post("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainWriteSerializer(data=payload, context={"request": request})
+        self.assertFalse(s.is_valid())
+        self.assertIn("translations", s.errors)
+
+    def test_domain_write_serializer_requires_missing_translations_for_allowed_languages(self):
+        payload = {
+            "allowed_languages": [self.lang_fr.id, self.lang_nl.id],
+            "translations": {"fr": {"name": "FR", "description": ""}},  # missing nl
+            "active": True,
+            "staff": [self.staff1.id],
+        }
+        request = self.factory.post("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainWriteSerializer(data=payload, context={"request": request})
+        self.assertFalse(s.is_valid())
+        self.assertIn("translations", s.errors)
+
+    def test_domain_write_serializer_rejects_empty_allowed_languages(self):
+        payload = {
+            "allowed_languages": [],
+            "translations": {"fr": {"name": "FR", "description": ""}},
+            "active": True,
+            "staff": [self.staff1.id],
+        }
+        request = self.factory.post("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainWriteSerializer(data=payload, context={"request": request})
+        self.assertFalse(s.is_valid())
+        self.assertIn("allowed_languages", s.errors)
+
+    def test_domain_write_serializer_dedups_allowed_languages(self):
+        payload = {
+            "allowed_languages": [self.lang_fr.id, self.lang_fr.id, self.lang_nl.id],
             "translations": {
-                "fr": {"name": "N", "description": ""},
-                "nl": {"name": "N", "description": ""},
-                "en": {"name": "N", "description": ""},
+                "fr": {"name": "FR", "description": ""},
+                "nl": {"name": "NL", "description": ""},
             },
-            "allowed_language_codes": [" FR ", "nl", "fr", "en", "NL"],
             "active": True,
-            "staff_ids": [self.staff1.pk],
+            "staff": [self.staff1.id],
         }
-        s = DomainWriteSerializer(data=payload)
+        request = self.factory.post("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainWriteSerializer(data=payload, context={"request": request})
         self.assertTrue(s.is_valid(), s.errors)
-        self.assertEqual(s.validated_data["allowed_language_codes"], ["fr", "nl", "en"])
+        obj = s.save()
 
-    def test_validate_allowed_language_codes_invalid_raises(self):
+        self.assertEqual(obj.allowed_languages.count(), 2)
+
+    # -------------------------
+    # DomainWriteSerializer - create / update
+    # -------------------------
+    def test_domain_write_serializer_can_create(self):
         payload = {
-            "translations": {"fr": {"name": "N", "description": ""}},
-            "allowed_language_codes": ["fr", "xx"],
-            "active": True,
-        }
-        s = DomainWriteSerializer(data=payload)
-        self.assertFalse(s.is_valid())
-        self.assertIn("allowed_language_codes", s.errors)
-        self.assertIn("Invalid language code(s): xx", str(s.errors["allowed_language_codes"][0]))
-
-    # -------------------------
-    # validate() (global)
-    # -------------------------
-    def test_validate_requires_translations_field(self):
-        payload = {"allowed_language_codes": ["fr"], "active": True}
-        s = DomainWriteSerializer(data=payload)
-        self.assertFalse(s.is_valid())
-        self.assertIn("translations", s.errors)
-        # required=True -> DRF message
-        self.assertIn("required", str(s.errors["translations"][0]).lower())
-
-    def test_validate_requires_translations_not_empty(self):
-        payload = {"translations": {}, "allowed_language_codes": ["fr"], "active": True}
-        s = DomainWriteSerializer(data=payload)
-        self.assertFalse(s.is_valid())
-        self.assertIn("translations", s.errors)
-        self.assertEqual(str(s.errors["translations"][0]), "Au moins une traduction est requise.")
-
-    def test_validate_allowed_language_codes_missing_translation_raises(self):
-        payload = {
-            "translations": {"fr": {"name": "Nom", "description": ""}},
-            "allowed_language_codes": ["fr", "nl"],
-            "active": True,
-        }
-        s = DomainWriteSerializer(data=payload)
-        self.assertFalse(s.is_valid())
-        self.assertIn("translations", s.errors)
-        msg = str(s.errors["translations"][0])
-        self.assertIn("Traductions manquantes pour:", msg)
-        self.assertIn("nl", msg)
-
-    def test_validate_no_allowed_language_codes_does_not_require_covering_translations(self):
-        """
-        Branche: allowed=set() -> pas de check 'missing'
-        """
-        payload = {
-            "translations": {"fr": {"name": "Nom", "description": ""}},
-            "active": True,
-        }
-        s = DomainWriteSerializer(data=payload)
-        self.assertTrue(s.is_valid(), s.errors)
-
-    # -------------------------
-    # _apply_translations helper
-    # -------------------------
-    def test_apply_translations_sets_empty_strings_when_missing_keys(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        s = DomainWriteSerializer()
-        s._apply_translations(d, {"fr": {"name": "X"}})
-
-        d.refresh_from_db()
-        d.set_current_language("fr")
-        self.assertEqual(d.name, "X")
-        self.assertEqual(d.description, "")  # clé absente => ""
-
-    def test_apply_translations_with_none_is_noop(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        s = DomainWriteSerializer()
-        s._apply_translations(d, None)  # doit juste ne pas crash
-
-    # -------------------------
-    # create()
-    # -------------------------
-    def test_create_creates_domain_applies_translations_sets_m2m_languages_and_staff(self):
-        payload = {
+            "allowed_languages": [self.lang_fr.id, self.lang_nl.id],
             "translations": {
-                "fr": {"name": "Domaine FR", "description": "Desc FR"},
-                "nl": {"name": "Domein NL", "description": "Desc NL"},
+                "fr": {"name": "New FR", "description": "D FR"},
+                "nl": {"name": "New NL", "description": "D NL"},
             },
-            "allowed_language_codes": ["fr", "nl", "fr"],
+            "active": True,
+            "staff": [self.staff1.id, self.staff2.id],
+        }
+        request = self.factory.post("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainWriteSerializer(data=payload, context={"request": request})
+        self.assertTrue(s.is_valid(), s.errors)
+        obj = s.save()
+
+        self.assertEqual(obj.owner_id, self.owner.id)
+        self.assertTrue(obj.active)
+        self.assertEqual(obj.staff.count(), 2)
+        self.assertEqual(obj.allowed_languages.count(), 2)
+
+        obj.set_current_language("fr")
+        self.assertEqual(obj.name, "New FR")
+        self.assertEqual(obj.description, "D FR")
+
+        obj.set_current_language("nl")
+        self.assertEqual(obj.name, "New NL")
+        self.assertEqual(obj.description, "D NL")
+
+    def test_domain_write_serializer_can_update(self):
+        payload = {
+            "allowed_languages": [self.lang_fr.id],
+            "translations": {"fr": {"name": "Updated FR", "description": "Updated"}},
             "active": False,
-            "staff_ids": [self.staff1.pk],
+            "staff": [self.staff1.id],
         }
-        s = DomainWriteSerializer(data=payload)
+        request = self.factory.put("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainWriteSerializer(instance=self.domain, data=payload, context={"request": request})
+        self.assertTrue(s.is_valid(), s.errors)
+        obj = s.save()
+
+        self.assertFalse(obj.active)
+        self.assertEqual(list(obj.allowed_languages.values_list("code", flat=True)), ["fr"])
+        self.assertEqual(list(obj.staff.values_list("username", flat=True)), ["staff1"])
+
+        obj.set_current_language("fr")
+        self.assertEqual(obj.name, "Updated FR")
+        self.assertEqual(obj.description, "Updated")
+
+    def test_domain_write_serializer_requires_owner_in_context(self):
+        payload = {
+            "allowed_languages": [self.lang_fr.id],
+            "translations": {"fr": {"name": "FR", "description": ""}},
+            "active": True,
+            "staff": [self.staff1.id],
+        }
+
+        request = self.factory.post("/", payload, format="json")
+        # Simule un utilisateur anonyme (ou non authentifié)
+        request.user = type("Anon", (), {"is_anonymous": True})()
+
+        s = DomainWriteSerializer(data=payload, context={"request": request})
+
+        # Le serializer est valide côté champs/format
         self.assertTrue(s.is_valid(), s.errors)
 
-        d = s.save(owner=self.owner)
-
-        self.assertFalse(d.active)
-        self.assertEqual(set(d.staff.values_list("username", flat=True)), {"staff1"})
-        self.assertEqual(set(d.allowed_languages.values_list("code", flat=True)), {"fr", "nl"})
-
-        d.set_current_language("fr")
-        self.assertEqual(d.name, "Domaine FR")
-        self.assertEqual(d.description, "Desc FR")
-
-        d.set_current_language("nl")
-        self.assertEqual(d.name, "Domein NL")
-        self.assertEqual(d.description, "Desc NL")
-
-    def test_create_with_no_staff_and_codes_none_does_not_touch_m2m(self):
-        """
-        Branche:
-        - staff = [] -> skip domain.staff.set
-        - codes is None -> skip allowed_languages.set
-        """
-        payload = {
-            "translations": {"fr": {"name": "Nom", "description": ""}},
-            # allowed_language_codes absent => None (pop(..., None))
-            # staff_ids absent => staff = []
-            "active": True,
-        }
-        s = DomainWriteSerializer(data=payload)
-        self.assertTrue(s.is_valid(), s.errors)
-        d = s.save(owner=self.owner)
-
-        self.assertEqual(d.staff.count(), 0)
-        self.assertEqual(d.allowed_languages.count(), 0)
-
-        d.set_current_language("fr")
-        self.assertEqual(d.name, "Nom")
-
-    def test_create_with_codes_list_filters_existing_language_objects_only(self):
-        """
-        Branche create(): langs = Language.objects.filter(code__in=codes)
-        -> si code inexistant en DB, il est ignoré.
-        """
-        payload = {
-            "translations": {"fr": {"name": "Nom", "description": ""}},
-            "allowed_language_codes": ["fr", "zz"],  # zz n'existe pas en table Language
-            "active": True,
-        }
-        s = DomainWriteSerializer(data=payload)
-        self.assertFalse(s.is_valid())
-        # validate_allowed_language_codes bloque déjà zz via LANG_CODES patché {"fr","nl","en"}
-        self.assertIn("allowed_language_codes", s.errors)
+        # Mais la création doit refuser car owner (request.user) invalide
+        with self.assertRaises(ValidationError):
+            s.save()
 
     # -------------------------
-    # update()
+    # DomainPartialSerializer
     # -------------------------
-    def test_update_updates_active_staff_and_languages_and_translations(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.set([self.lang_fr])
-        d.staff.add(self.staff1)
-
-        d.set_current_language("fr")
-        d.name = "Avant"
-        d.description = "AvantDesc"
-        d.save()
-
-        payload = {
-            "translations": {
-                "fr": {"name": "Après", "description": "AprèsDesc"},
-                "en": {"name": "After", "description": "AfterDesc"},
-            },
-            "allowed_language_codes": ["fr", "en"],
-            "active": False,
-            "staff_ids": [self.staff2.pk],
-        }
-        s = DomainWriteSerializer(instance=d, data=payload, partial=False)
-        self.assertTrue(s.is_valid(), s.errors)
-        d2 = s.save()
-
-        self.assertFalse(d2.active)
-        self.assertEqual(set(d2.staff.values_list("username", flat=True)), {"staff2"})
-        self.assertEqual(set(d2.allowed_languages.values_list("code", flat=True)), {"fr", "en"})
-
-        d2.set_current_language("fr")
-        self.assertEqual(d2.name, "Après")
-        self.assertEqual(d2.description, "AprèsDesc")
-
-        d2.set_current_language("en")
-        self.assertEqual(d2.name, "After")
-        self.assertEqual(d2.description, "AfterDesc")
-
-    def test_update_when_staff_is_none_does_not_change_staff(self):
-        """
-        Branche update():
-        staff = validated_data.pop("staff", None)
-        if staff is not None: instance.staff.set(staff)
-        """
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.staff.add(self.staff1)
-
-        payload = {
-            "translations": {"fr": {"name": "N", "description": ""}},
-            "active": False,
-            # staff_ids absent => staff=None => ne change pas
-        }
-        s = DomainWriteSerializer(instance=d, data=payload, partial=True)
-        self.assertTrue(s.is_valid(), s.errors)
-        d2 = s.save()
-
-        self.assertFalse(d2.active)
-        self.assertEqual(set(d2.staff.values_list("username", flat=True)), {"staff1"})
-
-    def test_update_when_codes_is_none_does_not_change_allowed_languages(self):
-        """
-        Branche update():
-        codes = validated_data.pop("allowed_language_codes", None)
-        if codes is not None: instance.allowed_languages.set(...)
-        """
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.set([self.lang_fr, self.lang_nl])
-
-        payload = {
-            "translations": {"fr": {"name": "N", "description": ""}},
-            "active": True,
-            # allowed_language_codes absent => codes=None => ne change pas
-        }
-        s = DomainWriteSerializer(instance=d, data=payload, partial=True)
-        self.assertTrue(s.is_valid(), s.errors)
-        d2 = s.save()
-
-        self.assertEqual(set(d2.allowed_languages.values_list("code", flat=True)), {"fr", "nl"})
-
-    def test_update_when_translations_is_none_does_not_apply_translations(self):
-        """
-        Branche update(): if translations is not None -> apply
-        """
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.set_current_language("fr")
-        d.name = "Avant"
-        d.description = "Desc"
-        d.save()
-
-        payload = {"active": False}  # translations absent => will fail validate() currently
-        # ⚠️ Ton validate() impose translations non vide -> donc partial sans translations échoue.
-        s = DomainWriteSerializer(instance=d, data=payload, partial=True)
-        self.assertFalse(s.is_valid())
-        self.assertIn("translations", s.errors)
-        self.assertEqual(str(s.errors["translations"][0]), "Au moins une traduction est requise.")
-
-    def test_partial_update_missing_translations_field_fails_custom_message(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
+    def test_domain_partial_serializer_can_update_only_active(self):
         payload = {"active": False}
-        s = DomainWriteSerializer(instance=d, data=payload, partial=True)
+        request = self.factory.patch("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainPartialSerializer(instance=self.domain, data=payload, partial=True, context={"request": request})
+        self.assertTrue(s.is_valid(), s.errors)
+        obj = s.save()
+        self.assertFalse(obj.active)
+
+    def test_domain_partial_serializer_can_update_allowed_languages_only_without_translations(self):
+        payload = {"allowed_languages": [self.lang_fr.id]}
+        request = self.factory.patch("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainPartialSerializer(instance=self.domain, data=payload, partial=True, context={"request": request})
+        self.assertTrue(s.is_valid(), s.errors)
+        obj = s.save()
+
+        self.assertEqual(list(obj.allowed_languages.values_list("code", flat=True)), ["fr"])
+
+        # Existing translations should remain untouched
+        obj.set_current_language("nl")
+        self.assertEqual(obj.name, "Domein NL")
+
+    def test_domain_partial_serializer_rejects_empty_allowed_languages(self):
+        payload = {"allowed_languages": []}
+        request = self.factory.patch("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainPartialSerializer(instance=self.domain, data=payload, partial=True, context={"request": request})
+        self.assertFalse(s.is_valid())
+        self.assertIn("allowed_languages", s.errors)
+
+    def test_domain_partial_serializer_when_translations_present_applies_full_rules(self):
+        # allowed: fr + nl, but only provide fr translation -> should fail (missing nl)
+        payload = {
+            "allowed_languages": [self.lang_fr.id, self.lang_nl.id],
+            "translations": {"fr": {"name": "Only FR", "description": ""}},
+        }
+        request = self.factory.patch("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainPartialSerializer(instance=self.domain, data=payload, partial=True, context={"request": request})
         self.assertFalse(s.is_valid())
         self.assertIn("translations", s.errors)
-        self.assertEqual(str(s.errors["translations"][0]), "Au moins une traduction est requise.")
 
-    def test_create_codes_allowed_but_language_missing_in_db_is_ignored(self):
-        with patch("domain.serializers.LANG_CODES", {"fr", "zz"}):
-            payload = {
-                "translations": {"fr": {"name": "Nom FR", "description": ""},
-                                 "zz": {"name": "Nom ZZ", "description": ""}, },
-                "allowed_language_codes": ["fr", "zz"],  # zz autorisé mais pas en DB
-                "active": True,
-            }
-            s = DomainWriteSerializer(data=payload)
-            self.assertTrue(s.is_valid(), s.errors)
-            d = s.save(owner=self.owner)
-            self.assertEqual(set(d.allowed_languages.values_list("code", flat=True)), {"fr"})
-            d.set_current_language("fr")
-            self.assertEqual(d.name, "Nom FR")
+    # -------------------------
+    # DomainDetailSerializer
+    # -------------------------
+    def test_domain_detail_serializer_outputs_subjects_key_and_filters_active(self):
+        # Create 2 subjects: 1 active, 1 inactive
+        s_active = Subject.objects.create(domain=self.domain, active=True)
+        s_active.set_current_language("fr")
+        s_active.name = "Sujet actif"
+        s_active.description = "Desc"
+        s_active.save()
 
-            d.set_current_language("zz")
-            self.assertEqual(d.name, "Nom ZZ")
+        s_inactive = Subject.objects.create(domain=self.domain, active=False)
+        s_inactive.set_current_language("fr")
+        s_inactive.name = "Sujet inactif"
+        s_inactive.save()
+
+        serializer = DomainDetailSerializer(instance=self.domain, context={"request": self.factory.get("/")})
+        data = serializer.data
+
+        self.assertIn("subjects", data)
+        self.assertIsInstance(data["subjects"], list)
+        self.assertEqual(len(data["subjects"]), 1)
+
+        # SubjectReadSerializer structure assumed to include translations
+        # We'll assert at least that it's the active one by checking its translated name
+        only_subject = data["subjects"][0]
+        self.assertIn("translations", only_subject)
+        self.assertIn("fr", only_subject["translations"])
+        self.assertEqual(only_subject["translations"]["fr"]["name"], "Sujet actif")
+
+    def test_domain_detail_serializer_subjects_ordered_by_id(self):
+        # serializer uses obj.subjects.filter(active=True).order_by("id")
+        s1 = Subject.objects.create(domain=self.domain, active=True)
+        s1.set_current_language("fr")
+        s1.name = "S1"
+        s1.save()
+
+        s2 = Subject.objects.create(domain=self.domain, active=True)
+        s2.set_current_language("fr")
+        s2.name = "S2"
+        s2.save()
+
+        serializer = DomainDetailSerializer(instance=self.domain, context={"request": self.factory.get("/")})
+        subjects = serializer.data["subjects"]
+
+        # Should be ascending by id => first should be s1
+        self.assertGreater(len(subjects), 1)
+        first = subjects[0]
+        second = subjects[1]
+        self.assertEqual(first["id"], s1.id)
+        self.assertEqual(second["id"], s2.id)
+
+    def test_domain_detail_serializer_is_read_only(self):
+        s = DomainDetailSerializer(data={"active": False}, context={"request": self.factory.get("/")})
+        self.assertFalse(s.is_valid())
+        self.assertIn("non_field_errors", s.errors)

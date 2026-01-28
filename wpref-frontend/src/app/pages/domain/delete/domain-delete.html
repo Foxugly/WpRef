@@ -1,0 +1,14 @@
+<div class="page">
+  <div class="title">Supprimer un domain</div>
+  <div class="card">
+    @if (domain()) {
+      <p>Es-tu sûr de vouloir supprimer <b>{{ getName(domain()) }}</b> ?</p>
+      <div class="actions">
+        <p-button id="btn_delete" icon="pi pi-trash" label="Supprimer" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
+        <p-button id="btn_back" icon="pi pi-times" label="Annuler" severity="secondary" (onClick)="goList()"/>
+      </div>
+    } @else {
+      <p class="muted">Chargement…</p>
+    }
+  </div>
+</div>

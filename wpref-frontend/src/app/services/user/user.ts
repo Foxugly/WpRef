@@ -9,7 +9,6 @@ import {
   UserMePartialUpdateRequestParams
 } from '../../api/generated';
 import {isSupportedLanguage, SupportedLanguage} from '../../../environments/language';
-import {Router} from '@angular/router';
 
 
 @Injectable({providedIn: 'root'})

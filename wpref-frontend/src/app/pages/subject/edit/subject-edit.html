@@ -1,24 +1,26 @@
 <div class="page">
-  <div class="header-line">
-    <div class="header-left">
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
+
+    <div class="header-center">
       <h1 class="title">Éditer le sujet</h1>
       <p class="subtitle muted">Traductions et contenu</p>
     </div>
 
     <div class="header-actions">
       <p-button
-        type="button"
+        (onClick)="goList()"
         icon="pi pi-arrow-left"
         label="Retour"
         severity="secondary"
-        (onClick)="goList()">
+        type="button">
       </p-button>
 
       <p-button
-        type="button"
+        (onClick)="save()"
         icon="pi pi-save"
         label="Enregistrer"
-        (onClick)="save()">
+        type="button">
       </p-button>
     </div>
   </div>
@@ -30,58 +32,76 @@
   } @else {
 
     <!-- FORM CARD -->
-    <form class="card form-card" [formGroup]="form" (ngSubmit)="save()">
-      <div class="card-head">
+    <form (ngSubmit)="save()" [formGroup]="form" class="card form-card">
+      <div class="card-head card-head--with-badge">
         <h2 class="card-title">Traductions</h2>
         <span class="badge">{{ allowedLanguages().length }} langue(s)</span>
       </div>
 
-      <p-tabs class="tabs" [(value)]="activeTabIndex">
+      <p-tabs
+        (valueChange)="onTabChange($event)"
+        [value]="activeLang() ?? undefined"
+        class="tabs">
         <p-tablist>
           @for (lang of allowedLanguages(); track lang.code) {
-            <p-tab [value]="$index">{{ lang.code.toUpperCase() }}</p-tab>
+            <p-tab [value]="lang.code">{{ lang.code.toUpperCase() }}</p-tab>
           }
         </p-tablist>
 
         <p-tabpanels>
           @for (lang of allowedLanguages(); track lang.code) {
-            <p-tabpanel [value]="$index">
+            <p-tabpanel [value]="lang.code">
+              <div class="lang-panel" formGroupName="translations">
+                <div class="lang-toolbar">
+                  <p-button
+                    (click)="translateFromActiveTab()"
+                    [disabled]="translating()"
+                    [loading]="translating()"
+                    icon="pi pi-language"
+                    label="Traduire vers les autres langues"
+                    severity="info"
+                    type="button">
+                  </p-button>
+                </div>
+                <div [formGroupName]="lang.code" class="meta-grid">
+                  <div class="meta-item meta-item--full">
+                    <label class="meta-label">Nom ({{ lang.code.toUpperCase() }})</label>
+                    <div class="meta-value">
+                      <input formControlName="name" pInputText placeholder="Nom du sujet"/>
+                    </div>
 
-              <div formGroupName="translations" class="lang-panel">
-                <div class="form-grid" [formGroupName]="lang.code">
-
-                  <div class="field">
-                    <label class="field-label">Nom</label>
-                    <input pInputText formControlName="name" placeholder="Nom du sujet" />
-                    @if (
-                      langGroup(lang.code).get('name')?.touched &&
-                      langGroup(lang.code).get('name')?.invalid
-                    ) {
-                      <small class="field-error">Nom requis (min. 2 caractères)</small>
+                    @if (langGroup(lang.code).get('name')?.touched &&
+                    langGroup(lang.code).get('name')?.invalid) {
+                      <div class="meta-hint meta-hint--error">
+                        Nom requis (min. 2 caractères)
+                      </div>
                     }
                   </div>
 
-                  <div class="field field--full">
-                    <label class="field-label">Description</label>
-                    <p-editor formControlName="description" [style]="{ height: '220px' }"></p-editor>
+                  <div class="meta-item meta-item--full">
+                    <label class="meta-label">Description ({{ lang.code.toUpperCase() }})</label>
+                    <div class="meta-value">
+                      <p-editor
+                        class="editor-compact"
+                        formControlName="description">
+                      </p-editor>
+                    </div>
                   </div>
-
                 </div>
               </div>
-
             </p-tabpanel>
           }
         </p-tabpanels>
       </p-tabs>
 
       <div class="footer-actions">
-        <p-button type="submit" icon="pi pi-save" label="Enregistrer"></p-button>
+        <p-button icon="pi pi-save" label="Enregistrer" type="submit"></p-button>
         <p-button
-          type="button"
+          (onClick)="goList()"
           icon="pi pi-times"
-          severity="secondary"
           label="Annuler"
-          (onClick)="goList()">
+          severity="secondary"
+          type="button">
         </p-button>
       </div>
     </form>
@@ -90,54 +110,58 @@
     <div class="card">
       <div class="card-head">
         <h2 class="card-title">Questions</h2>
-        <div class="card-actions">
+        <div class="header-actions">
           <p-button
-            type="button"
+            (onClick)="goQuestionNew()"
             icon="pi pi-plus"
             label="Ajouter"
-            severity="secondary"
-            (onClick)="goQuestionNew()">
+            severity="primary"
+            type="button">
           </p-button>
         </div>
       </div>
 
-      @if ((questions || []).length === 0) {
+      @if ((questions() || []).length === 0) {
         <p class="muted empty-state">Aucune question.</p>
       } @else {
-        <table class="table">
-          <thead>
+        <p-table
+          [value]="questions()"
+          showGridlines
+          size="small"
+          stripedRows
+          styleClass="table"
+        >
+          <ng-template #header>
             <tr>
               <th>Titre</th>
               <th class="col-actions">Actions</th>
             </tr>
-          </thead>
+          </ng-template>
 
-          <tbody>
-            @for (q of questions; track q[id]) {
-              <tr>
-                <td class="truncate">{{ q }}</td>
-                <td class="col-actions">
-                  <div class="row-actions">
-                    <p-button
-                      type="button"
-                      icon="pi pi-pencil"
-                      severity="info"
-                      size="small"
-                      (onClick)="goQuestionEdit(q[id])">
-                    </p-button>
-                    <p-button
-                      type="button"
-                      icon="pi pi-trash"
-                      severity="danger"
-                      size="small"
-                      (onClick)="goQuestionDelete(q[id])">
-                    </p-button>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+          <ng-template #body let-q>
+            <tr>
+              <td class="truncate">{{ getQuestionTitle(q) }}</td>
+              <td class="col-actions">
+                <div class="row-actions">
+                  <p-button
+                    (onClick)="goQuestionEdit(q.id)"
+                    icon="pi pi-pencil"
+                    severity="info"
+                    size="small"
+                    type="button">
+                  </p-button>
+                  <p-button
+                    (onClick)="goQuestionDelete(q[id])"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    size="small"
+                    type="button">
+                  </p-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
       }
     </div>
   }

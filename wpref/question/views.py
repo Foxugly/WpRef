@@ -1,6 +1,7 @@
-import json
 import logging
 
+from django.core.exceptions import ValidationError
+from django.db import transaction, IntegrityError
 from django.http import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
@@ -8,17 +9,19 @@ from drf_spectacular.utils import (
     extend_schema_view,
     OpenApiParameter,
     OpenApiResponse,
-    OpenApiTypes, OpenApiRequest,
+    OpenApiTypes,
 )
-from rest_framework import status
+from rest_framework import status, serializers
+from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from wpref.tools import ErrorDetailSerializer
 from wpref.tools import MyModelViewSet
 
-from .models import Question, QuestionMedia
-from .serializers import QuestionReadSerializer, QuestionWriteSerializer, QuestionMultipartWriteSerializer
+from .models import Question, MediaAsset
+from .serializers import QuestionReadSerializer, QuestionWriteSerializer, MediaAssetSerializer, \
+    MediaAssetUploadSerializer, _infer_kind_from_upload, _sha256_file
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,6 @@ logger = logging.getLogger(__name__)
                 "Liste paginée des questions.\n\n"
                 "Supporte :\n"
                 "- `search` (filtre title__icontains)\n"
-                "- `title`, `description` via DjangoFilterBackend (si activé)\n"
         ),
         parameters=[
             OpenApiParameter(
@@ -40,20 +42,6 @@ logger = logging.getLogger(__name__)
                 location=OpenApiParameter.QUERY,
                 required=False,
                 description="Recherche simple (title__icontains).",
-            ),
-            OpenApiParameter(
-                name="title",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Filtre exact (via DjangoFilterBackend).",
-            ),
-            OpenApiParameter(
-                name="description",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Filtre exact (via DjangoFilterBackend).",
             ),
         ],
         responses={
@@ -83,14 +71,18 @@ logger = logging.getLogger(__name__)
         tags=["Question"],
         summary="Créer une question (multipart ou JSON)",
         description=(
-                "Crée une question. Supporte multipart/form-data (recommandé pour upload médias) ou JSON.\n\n"
-                "**Convention**:\n"
-                "- `subject_ids`: envoyé comme liste multipart (subject_ids=1&subject_ids=2)\n"
-                "- `answer_options`: JSON string (liste)\n"
-                "- `media`: JSON string (liste) pour les external_url\n"
-                "- fichiers : `media[0][file]`, `media[1][file]`, ...\n"
+                "Crée une question.\n\n"
+                "⚠️ Les médias NE sont PAS uploadés ici.\n\n"
+                "Workflow recommandé :\n"
+                "1. POST /api/question/media/ → upload fichier ou URL externe\n"
+                "2. Récupérer les `id` des MediaAsset retournés\n"
+                "3. POST /api/question/ avec `media_asset_ids: [1, 2, 3]`\n\n"
+                "Payload supporté : JSON ou multipart/form-data.\n"
+                "- `subject_ids`: liste d'IDs\n"
+                "- `answer_options`: JSON (liste)\n"
+                "- `media_asset_ids`: liste d'IDs MediaAsset\n"
         ),
-        request=QuestionMultipartWriteSerializer,
+        request=QuestionWriteSerializer,
         responses={
             201: QuestionReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
@@ -101,8 +93,9 @@ logger = logging.getLogger(__name__)
         tags=["Question"],
         summary="Mettre à jour une question (PUT)",
         description=(
-                "Mise à jour complète. Même payload que create.\n"
-                "Supporte multipart/form-data ou JSON."
+                "Met à jour une question.\n\n"
+                "Les médias sont gérés via `/api/question/media/`.\n"
+                "Utiliser `media_asset_ids` pour lier/délier les médias.\n"
         ),
         parameters=[
             OpenApiParameter(
@@ -113,7 +106,7 @@ logger = logging.getLogger(__name__)
                 description="ID de la question (question_id).",
             )
         ],
-        request=QuestionMultipartWriteSerializer,
+        request=QuestionWriteSerializer,
         responses={
             200: QuestionReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
@@ -125,8 +118,9 @@ logger = logging.getLogger(__name__)
         tags=["Question"],
         summary="Mettre à jour une question (PATCH)",
         description=(
-                "Mise à jour partielle. Même payload que create.\n"
-                "Supporte multipart/form-data ou JSON."
+                "Met à jour une question.\n\n"
+                "Les médias sont gérés via `/api/question/media/`.\n"
+                "Utiliser `media_asset_ids` pour lier/délier les médias.\n"
         ),
         parameters=[
             OpenApiParameter(
@@ -137,7 +131,7 @@ logger = logging.getLogger(__name__)
                 description="ID de la question (question_id).",
             )
         ],
-        request=QuestionMultipartWriteSerializer,
+        request=QuestionWriteSerializer,
         responses={
             200: QuestionReadSerializer,
             400: OpenApiResponse(response=OpenApiTypes.OBJECT, description="Validation error"),
@@ -163,20 +157,41 @@ logger = logging.getLogger(__name__)
             403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden (admin only)"),
         },
     ),
+    media= extend_schema(
+        tags=["Question"],
+        summary="Uploader un média (dédup sha256) ou enregistrer un média externe",
+        description=(
+                "Upload un fichier (multipart) ou enregistre une URL externe.\n"
+                "- multipart: envoyer `file`\n"
+                "- json/form: envoyer `external_url`\n\n"
+                "Retourne un `MediaAsset` (id à réutiliser dans `media_asset_ids` lors de la création/màj d'une Question)."
+        ),
+        request=MediaAssetUploadSerializer,
+        responses={
+            201: MediaAssetSerializer,
+            200: MediaAssetSerializer,
+            400: OpenApiResponse(description="Validation error"),
+        },
+    ),
 )
 class QuestionViewSet(MyModelViewSet):
     queryset = (
         Question.objects
         .all()
         .select_related("domain")
-        .prefetch_related("subjects", "translations", "answer_options__translations")
+        .prefetch_related("subjects", "translations", "answer_options__translations", "media__asset", )
     )
     permission_classes = [IsAdminUser]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = []
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    filterset_fields = ["domain", "active", "is_mode_practice", "is_mode_exam"]
     lookup_field = "pk"
     lookup_url_kwarg = "question_id"
+
+    def get_parsers(self):
+        action = getattr(self, "action", None)
+        if action in ["create","update"]:
+            return [JSONParser()]
+        return super().get_parsers()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -204,53 +219,23 @@ class QuestionViewSet(MyModelViewSet):
     # coercion JSON fields
     # ==========================================================
     def _coerce_json_fields(self, data):
-        """
-        Transforme request.data (QueryDict) en dict normal pour le serializer,
-        en gérant correctement :
-        - subject_ids     -> liste d'int
-        - answer_options  -> liste de dicts (parse JSON)
-        - media           -> liste de dicts (parse JSON) si envoyé en JSON
-        """
-
-        # 1) On sort de la QueryDict -> dict Python classique
         if isinstance(data, QueryDict):
             mutable = {}
             for key in data.keys():
-                if key == "subject_ids":
-                    mutable["subject_ids"] = [int(v) for v in data.getlist("subject_ids") if v.strip()]
+                if key in ("subject_ids", "media_asset_ids"):
+                    raw = data.getlist(key)
+                    ids: list[int] = []
+                    for item in raw:
+                        if not item:
+                            continue
+                        parts = [p.strip() for p in str(item).split(",") if p.strip()]
+                        for p in parts:
+                            ids.append(int(p))
+                    mutable[key] = ids
                 else:
                     mutable[key] = data.get(key)
-        else:
-            mutable = dict(data)
-
-        raw_trans = mutable.get("translations")
-        if isinstance(raw_trans, str):
-            try:
-                parsed_trans = json.loads(raw_trans)
-                if isinstance(parsed_trans, dict):
-                    mutable["translations"] = parsed_trans
-            except json.JSONDecodeError:
-                pass
-
-        raw_answer_options = mutable.get("answer_options")
-        if isinstance(raw_answer_options, str):
-            try:
-                parsed = json.loads(raw_answer_options)
-                if isinstance(parsed, list):
-                    mutable["answer_options"] = parsed
-            except json.JSONDecodeError:
-                pass
-
-        raw_media = mutable.get("media")
-        if isinstance(raw_media, str):
-            try:
-                parsed_media = json.loads(raw_media)
-                if isinstance(parsed_media, list):
-                    mutable["media"] = parsed_media
-            except json.JSONDecodeError:
-                pass
-        return mutable
-
+            return mutable
+        return dict(data)
     # ==========================================================
     # CRUD implicite : surcharges
     # ==========================================================
@@ -261,7 +246,7 @@ class QuestionViewSet(MyModelViewSet):
             input_expected="query params (search?, title?, description?), body vide",
             output="200 + [QuestionSerializer] (paginé)",
         )
-        qs = self.get_queryset()
+        qs = self.filter_queryset(self.get_queryset())
         search = request.query_params.get("search")
         if search:
             qs = qs.filter(translations__title__icontains=search).distinct()
@@ -281,37 +266,25 @@ class QuestionViewSet(MyModelViewSet):
         )
         return super().retrieve(request, *args, **kwargs)
 
-    @extend_schema(
-        request=OpenApiRequest(
-            request=QuestionMultipartWriteSerializer,
-            encoding={"media_files": {"style": "form", "explode": True}},
-        )
-    )
+    @extend_schema(request=QuestionWriteSerializer)
     def create(self, request, *args, **kwargs):
         self._log_call(
             method_name="create",
             endpoint="POST /api/question/",
-            input_expected="multipart/JSON (Question + subject_ids + answer_options + media)",
+            input_expected="multipart/JSON (Question + subject_ids + answer_options + media_asset_ids)",
             output="201 + QuestionSerializer | 400",
         )
         data = self._coerce_json_fields(request.data)
-        media_data = data.get("media", [])
         serializer = self.get_serializer(data=data, context=self.get_serializer_context())
         if not serializer.is_valid():
             logger.warning("CREATE errors: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         question = serializer.save()
-        self._handle_media_upload(request, question, media_data=media_data)
         logger.info("Question created id=%s", question.id)
         return Response(QuestionReadSerializer(question, context=self.get_serializer_context()).data,
                         status=status.HTTP_201_CREATED)
 
-    @extend_schema(
-        request=OpenApiRequest(
-            request=QuestionMultipartWriteSerializer,
-            encoding={"media_files": {"style": "form", "explode": True}},
-        )
-    )
+    @extend_schema(request=QuestionWriteSerializer)
     def update(self, request, *args, **kwargs):
         self._log_call(
             method_name="update",
@@ -321,16 +294,11 @@ class QuestionViewSet(MyModelViewSet):
         )
         return self._update_internal(request, partial=False)
 
-    @extend_schema(
-        request=OpenApiRequest(
-            request=QuestionMultipartWriteSerializer,
-            encoding={"media_files": {"style": "form", "explode": True}},
-        )
-    )
+    @extend_schema(request=QuestionWriteSerializer)
     def partial_update(self, request, *args, **kwargs):
         self._log_call(
             method_name="partial_update",
-            endpoint="PATCH /api/question/{queston_id}/",
+            endpoint="PATCH /api/question/{question_id}/",
             input_expected="path question_id + body multipart/JSON partiel",
             output="200 + QuestionSerializer | 400 | 404",
         )
@@ -351,7 +319,6 @@ class QuestionViewSet(MyModelViewSet):
     def _update_internal(self, request, *, partial: bool):
         instance = self.get_object()
         data = self._coerce_json_fields(request.data)
-        media_data = data.get("media", [])
 
         serializer = QuestionWriteSerializer(instance, data=data, partial=partial,
                                              context=self.get_serializer_context())
@@ -360,52 +327,84 @@ class QuestionViewSet(MyModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         question = serializer.save()
-        if (not partial) or ("media" in data) or request.FILES:
-            self._handle_media_upload(request, question, media_data=media_data)
 
         logger.info("Question updated id=%s partial=%s", question.id, partial)
         return Response(QuestionReadSerializer(question, context=self.get_serializer_context()).data,
                         status=status.HTTP_200_OK)
 
     # ==========================================================
-    # Ton code : gestion media
-    # ==========================================================
-
-    # ---------------------------
     # Gestion des médias
-    # ---------------------------
-    def _handle_media_upload(self, request, question: Question, media_data=None) -> None:
+    # ==========================================================
+    def _upsert_external_asset(self, external_url: str):
+        external_url = external_url.strip()
 
-        question.media.all().delete()
-        sort_index = 1
-        media_data = media_data or []
-        for key in request.FILES:
-            for f in request.FILES.getlist(key):
-                content_type = (getattr(f, "content_type", "") or "").lower()
-                if content_type.startswith("image/"):
-                    kind = QuestionMedia.IMAGE
-                elif content_type.startswith("video/"):
-                    kind = QuestionMedia.VIDEO
-                else:
-                    continue
+        asset, created = MediaAsset.objects.get_or_create(
+            kind=MediaAsset.EXTERNAL,
+            external_url=external_url,
+            defaults={"sha256": None, "file": None},
+        )
+        return asset, created
 
-                QuestionMedia.objects.create(
-                    question=question,
-                    kind=kind,
-                    file=f,
-                    sort_order=sort_index,
+    def _upsert_file_asset(self, upload_file):
+        inferred_kind = _infer_kind_from_upload(upload_file)
+        digest = _sha256_file(upload_file)
+
+        try:
+            with transaction.atomic():
+                asset = MediaAsset.objects.create(
+                    kind=inferred_kind,
+                    file=upload_file,
+                    sha256=digest,
                 )
-                sort_index += 1
+            return asset, True
+        except (IntegrityError, ValidationError):
+            asset = MediaAsset.objects.get(kind=inferred_kind, sha256=digest)
+            return asset, False
 
-        for item in media_data:
-            if not isinstance(item, dict):
-                continue
+    @action(detail=False, methods=["post"], url_path="media",
+            parser_classes=[MultiPartParser, FormParser, JSONParser])
+    def media(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="media",
+            endpoint="POST /api/question/media/",
+            input_expected="multipart(file) OU JSON(external_url)",
+            output="200/201 + MediaAssetSerializer | 400",
+        )
 
-            if item.get("kind") == QuestionMedia.EXTERNAL and item.get("external_url"):
-                QuestionMedia.objects.create(
-                    question=question,
-                    kind=QuestionMedia.EXTERNAL,
-                    external_url=item["external_url"],
-                    sort_order=item.get("sort_order", sort_index),
+        s = MediaAssetUploadSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+
+        upload_file = s.validated_data.get("file")
+        external_url = s.validated_data.get("external_url")
+        explicit_kind = s.validated_data.get("kind")
+
+        if external_url:
+            if explicit_kind and explicit_kind != MediaAsset.EXTERNAL:
+                return Response(
+                    {"kind": "For external_url, kind must be 'external'."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-                sort_index += 1
+
+            asset, created = self._upsert_external_asset(external_url)
+            return Response(
+                MediaAssetSerializer(asset, context=self.get_serializer_context()).data,
+                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+            )
+
+        # file upload
+        try:
+            inferred_kind = _infer_kind_from_upload(upload_file)
+        except serializers.ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
+        if explicit_kind and explicit_kind != inferred_kind:
+            return Response(
+                {"kind": f"Provided kind '{explicit_kind}' does not match inferred '{inferred_kind}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        asset, created = self._upsert_file_asset(upload_file)
+        return Response(
+            MediaAssetSerializer(asset, context=self.get_serializer_context()).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )

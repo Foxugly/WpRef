@@ -1,164 +1,142 @@
 import {Injectable} from '@angular/core';
-import {map, Observable} from 'rxjs';
-import {MediaSelectorValue} from '../../components/media-selector/media-selector';
-
-import {ROUTES} from '../../app.routes-paths'
 import {Router} from '@angular/router';
+import {map, Observable} from 'rxjs';
+
+import {ROUTES} from '../../app.routes-paths';
+
 import {
-  QuestionAnswerOptionReadDto,
+  LanguageEnumDto, MediaAssetDto,
+  QuestionApi,
+  QuestionCreateRequestParams, QuestionMediaCreateRequestParams,
   QuestionReadDto,
-  QuestionApi, QuestionListRequestParams, QuestionCreateRequestParams, QuestionUpdateRequestParams,
-  QuestionPartialUpdateRequestParams, QuestionRetrieveRequestParams, QuestionDestroyRequestParams
+  QuestionUpdateRequestParams,
+  QuestionWriteRequestDto,
 } from '../../api/generated';
 
-export interface QuestionFormValue {
+import {LangCode} from '../translation/translation';
+import {MediaSelectorValue} from '../../components/media-selector/media-selector';
+import {FormArray, FormControl, FormGroup} from '@angular/forms';
+import {selectTranslation} from '../../shared/i18n/select-translation';
+
+export type QuestionTrGroup = FormGroup<{
+  title: FormControl<string>;
+  description: FormControl<string>;
+  explanation: FormControl<string>;
+  answer_options: FormArray<AnswerTrGroup>;
+}>;
+
+export type AnswerTrGroup = FormGroup<{
+  content: FormControl<string>;
+}>;
+
+export type QuestionTranslationForm = {
   title: string;
   description: string;
   explanation: string;
+};
+
+export type AnswerOptionForm = {
+  is_correct: boolean;
+  sort_order: number;
+  translations: Record<LangCode, { content: string }>;
+};
+
+export type QuestionCreateJsonPayload = {
+  domain: number;
+  subject_ids: number[];
   allow_multiple_correct: boolean;
   active: boolean;
   is_mode_practice: boolean;
   is_mode_exam: boolean;
-
-  subjectIds: number[];
-
-  answerOptions: QuestionAnswerOptionReadDto[];
-
-  media: MediaSelectorValue[]; // inclut File éventuel
-}
-
-export type QuestionCreatePayload = QuestionFormValue;
-export type QuestionUpdatePayload = Partial<QuestionFormValue>;
+  translations: Record<LangCode, QuestionTranslationForm>;
+  answer_options: Array<AnswerOptionForm>;
+  media_asset_ids: number[];
+};
 
 
-@Injectable({providedIn: 'root',})
+@Injectable({providedIn: 'root'})
 export class QuestionService {
   constructor(private api: QuestionApi, private router: Router) {
   }
 
-  // LIST
-  list(params?: { name?: string; search?: string }): Observable<Array<QuestionReadDto>> {
-    const payload : QuestionListRequestParams = {title:params?.name, search:params?.search}
-    return this.api.questionList(payload);
+  // ==========
+  // API
+  // ==========
+
+  list(params?: { search?: string; subjectId?: number; domainId?: number }): Observable<QuestionReadDto[]> {
+    // si ton client généré n'expose pas ces params,
+    // garde "as any" mais idéalement adapte aux vrais noms
+    return this.api.questionList({
+      search: params?.search,
+      subjectId: params?.subjectId,
+      domainId: params?.domainId,
+    } as any);
   }
 
-  // CREATE (multipart / form)
-  create(payload: QuestionCreateRequestParams): Observable<QuestionReadDto> {
-    return this.api.questionCreate(payload);
-  }
-
-  // UPDATE (PUT)
-  update(payload: QuestionUpdateRequestParams): Observable<QuestionReadDto> {
-    return this.api.questionUpdate(payload);
-  }
-
-  // UPDATE (PATCH)
-  updatePartial(payload: QuestionPartialUpdateRequestParams): Observable<QuestionReadDto> {
-    return this.api.questionPartialUpdate(payload);
-  }
-
-  // RETRIEVE
   retrieve(questionId: number): Observable<QuestionReadDto> {
-    const payload:QuestionRetrieveRequestParams = {questionId:questionId};
-    return this.api.questionRetrieve(payload);
+    return this.api.questionRetrieve({questionId} as any);
   }
 
-  // DELETE
+  create(qwrdto: QuestionWriteRequestDto): Observable<QuestionReadDto> {
+    console.log(qwrdto);
+    return this.api.questionCreate({questionWriteRequestDto:qwrdto} as QuestionCreateRequestParams);
+  }
+
+  update(qurp: QuestionUpdateRequestParams): Observable<QuestionReadDto> {
+    return this.api.questionUpdate(qurp);
+  }
+
   delete(questionId: number): Observable<void> {
-    const payload:QuestionDestroyRequestParams = {questionId:questionId};
-    return this.api.questionDestroy(payload).pipe(map(() => void 0));
+    return this.api.questionDestroy({questionId} as any).pipe(map(() => void 0));
   }
 
-  // --------------------------
-  // Navigation (UI only)
-  // --------------------------
-  goBack(): void {
-    this.router.navigate(ROUTES.question.list());
-  }
+  // ==========
+  // Navigation
+  // ==========
 
   goList(): void {
     this.router.navigate(ROUTES.question.list());
   }
 
-  goView(questionId: number): void {
-    this.router.navigate(ROUTES.question.view(questionId));
-  }
-
-  goNew(): void {
-    this.router.navigate(ROUTES.question.add());
+  goNew(domainId?: number): void {
+    this.router.navigate(ROUTES.question.add(), {
+      queryParams: domainId ? {domainId} : undefined,
+    });
   }
 
   goEdit(questionId: number): void {
     this.router.navigate(ROUTES.question.edit(questionId));
   }
 
+  goView(questionId: number): void {
+    this.router.navigate(ROUTES.question.view(questionId));
+  }
+
   goDelete(questionId: number): void {
     this.router.navigate(ROUTES.question.delete(questionId));
+  }
+
+  goBack(): void {
+    this.router.navigate(ROUTES.question.list());
   }
 
   goSubjectEdit(subjectId: number): void {
     this.router.navigate(ROUTES.subject.edit(subjectId));
   }
 
-  private cleanIds(ids: any): number[] {
-    return Array.isArray(ids)
-      ? ids
-        .filter((id) => id !== null && id !== undefined && id !== '')
-        .map((id) => Number(id))
-        .filter((id) => Number.isFinite(id))
-      : [];
+  // ==========
+  // Builders
+  // ==========
+
+  getQuestionTranslationForm(question: QuestionReadDto, lang: LanguageEnumDto): QuestionTranslationForm {
+    const tr = question.translations as Record<string, QuestionTranslationForm> | undefined;
+    return (
+      selectTranslation<QuestionTranslationForm>(tr ?? {}, lang) ??
+      {title: '', description: '', explanation: ''}
+    );
   }
 
-  private mapAnswerOptions(answerOptions: QuestionAnswerOptionReadDto[] | undefined) {
-    return (answerOptions ?? []).map((opt, index) => ({
-      content: opt.content,
-     // is_correct: !!opt.is_correct, TODO
-      sort_order: opt.sort_order ?? index + 1,
-    }));
-  }
-
-  /**
-   * Construit :
-   * - mediaMeta: liste JSON (externals + fichiers)
-   * - mediaFiles: File[] dans le même ordre que les entrées "fichier"
-   *
-   * Variante simple : on ajoute les fichiers comme items kind=image/video sans external_url
-   * et on garde l'ordre UI via sort_order.
-   *
-   * Si tu veux un mapping exact meta ↔ fichier, on peut ajouter file_index dans le JSON.
-   */
-  private mapMedia(mediaItems: MediaSelectorValue[] | undefined): { mediaMeta: any[]; mediaFiles: File[] } {
-    const items = Array.isArray(mediaItems) ? mediaItems : [];
-
-    const mediaFiles: File[] = [];
-    const mediaMeta = items.map((m, index) => {
-      const sort_order = m.sort_order ?? index + 1;
-
-      if (m.kind === 'external') {
-        return {
-          kind: 'external',
-          external_url: m.external_url ?? null,
-          sort_order,
-        };
-      }
-
-      // image/video
-      if (m.file instanceof File) {
-        const file_index = mediaFiles.push(m.file) - 1;
-        return {
-          kind: m.kind,          // 'image' | 'video'
-          sort_order,
-          file_index,            // ✅ optionnel mais très pratique côté backend
-        };
-      }
-
-      // image/video sans nouveau fichier (ex: déjà existant côté backend)
-      // garde un placeholder sans file_index
-      return {
-        kind: m.kind,
-        sort_order,
-      };
-    });
-    return {mediaMeta, mediaFiles};
+  questionMediaCreate(param:QuestionMediaCreateRequestParams):Observable<MediaAssetDto> {
+    return this.api.questionMediaCreate(param);
   }
 }

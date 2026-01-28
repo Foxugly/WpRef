@@ -1,5 +1,3 @@
-from typing import List
-
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -36,28 +34,31 @@ class DomainReadSerializer(serializers.ModelSerializer):
         read_only_fields = fields
         extra_kwargs = {"owner": {"read_only": True}}
 
-    def get_translations(self, obj: Domain) -> dict:
+    def get_translations(self, obj: Domain) -> dict[str, dict[str, str]]:
         data = {}
         for t in obj.translations.all():
-            data[t.language_code] = {"name": t.name or "", "description": t.description or "", }
+            data[t.language_code] = {"name": t.name or "", "description": t.description or ""}
         return data
 
-    def get_owner(self, obj: Domain) -> dict:
-        return {"id": obj.owner_id, "username": obj.owner.username, }
+    def get_owner(self, obj: Domain) -> dict[str, int | str]:
+        return {"id": obj.owner_id, "username": obj.owner.username}
 
-    def get_staff(self, obj: Domain) -> list[dict]:
+    def get_staff(self, obj: Domain) -> list[dict[str, int | str]]:
         return [{"id": u.id, "username": u.username} for u in obj.staff.all()]
 
     @extend_schema_field(LanguageReadSerializer(many=True))
-    def get_allowed_languages(self, obj:Domain) -> List[dict]:
-        qs = obj.allowed_languages.all().filter(active=True).order_by("id")
+    def get_allowed_languages(self, obj: Domain) -> list[dict]:
+        qs = obj.allowed_languages.filter(active=True).order_by("id")
         return LanguageReadSerializer(qs, many=True, context=self.context).data
+
+    def validate(self, attrs):
+        raise serializers.ValidationError("This serializer is read-only.")
 
 
 class DomainWriteSerializer(serializers.ModelSerializer):
-    allowed_languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, required=True, )
-    translations = serializers.DictField(child=serializers.DictField(), write_only=True, required=True, )
-    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=True, )
+    allowed_languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, required=True)
+    translations = serializers.DictField(child=serializers.DictField(), write_only=True, required=True)
+    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=True)
 
     class Meta:
         model = Domain
@@ -82,11 +83,7 @@ class DomainWriteSerializer(serializers.ModelSerializer):
     # ---------------------------
     # validation
     # ---------------------------
-    def validate_allowed_languages(self, value):
-        if not value:
-            return value
-
-            # déduplication tout en gardant l'ordre
+    def validate_allowed_languages(self, value: list[Language]) -> list[Language]:
         seen_ids = set()
         unique_languages = []
         for lang in value:
@@ -95,10 +92,8 @@ class DomainWriteSerializer(serializers.ModelSerializer):
             seen_ids.add(lang.pk)
             unique_languages.append(lang)
 
-        # validation métier : le code doit exister dans settings.LANGUAGES
-        valid_codes = {code for code, _ in settings.LANGUAGES}
-        invalid = [lang.code for lang in unique_languages if lang.code not in valid_codes]
-
+        # Validation : code doit exister dans settings.LANGUAGES
+        invalid = [lang.code for lang in unique_languages if lang.code not in LANG_CODES]
         if invalid:
             raise serializers.ValidationError(
                 f"Invalid language code(s): {', '.join(sorted(invalid))}"
@@ -111,11 +106,17 @@ class DomainWriteSerializer(serializers.ModelSerializer):
         if not translations:
             raise serializers.ValidationError({"translations": "Au moins une traduction est requise."})
 
-        # optionnel : imposer que translations couvre allowed_languages
-        allowed = set(attrs.get("allowed_language_codes") or [])
-        if allowed:
+        allowed_langs = attrs.get("allowed_languages")
+        if "allowed_languages" in attrs and allowed_langs == []:
+            raise serializers.ValidationError({"allowed_languages": "Au moins une langue est requise."})
+        if allowed_langs is not None:
+            allowed_codes = {l.code for l in allowed_langs}
             provided = set(translations.keys())
-            missing = allowed - provided
+            invalid_codes = provided - LANG_CODES
+            if invalid_codes:
+                raise serializers.ValidationError({"translations": f"Langues inconnues: {sorted(invalid_codes)}"})
+
+            missing = allowed_codes - provided
             if missing:
                 raise serializers.ValidationError(
                     {"translations": f"Traductions manquantes pour: {sorted(missing)}"}
@@ -127,16 +128,19 @@ class DomainWriteSerializer(serializers.ModelSerializer):
     # create / update
     # ---------------------------
     def create(self, validated_data):
+        request = self.context.get("request")
+        if not request or not request.user or request.user.is_anonymous:
+            raise serializers.ValidationError({"owner": "Owner is required."})
         translations = validated_data.pop("translations")
         langs = validated_data.pop("allowed_languages", [])
         staff = validated_data.pop("staff", [])
         with transaction.atomic():
-            domain = Domain.objects.create(**validated_data)
+            domain = Domain.objects.create(owner=request.user, **validated_data)
             if staff:
                 domain.staff.set(staff)
-            if len(langs):
+            if langs:
                 domain.allowed_languages.set(langs)
-        self._apply_translations(domain, translations)
+            self._apply_translations(domain, translations)
         return domain
 
     def update(self, instance, validated_data):
@@ -151,20 +155,32 @@ class DomainWriteSerializer(serializers.ModelSerializer):
             if staff is not None:
                 instance.staff.set(staff)
 
-            if len(langs):
+            if langs is not None:
                 instance.allowed_languages.set(langs)
 
-        if translations is not None:
-            self._apply_translations(instance, translations)
+            if translations is not None:
+                self._apply_translations(instance, translations)
 
         return instance
 
 
 class DomainPartialSerializer(DomainWriteSerializer):
-    allowed_languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, required=False, )
-    translations = serializers.DictField(child=serializers.DictField(), write_only=True, required=False, )
-    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False, )
+    allowed_languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, required=False)
+    translations = serializers.DictField(child=serializers.DictField(), write_only=True, required=False)
+    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
     active = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        # Si on touche aux translations => règles complètes
+        if "translations" in attrs:
+            return super().validate(attrs)
+
+        # Si on touche seulement aux allowed_languages (sans translations), on ne force pas translations
+        if "allowed_languages" in attrs:
+            allowed_langs = attrs.get("allowed_languages")
+            if allowed_langs == []:
+                raise serializers.ValidationError({"allowed_languages": "Au moins une langue est requise."})
+        return attrs
 
 
 class DomainDetailSerializer(DomainReadSerializer):
@@ -181,12 +197,15 @@ class DomainDetailSerializer(DomainReadSerializer):
             "staff",
             "created_at",
             "updated_at",
-            "subjects",
+            "subjects"
         ]
         read_only_fields = fields
         extra_kwargs = {"owner": {"read_only": True}}
 
     @extend_schema_field(SubjectReadSerializer(many=True))
-    def get_subjects(self, obj: Domain) -> List[dict]:
+    def get_subjects(self, obj: Domain) -> list[dict]:
         qs = obj.subjects.filter(active=True).order_by("id")
         return SubjectReadSerializer(qs, many=True, context=self.context).data
+
+    def validate(self, attrs):
+        raise serializers.ValidationError("This serializer is read-only.")

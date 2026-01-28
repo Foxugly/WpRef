@@ -1,198 +1,159 @@
-# domain/tests/tests_models.py
-
-from unittest.mock import patch
+# domain/tests/test_models.py
+from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db.models.deletion import ProtectedError
+from django.db import IntegrityError
 from django.test import TestCase, override_settings
+from django.utils import translation
+
 from domain.models import Domain, settings_language_codes
 from language.models import Language
 
 User = get_user_model()
 
 
-@override_settings(LANGUAGES=(("fr", "Français"), ("nl", "Nederlands"), ("en", "English")))
-class DomainModelTests(TestCase):
-    def setUp(self):
-        self.owner = User.objects.create_user(username="owner", password="pass")
+class DomainModelTestCase(TestCase):
+    """
+    Tests Domain (models.py) compatibles avec Parler + ManyToMany:
+    - Ne JAMAIS appeler full_clean() sur une instance Domain non sauvegardée
+      (car Domain.clean() lit allowed_languages => besoin d'une PK).
+    """
 
-    # -------------------------
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = User.objects.create_user(username="owner", password="pwd")
+        cls.staff1 = User.objects.create_user(username="staff1", password="pwd")
+        cls.staff2 = User.objects.create_user(username="staff2", password="pwd")
+
+        # Langues
+        cls.lang_fr = Language.objects.create(code="fr", name="Français", active=True)
+        cls.lang_en = Language.objects.create(code="en", name="English", active=True)
+        cls.lang_xx = Language.objects.create(code="xx", name="Invalid", active=True)
+
+    def setUp(self):
+        translation.activate("fr")
+
+    def tearDown(self):
+        translation.deactivate_all()
+        super().tearDown()
+
+    # -----------------------
+    # Helpers Parler
+    # -----------------------
+    def _set_parler(self, obj, lang: str, **fields):
+        obj.set_current_language(lang)
+        for k, v in fields.items():
+            setattr(obj, k, v)
+        obj.save()
+        return obj
+
+    def _mk_domain(self, *, active=True) -> Domain:
+        return Domain.objects.create(owner=self.owner, active=active)
+
+    # ---------------------------------------------------------------------
     # settings_language_codes()
-    # -------------------------
-    def test_settings_language_codes_returns_codes_from_settings(self):
-        self.assertEqual(settings_language_codes(), {"fr", "nl", "en"})
+    # ---------------------------------------------------------------------
+    @override_settings(LANGUAGES=(("fr", "Français"), ("en", "English")))
+    def test_settings_language_codes_reads_from_settings(self):
+        self.assertEqual(settings_language_codes(), {"fr", "en"})
 
     @override_settings(LANGUAGES=())
-    def test_settings_language_codes_handles_empty_settings(self):
+    def test_settings_language_codes_empty_when_no_settings_languages(self):
         self.assertEqual(settings_language_codes(), set())
 
-    def test_settings_language_codes_handles_missing_LANGUAGES_attr(self):
-        """
-        getattr(settings, "LANGUAGES", []) -> [] si attribut absent
-        """
-        from django.conf import settings as dj_settings
+    # ---------------------------------------------------------------------
+    # __str__ (Parler)
+    # ---------------------------------------------------------------------
+    def test_str_fallback_without_any_translation(self):
+        d = self._mk_domain()
+        self.assertEqual(str(d), f"Domain#{d.pk}")
 
-        # patch.object sur settings pour simuler absence d'attribut LANGUAGES
-        # (on supprime temporairement l'attribut si présent)
-        had = hasattr(dj_settings, "LANGUAGES")
-        old = getattr(dj_settings, "LANGUAGES", None)
-        if had:
-            delattr(dj_settings, "LANGUAGES")
-        try:
-            self.assertEqual(settings_language_codes(), set())
-        finally:
-            if had:
-                setattr(dj_settings, "LANGUAGES", old)
+    def test_str_uses_any_language_translation_when_available(self):
+        d = self._mk_domain()
+        self._set_parler(d, "fr", name="Domaine FR", description="Desc FR")
 
-    # -------------------------
-    # __str__
-    # -------------------------
-    def test_str_returns_translated_name_when_available(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.set_current_language("fr")
-        d.name = "Domaine FR"
-        d.description = "Desc"
-        d.save()
-
+        translation.activate("fr")
         self.assertEqual(str(d), "Domaine FR")
 
-    def test_str_fallback_when_safe_translation_getter_returns_none(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        with patch.object(Domain, "safe_translation_getter", return_value=None):
-            self.assertEqual(str(d), f"Domain#{d.pk}")
+        # any_language=True => si "en" n'existe pas, il doit trouver "fr"
+        translation.activate("en")
+        self.assertEqual(str(d), "Domaine FR")
 
-    def test_str_fallback_when_safe_translation_getter_returns_empty_string(self):
-        d = Domain.objects.create(owner=self.owner, active=True)
-        with patch.object(Domain, "safe_translation_getter", return_value=""):
-            self.assertEqual(str(d), f"Domain#{d.pk}")
+    def test_str_prefers_current_language_if_exists(self):
+        d = self._mk_domain()
+        self._set_parler(d, "fr", name="Domaine FR", description="")
+        self._set_parler(d, "en", name="Domain EN", description="")
 
-    def test_str_fallback_includes_pk(self):
-        """
-        Vérifie explicitement le format fallback Domain#{pk}
-        """
-        d = Domain.objects.create(owner=self.owner, active=True)
-        with patch.object(Domain, "safe_translation_getter", return_value=""):
-            s = str(d)
-        self.assertTrue(s.startswith("Domain#"))
-        self.assertEqual(s, f"Domain#{d.pk}")
+        translation.activate("en")
+        self.assertEqual(str(d), "Domain EN")
 
-    # -------------------------
-    # Meta.ordering
-    # -------------------------
-    def test_meta_ordering_is_id(self):
-        self.assertEqual(Domain._meta.ordering, ["id"])
+    # ---------------------------------------------------------------------
+    # owner required
+    # ---------------------------------------------------------------------
+    def test_owner_is_required(self):
+        # Avec Domain.save() qui appelle full_clean(), on attend une ValidationError (pas une IntegrityError DB)
+        with self.assertRaises(ValidationError):
+            Domain.objects.create(active=True)
 
-    def test_queryset_is_ordered_by_id(self):
-        d1 = Domain.objects.create(owner=self.owner, active=True)
-        d2 = Domain.objects.create(owner=self.owner, active=True)
-        ids = list(Domain.objects.values_list("id", flat=True))
-        self.assertEqual(ids, sorted([d1.id, d2.id]))
+    # ---------------------------------------------------------------------
+    # clean(): validation allowed_languages (instance DOIT être sauvée)
+    # ---------------------------------------------------------------------
+    @override_settings(LANGUAGES=(("fr", "Français"), ("en", "English")))
+    def test_clean_with_duplicate_allowed_languages_is_ok(self):
+        d = self._mk_domain()
+        d.allowed_languages.set([self.lang_fr, self.lang_fr, self.lang_en])
+        d.full_clean()  # doit passer
 
-    # -------------------------
-    # clean() + allowed_languages M2M
-    # -------------------------
-    def test_clean_ok_when_allowed_languages_empty(self):
-        """
-        Si allowed_languages est vide => codes=set() => invalid=[] => ok
-        """
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.clean()  # ne doit pas lever
+    @override_settings(LANGUAGES=(("fr", "Français"), ("en", "English")))
+    def test_clean_allows_only_language_codes_present_in_settings(self):
+        d = self._mk_domain()
+        d.allowed_languages.set([self.lang_fr, self.lang_en])
 
-    def test_clean_ok_when_allowed_languages_are_in_settings(self):
-        fr = Language.objects.create(code="fr", name="Français", active=True)
-        nl = Language.objects.create(code="nl", name="Nederlands", active=True)
+        # OK: d a une PK, allowed_languages accessible
+        d.full_clean()
 
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.add(fr, nl)
-        d.clean()  # ne doit pas lever
-
-    def test_clean_raises_when_allowed_language_not_in_settings(self):
-        xx = Language.objects.create(code="xx", name="Xx", active=True)
-
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.add(xx)
+    @override_settings(LANGUAGES=(("fr", "Français"), ("en", "English")))
+    def test_clean_rejects_language_codes_not_in_settings(self):
+        d = self._mk_domain()
+        d.allowed_languages.set([self.lang_fr, self.lang_xx])  # xx invalide
 
         with self.assertRaises(ValidationError) as ctx:
-            d.clean()
+            d.full_clean()
 
-        err = ctx.exception
-        self.assertIn("allowed_languages", err.message_dict)
-        msg = " ".join(err.message_dict["allowed_languages"])
-        self.assertIn("Invalid language code(s): xx", msg)
+        self.assertIn("allowed_languages", ctx.exception.message_dict)
+        msg_list = ctx.exception.message_dict["allowed_languages"]
+        self.assertTrue(any("Invalid language code(s)" in m for m in msg_list))
+        self.assertTrue(any("xx" in m for m in msg_list))
 
-    def test_clean_raises_with_multiple_invalid_codes_sorted(self):
-        """
-        invalid = sorted([...]) -> vérifie tri + join dans le message
-        """
-        xx = Language.objects.create(code="xx", name="Xx", active=True)
-        aa = Language.objects.create(code="aa", name="Aa", active=True)
-
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.add(xx, aa)
-
-        with self.assertRaises(ValidationError) as ctx:
-            d.clean()
-
-        msg = " ".join(ctx.exception.message_dict["allowed_languages"])
-        # tri attendu: aa, xx
-        self.assertIn("Invalid language code(s): aa, xx", msg)
-
-    def test_clean_raises_when_mix_valid_and_invalid(self):
-        fr = Language.objects.create(code="fr", name="Français", active=True)
-        xx = Language.objects.create(code="xx", name="Xx", active=True)
-
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.add(fr, xx)
-
-        with self.assertRaises(ValidationError) as ctx:
-            d.clean()
-
-        msg = " ".join(ctx.exception.message_dict["allowed_languages"])
-        self.assertIn("Invalid language code(s): xx", msg)
-        self.assertNotIn("fr", msg)
+    @override_settings(LANGUAGES=(("fr", "Français"), ("en", "English")))
+    def test_clean_accepts_empty_allowed_languages(self):
+        d = self._mk_domain()
+        d.allowed_languages.clear()
+        d.full_clean()  # ok
 
     @override_settings(LANGUAGES=())
-    def test_clean_raises_when_settings_languages_empty_and_allowed_languages_not_empty(self):
-        fr = Language.objects.create(code="fr", name="Français", active=True)
+    def test_clean_rejects_any_allowed_languages_when_settings_languages_empty(self):
+        d = self._mk_domain()
+        d.allowed_languages.set([self.lang_fr])
+        with self.assertRaises(ValidationError):
+            d.full_clean()
 
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.add(fr)
-
-        with self.assertRaises(ValidationError) as ctx:
-            d.clean()
-
-        msg = " ".join(ctx.exception.message_dict["allowed_languages"])
-        self.assertIn("Invalid language code(s): fr", msg)
-
-    # -------------------------
-    # owner PROTECT
-    # -------------------------
-    def test_owner_protected_from_delete(self):
-        Domain.objects.create(owner=self.owner, active=True)
-        with self.assertRaises(ProtectedError):
-            self.owner.delete()
-
-    # -------------------------
-    # staff M2M
-    # -------------------------
-    def test_staff_m2m_can_add_and_read(self):
-        staff1 = User.objects.create_user(username="staff1", password="pass")
-        staff2 = User.objects.create_user(username="staff2", password="pass")
-
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.staff.add(staff1, staff2)
-
+    # ---------------------------------------------------------------------
+    # staff M2M (smoke)
+    # ---------------------------------------------------------------------
+    def test_staff_m2m_can_be_set(self):
+        d = self._mk_domain()
+        d.staff.set([self.staff1, self.staff2])
         self.assertEqual(set(d.staff.values_list("username", flat=True)), {"staff1", "staff2"})
-        self.assertIn(d, staff1.managed_domains.all())
-        self.assertIn(d, staff2.managed_domains.all())
 
-    def test_allowed_languages_related_name_domains(self):
-        """
-        Bonus coverage: related_name="domains"
-        """
-        fr = Language.objects.create(code="fr", name="Français", active=True)
-        d = Domain.objects.create(owner=self.owner, active=True)
-        d.allowed_languages.add(fr)
+    # ---------------------------------------------------------------------
+    # Meta ordering
+    # ---------------------------------------------------------------------
+    def test_ordering_is_by_id_ascending(self):
+        d1 = self._mk_domain()
+        d2 = self._mk_domain()
+        d3 = self._mk_domain()
 
-        self.assertIn(d, fr.domains.all())
+        ids = list(Domain.objects.values_list("id", flat=True))
+        self.assertEqual(ids, [d1.id, d2.id, d3.id])

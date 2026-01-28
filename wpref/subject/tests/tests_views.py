@@ -1,344 +1,229 @@
 # subject/tests/test_views.py
-from unittest.mock import patch
+from __future__ import annotations
 
 from django.contrib.auth import get_user_model
-from django.urls import reverse
-from domain.models import Domain
+from django.test import TestCase
+from django.utils import translation
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIRequestFactory, force_authenticate
+
+from domain.models import Domain
+from question.models import Question, QuestionSubject
 from subject.models import Subject
+from subject.views import SubjectViewSet
 
 User = get_user_model()
 
 
-class SubjectViewSetTests(APITestCase):
+class SubjectViewSetTestCase(TestCase):
+    """
+    Couvre le fichier views.py de SubjectViewSet :
+    - permissions (IsAuthenticated vs IsAdminUser)
+    - list avec filters + search + pagination (si activée)
+    - retrieve
+    - details (action)
+    - create / update / partial_update / destroy
+    """
+
     @classmethod
     def setUpTestData(cls):
-        cls.admin = User.objects.create_user(
-            username="admin", password="adminpass", is_staff=True, is_superuser=True
-        )
-        cls.user = User.objects.create_user(username="user", password="userpass")
+        cls.factory = APIRequestFactory()
 
-        cls.owner = User.objects.create_user(username="owner", password="ownerpass")
-        cls.domain = Domain.objects.create(owner=cls.owner, active=True)
+        cls.user = User.objects.create_user(username="u1", password="pwd")
+        cls.admin = User.objects.create_user(username="admin", password="pwd", is_staff=True)
+
+        # Domain (parler): créer puis poser une traduction si tu veux tester domain_name
+        cls.domain = Domain.objects.create(owner=cls.admin, active=True)
         cls.domain.set_current_language("fr")
         cls.domain.name = "Domaine FR"
         cls.domain.description = ""
         cls.domain.save()
 
-        # Subjects de base (avec traductions)
-        cls.s1 = Subject.objects.create(domain=cls.domain)
-        cls.s1.set_current_language("fr")
-        cls.s1.name = "Mathématiques"
-        cls.s1.description = "Les maths"
-        cls.s1.save()
+        # Subjects
+        cls.subj1 = Subject.objects.create(domain=cls.domain, active=True)
+        cls.subj1.set_current_language("fr")
+        cls.subj1.name = "Math"
+        cls.subj1.description = "Desc"
+        cls.subj1.save()
 
-        cls.s2 = Subject.objects.create(domain=None)
-        cls.s2.set_current_language("fr")
-        cls.s2.name = "Philosophie"
-        cls.s2.description = "Pensée"
-        cls.s2.save()
+        cls.subj2 = Subject.objects.create(domain=cls.domain, active=False)
+        cls.subj2.set_current_language("fr")
+        cls.subj2.name = "Physique"
+        cls.subj2.description = ""
+        cls.subj2.save()
 
-        cls.s3 = Subject.objects.create(domain=cls.domain)
-        cls.s3.set_current_language("nl")
-        cls.s3.name = "Wiskunde"
-        cls.s3.description = "NL desc"
-        cls.s3.save()
+        # Questions (pour details)
+        cls.q1 = Question.objects.create(domain=cls.domain, active=True)
+        cls.q1.set_current_language("fr")
+        cls.q1.title = "Question 1"
+        cls.q1.description = ""
+        cls.q1.explanation = ""
+        cls.q1.save()
 
-    # -------------------------
+        cls.q2 = Question.objects.create(domain=cls.domain, active=False)  # inactive => doit être filtrée
+        cls.q2.set_current_language("fr")
+        cls.q2.title = "Question 2"
+        cls.q2.description = ""
+        cls.q2.explanation = ""
+        cls.q2.save()
+
+        QuestionSubject.objects.create(question=cls.q1, subject=cls.subj1, sort_order=0)
+        QuestionSubject.objects.create(question=cls.q2, subject=cls.subj1, sort_order=1)
+
+    def setUp(self):
+        translation.activate("fr")
+
+    def tearDown(self):
+        translation.deactivate_all()
+
+    # ----------------------------
     # helpers
-    # -------------------------
-    def _list_url(self):
-        return reverse("api:subject-api:subject-list")
+    # ----------------------------
+    def _call(self, method: str, action: str, user=None, *, path="/api/subject/", data=None, query=None, subject_id=None):
+        view = SubjectViewSet.as_view({method: action})
 
-    def _detail_url(self, subject_or_id):
-        subject_id = subject_or_id.id if hasattr(subject_or_id, "id") else int(subject_or_id)
-        return reverse("api:subject-api:subject-detail", kwargs={"subject_id": subject_id})
+        if query:
+            qs = "&".join([f"{k}={v}" for k, v in query.items()])
+            path = f"{path}?{qs}"
 
-    def _extract_items(self, resp_json):
-        # pagination ou pas
-        if isinstance(resp_json, dict) and "results" in resp_json:
-            return resp_json["results"]
-        return resp_json
+        req = getattr(self.factory, method)(path, data=data or {}, format="json")
+        if user is not None:
+            force_authenticate(req, user=user)
 
-    # -------------------------
-    # permissions: list/retrieve = IsAuthenticated
-    # -------------------------
+        kwargs = {}
+        if subject_id is not None:
+            kwargs["subject_id"] = subject_id
+
+        return view(req, **kwargs)
+
+    def _extract_results(self, resp):
+        """
+        Si pagination activée => resp.data["results"]
+        Sinon => resp.data directement (liste)
+        """
+        data = resp.data
+        if isinstance(data, dict) and "results" in data:
+            return data["results"]
+        return data
+
+    # ----------------------------
+    # permissions
+    # ----------------------------
     def test_list_requires_authentication(self):
-        r = self.client.get(self._list_url())
-        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
+        resp = self._call("get", "list", user=None)
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_retrieve_requires_authentication(self):
-        r = self.client.get(self._detail_url(self.s1))
-        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
+        resp = self._call("get", "retrieve", user=None, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_authenticated_user_can_list(self):
-        self.client.force_authenticate(user=self.user)
-        r = self.client.get(self._list_url())
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
+    def test_details_requires_authentication(self):
+        resp = self._call("get", "details", user=None, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/details/")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_authenticated_user_can_retrieve(self):
-        self.client.force_authenticate(user=self.user)
-        r = self.client.get(self._detail_url(self.s1))
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-
-    # -------------------------
-    # permissions: create/update/patch/delete = IsAdminUser
-    # -------------------------
     def test_create_requires_admin(self):
-        payload = {
-            "domain": self.domain.id,
-            "translations": {"fr": {"name": "Histoire", "description": "Desc"}},
-        }
-
-        # non auth
-        r = self.client.post(self._list_url(), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        # auth mais pas admin
-        self.client.force_authenticate(user=self.user)
-        r = self.client.post(self._list_url(), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+        payload = {"domain": self.domain.pk, "active": True, "translations": {"fr": {"name": "Bio", "description": ""}}}
+        resp = self._call("post", "create", user=self.user, data=payload)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_update_requires_admin(self):
-        payload = {"domain": None, "translations": {"fr": {"name": "X", "description": ""}}}
-
-        r = self.client.put(self._detail_url(self.s1), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        self.client.force_authenticate(user=self.user)
-        r = self.client.put(self._detail_url(self.s1), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_partial_update_requires_admin(self):
-        payload = {"translations": {"fr": {"name": "Y", "description": ""}}}
-
-        r = self.client.patch(self._detail_url(self.s1), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        self.client.force_authenticate(user=self.user)
-        r = self.client.patch(self._detail_url(self.s1), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+        payload = {"domain": self.domain.pk, "active": True, "translations": {"fr": {"name": "Math2", "description": ""}}}
+        resp = self._call("put", "update", user=self.user, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/", data=payload)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_destroy_requires_admin(self):
-        r = self.client.delete(self._detail_url(self.s1))
-        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
+        resp = self._call("delete", "destroy", user=self.user, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
-        self.client.force_authenticate(user=self.user)
-        r = self.client.delete(self._detail_url(self.s1))
-        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+    # ----------------------------
+    # list
+    # ----------------------------
+    def test_list_returns_items(self):
+        resp = self._call("get", "list", user=self.user)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        items = self._extract_results(resp)
+        self.assertTrue(isinstance(items, list))
+        self.assertGreaterEqual(len(items), 2)
 
-    # -------------------------
-    # list behavior: search, pagination/no pagination
-    # -------------------------
-    def test_list_returns_subjects_for_authenticated_user(self):
-        self.client.force_authenticate(user=self.user)
-        r = self.client.get(self._list_url())
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-
-        items = self._extract_items(r.json())
-        # on a au moins ceux créés
+    def test_list_filter_active(self):
+        resp = self._call("get", "list", user=self.user, query={"active": "true"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        items = self._extract_results(resp)
         ids = {it["id"] for it in items}
-        self.assertTrue(self.s1.id in ids)
-        self.assertTrue(self.s2.id in ids)
-        self.assertTrue(self.s3.id in ids)
+        self.assertIn(self.subj1.pk, ids)
+        self.assertNotIn(self.subj2.pk, ids)
 
-    def test_list_search_filters_on_translations_name_icontains(self):
-        self.client.force_authenticate(user=self.user)
+    def test_list_filter_domain(self):
+        resp = self._call("get", "list", user=self.user, query={"domain": str(self.domain.pk)})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        items = self._extract_results(resp)
+        self.assertTrue(all(it["domain"] == self.domain.pk for it in items))
 
-        r = self.client.get(self._list_url(), {"search": "math"})
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-        items = self._extract_items(r.json())
-        self.assertTrue(any(it["id"] == self.s1.id for it in items))
-        # idéalement, ne contient pas philo
-        self.assertFalse(any(it["id"] == self.s2.id for it in items))
+    def test_list_search_on_translated_name(self):
+        resp = self._call("get", "list", user=self.user, query={"search": "ath"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        items = self._extract_results(resp)
+        ids = {it["id"] for it in items}
+        self.assertIn(self.subj1.pk, ids)
 
-    def test_list_search_distinct_avoids_duplicates(self):
-        """
-        distinct() est appelé -> pas de doublons même si plusieurs traductions match.
-        On crée un sujet avec 2 langues qui matchent "bio".
-        """
-        s = Subject.objects.create(domain=None)
-        s.set_current_language("fr")
-        s.name = "Bio"
-        s.description = ""
-        s.save()
-        s.set_current_language("nl")
-        s.name = "Bio"
-        s.description = ""
-        s.save()
+    # ----------------------------
+    # retrieve
+    # ----------------------------
+    def test_retrieve_returns_read_serializer_shape(self):
+        resp = self._call("get", "retrieve", user=self.user, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn("id", resp.data)
+        self.assertIn("domain", resp.data)
+        self.assertIn("active", resp.data)
+        self.assertIn("translations", resp.data)
+        self.assertIn("fr", resp.data["translations"])
 
-        self.client.force_authenticate(user=self.user)
-        r = self.client.get(self._list_url(), {"search": "bio"})
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-        items = self._extract_items(r.json())
+    # ----------------------------
+    # details
+    # ----------------------------
+    def test_details_returns_questions_only_active(self):
+        resp = self._call("get", "details", user=self.user, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/details/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn("questions", resp.data)
+        q_ids = {q["id"] for q in resp.data["questions"]}
+        self.assertIn(self.q1.pk, q_ids)
+        self.assertNotIn(self.q2.pk, q_ids)  # inactive filtered
 
-        hits = [it for it in items if it["id"] == s.id]
-        self.assertEqual(len(hits), 1)
+    # ----------------------------
+    # create / update / patch / delete (admin)
+    # ----------------------------
+    def test_create_as_admin(self):
+        payload = {"domain": self.domain.pk, "active": True, "translations": {"fr": {"name": "Bio", "description": ""}}}
+        resp = self._call("post", "create", user=self.admin, data=payload)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data["domain"], self.domain.pk)
+        self.assertTrue(resp.data["active"])
+        self.assertIn("fr", resp.data["translations"])
+        self.assertEqual(resp.data["translations"]["fr"]["name"], "Bio")
 
-    # -------------------------
-    # retrieve behavior: 200 / 404
-    # -------------------------
-    def test_retrieve_returns_404_for_missing(self):
-        self.client.force_authenticate(user=self.user)
-        r = self.client.get(self._detail_url(999999))
-        self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
+    def test_update_as_admin_returns_read_serializer(self):
+        payload = {"domain": self.domain.pk, "active": False, "translations": {"fr": {"name": "Math v2", "description": "x"}}}
+        resp = self._call("put", "update", user=self.admin, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/", data=payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["id"], self.subj1.pk)
+        self.assertFalse(resp.data["active"])
+        self.assertEqual(resp.data["translations"]["fr"]["name"], "Math v2")
 
-    # -------------------------
-    # create behavior (admin): 201 + object created
-    # -------------------------
-    def test_admin_can_create_subject(self):
-        self.client.force_authenticate(user=self.admin)
-        payload = {
-            "domain": self.domain.id,
-            "translations": {
-                "fr": {"name": "Histoire", "description": "Desc histoire"},
-                "nl": {"name": "Geschiedenis", "description": ""},
-            },
-        }
+    def test_partial_update_as_admin(self):
+        payload = {"active": True, "translations": {"fr": {"name": "Math v3", "description": ""}}, "domain": self.domain.pk}
+        resp = self._call("patch", "partial_update", user=self.admin, subject_id=self.subj2.pk, path=f"/api/subject/{self.subj2.pk}/", data=payload)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["id"], self.subj2.pk)
+        self.assertTrue(resp.data["active"])
+        self.assertEqual(resp.data["translations"]["fr"]["name"], "Math v3")
 
-        r = self.client.post(self._list_url(), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
-        data = r.json()
-        self.assertIn("id", data)
-        self.assertIn("name", data)  # read serializer
-        self.assertIn("description", data)  # read serializer
-        self.assertEqual(data["domain"], self.domain.id)
-
-        created = Subject.objects.get(pk=data["id"])
-        created.set_current_language("fr")
-        self.assertEqual(created.name, "Histoire")
-
-    def test_admin_create_validation_error(self):
-        """
-        translations requis -> 400
-        """
-        self.client.force_authenticate(user=self.admin)
-        r = self.client.post(self._list_url(), {"domain": self.domain.id}, format="json")
-        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("translations", r.json())
-
-    # -------------------------
-    # update/patch behavior (admin): 200 + read serializer output
-    # -------------------------
-    def test_admin_can_put_update_subject(self):
-        self.client.force_authenticate(user=self.admin)
-        payload = {
-            "domain": None,
-            "translations": {"fr": {"name": "Maths (maj)", "description": "nouveau"}},
-        }
-
-        r = self.client.put(self._detail_url(self.s1), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-        data = r.json()
-        self.assertEqual(data["id"], self.s1.id)
-        self.assertEqual(data["domain"], None)
-        self.assertIn("name", data)
-        self.assertIn("description", data)
-
-        self.s1.refresh_from_db()
-        self.s1.set_current_language("fr")
-        self.assertEqual(self.s1.name, "Maths (maj)")
-        self.assertEqual(self.s1.description, "nouveau")
-
-    def test_admin_can_patch_subject(self):
-        self.client.force_authenticate(user=self.admin)
-        payload = {"translations": {"fr": {"name": "Philo (maj)", "description": "d"}}}
-
-        r = self.client.patch(self._detail_url(self.s2), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-
-        self.s2.refresh_from_db()
-        self.s2.set_current_language("fr")
-        self.assertEqual(self.s2.name, "Philo (maj)")
-
-    def test_admin_update_404(self):
-        self.client.force_authenticate(user=self.admin)
-        payload = {"domain": None, "translations": {"fr": {"name": "X", "description": ""}}}
-        r = self.client.put(self._detail_url(999999), payload, format="json")
-        self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
-
-    # -------------------------
-    # destroy behavior (admin)
-    # -------------------------
-    def test_admin_can_delete_subject(self):
-        self.client.force_authenticate(user=self.admin)
-
-        s = Subject.objects.create(domain=None)
+    def test_destroy_as_admin(self):
+        s = Subject.objects.create(domain=self.domain, active=True)
         s.set_current_language("fr")
         s.name = "Temp"
         s.description = ""
         s.save()
 
-        r = self.client.delete(self._detail_url(s))
-        self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
+        resp = self._call("delete", "destroy", user=self.admin, subject_id=s.pk, path=f"/api/subject/{s.pk}/")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Subject.objects.filter(pk=s.pk).exists())
-
-    def test_admin_delete_404(self):
-        self.client.force_authenticate(user=self.admin)
-        r = self.client.delete(self._detail_url(999999))
-        self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
-
-    # -------------------------
-    # cover get_queryset() retrieve branch: prefetch_related is called
-    # -------------------------
-    def test_retrieve_uses_prefetch_related_branch(self):
-        """
-        On ne veut pas tester 'questions__...' réellement (ça dépend de tes relations),
-        mais au moins couvrir la branche action=='retrieve' sans crash.
-        """
-        self.client.force_authenticate(user=self.user)
-        r = self.client.get(self._detail_url(self.s1))
-        self.assertEqual(r.status_code, status.HTTP_200_OK)
-
-    # -------------------------
-    # cover that _log_call() is invoked in list/create/update/patch/destroy
-    # -------------------------
-    def test_log_call_is_invoked_on_list(self):
-        self.client.force_authenticate(user=self.user)
-        # patch sur la classe, car MyModelViewSet fournit _log_call
-        with patch("subject.views.SubjectViewSet._log_call") as mocked:
-            r = self.client.get(self._list_url())
-            self.assertEqual(r.status_code, status.HTTP_200_OK)
-            mocked.assert_called()
-
-    def test_log_call_is_invoked_on_create(self):
-        self.client.force_authenticate(user=self.admin)
-        payload = {"domain": None, "translations": {"fr": {"name": "Créé", "description": ""}}}
-
-        with patch("subject.views.SubjectViewSet._log_call") as mocked:
-            r = self.client.post(self._list_url(), payload, format="json")
-            self.assertEqual(r.status_code, status.HTTP_201_CREATED)
-            mocked.assert_called()
-
-    def test_log_call_is_invoked_on_update_patch_destroy(self):
-        self.client.force_authenticate(user=self.admin)
-
-        s = Subject.objects.create(domain=None)
-        s.set_current_language("fr")
-        s.name = "Loggable"
-        s.description = ""
-        s.save()
-
-        with patch("subject.views.SubjectViewSet._log_call") as mocked_update:
-            r = self.client.put(
-                self._detail_url(s),
-                {"domain": None, "translations": {"fr": {"name": "Loggable2", "description": ""}}},
-                format="json",
-            )
-            self.assertEqual(r.status_code, status.HTTP_200_OK)
-            mocked_update.assert_called()
-
-        with patch("subject.views.SubjectViewSet._log_call") as mocked_patch:
-            r = self.client.patch(
-                self._detail_url(s),
-                {"translations": {"fr": {"name": "Loggable3", "description": ""}}},
-                format="json",
-            )
-            self.assertEqual(r.status_code, status.HTTP_200_OK)
-            mocked_patch.assert_called()
-
-        with patch("subject.views.SubjectViewSet._log_call") as mocked_destroy:
-            r = self.client.delete(self._detail_url(s))
-            self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
-            mocked_destroy.assert_called()

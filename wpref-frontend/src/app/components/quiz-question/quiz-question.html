@@ -35,10 +35,10 @@
     @if (question.media.length) {
       <div class="quiz-question__media">
         @for (m of question.media; track m.id ?? m.sort_order; let i = $index) {
-          @switch (m.kind) {
+          @switch (m.asset.kind) {
             @case ('image') {
               <img
-                [alt]="question.title"
+                [alt]="getTitle(question)"
                 [src]="mediaSrc(m)"
                 class="quiz-question__media-image"
               />
@@ -68,9 +68,9 @@
       </div>
     }
     <!-- Description -->
-    @if (question.description) {
+    @if (getDescription(question)) {
       <div
-        [innerHTML]="stripOuterP(question.description)"
+        [innerHTML]="stripOuterP(getDescription(question))"
         class="quiz-question__description"
       ></div>
     }
@@ -103,9 +103,9 @@
         </div>
       }
       <!-- Description -->
-      @if (showCorrectAnswers && question.explanation) {
+      @if (showCorrectAnswers && getExplanation(question)) {
         <div
-          [innerHTML]="stripOuterP(question.explanation)"
+          [innerHTML]="stripOuterP(getExplanation(question))"
           class="quiz-question__description"
         ></div>
       }

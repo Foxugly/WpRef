@@ -3,12 +3,23 @@
 <head>
   <meta charset="utf-8">
   <title>WprefFrontend</title>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.__APP__) {
+        document.title = window.__APP__.name;
+        const logo = document.getElementById('logo'); // <link id="logo" ...>
+        if (logo) {
+          logo.href = window.__APP__.logoIco;
+        }
+      }
+    });
+  </script>
   <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&family=Roboto&display=swap">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link href="" id="logo" rel="icon" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Roboto&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>

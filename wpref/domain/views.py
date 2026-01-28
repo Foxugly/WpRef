@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from wpref.tools import MyModelViewSet
 
@@ -60,8 +60,6 @@ from wpref.tools import ErrorDetailSerializer
         ],
         responses={
             200: DomainDetailSerializer,
-            401: OpenApiResponse(response=ErrorDetailSerializer, description="Unauthorized"),
-            403: OpenApiResponse(response=ErrorDetailSerializer, description="Forbidden"),
             404: OpenApiResponse(response=ErrorDetailSerializer, description="Not found"),
         },
     ),
@@ -159,15 +157,19 @@ from wpref.tools import ErrorDetailSerializer
     ),
 )
 class DomainViewSet(MyModelViewSet):
-    permission_classes = [IsAuthenticated, IsDomainOwnerOrStaff]
     ordering = ["id"]
     lookup_field = "pk"
     lookup_url_kwarg = "domain_id"
 
+    def get_permissions(self):
+        if self.action in ["list", "retrieve", "details"]:
+            return [AllowAny()]
+        return [IsAuthenticated(), IsDomainOwnerOrStaff()]
+
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return DomainReadSerializer
-        elif self.action in ["details"]:
+        elif self.action == "details":
             return DomainDetailSerializer
         elif self.action == "partial_update":
             return DomainPartialSerializer
@@ -176,22 +178,23 @@ class DomainViewSet(MyModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Domain.objects.none()
-        qs = Domain.objects.all().select_related("owner").prefetch_related("staff")
 
+        qs = (
+            Domain.objects.all()
+            .select_related("owner")
+            .prefetch_related("staff", "allowed_languages", "translations")
+        )
         user = self.request.user
+        if not user or user.is_anonymous:
+            return qs.filter(active=True)
         if user.is_superuser or user.is_staff:
             return qs
-
-        # user normal : ne voit que ce qu'il possède ou gère
         return qs.filter(Q(owner=user) | Q(staff=user)).distinct()
 
     def perform_create(self, serializer):
-        # owner = user courant
-        domain = serializer.save(owner=self.request.user)
-
-        # Optionnel mais souvent pratique : le owner fait partie du staff.
-        # (tu peux le retirer si tu veux vraiment séparer owner vs staff)
-        domain.staff.add(self.request.user)
+        domain = serializer.save()
+        if self.request.user and not self.request.user.is_anonymous:
+            domain.staff.add(self.request.user)
 
     def create(self, request, *args, **kwargs):
         write_serializer = self.get_serializer(data=request.data)
@@ -200,7 +203,7 @@ class DomainViewSet(MyModelViewSet):
         instance = write_serializer.instance
 
         read_data = DomainReadSerializer(instance, context=self.get_serializer_context()).data
-        headers = self.get_success_headers(read_data)
+        headers = self.get_success_headers({"id": instance.pk})
         return Response(read_data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):

@@ -1,101 +1,159 @@
-<p-card header="Créer un domain">
-  <div class="card__content">
-    <div class="field">
-      <label>Domaine</label>
-      <p-select
-        (onChange)="onDomainChange($event.value)"
-        [disabled]="loading() || translating()"
-        [filter]="true"
-        [ngModel]="selectedDomainId()"
-        [options]="staffDomains()"
-        [showClear]="true"
-        optionLabel="name"
-        optionValue="id"
-        placeholder="Choisir un domaine"
-      ></p-select>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
+
+    <div class="header-center">
+      <h1 class="title">Créer un sujet</h1>
+      <p class="subtitle muted">Choix du domaine + traductions</p>
+    </div>
+
+    <div class="header-actions">
+      <p-button
+        (onClick)="goList()"
+        icon="pi pi-arrow-left"
+        label="Retour"
+        severity="secondary"
+        type="button">
+      </p-button>
     </div>
   </div>
 
-  <!-- Translations card -->
-  @if (selectedDomainId() && langs().length > 0) {
+  <!-- LOADING -->
+  @if (loading()) {
     <div class="card">
-      <div class="card__content">
-        <p-tabs>
+      <p class="muted">Chargement…</p>
+    </div>
+  } @else {
+
+    <!-- CARD: Domaine -->
+    <div class="card form-card">
+
+      <div class="card-head">
+        <h2 class="card-title">Domaine</h2>
+        <span class="badge">{{ domainOptions().length }} disponible(s)</span>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item meta-item--full">
+          <label class="meta-label">Domaine</label>
+          <div class="meta-value">
+            <p-select
+              (onChange)="onDomainChange($event.value)"
+              [disabled]="loading() || translating()"
+              [filter]="true"
+              [ngModel]="selectedDomainId()"
+              [options]="domainOptions()"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Choisir un domaine"
+            ></p-select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Traductions -->
+    @if (selectedDomainId() && tabCodes().length > 0) {
+      <form (ngSubmit)="submit()" [formGroup]="form" class="card form-card">
+
+        <div class="card-head card-head--with-badge">
+          <h2 class="card-title">Traductions</h2>
+          <span class="badge">{{ tabCodes().length }} langue(s)</span>
+        </div>
+
+        <p-tabs
+          (valueChange)="onTabChange($event)"
+          [value]="activeLang() ?? undefined"
+          class="tabs">
+
           <p-tablist>
-            @for (lang of langs(); track lang) {
-              <p-tab (click)="onTabChange(lang)" [value]="lang">
-                {{ lang.toUpperCase() }}
-              </p-tab>
+            @for (lang of tabCodes(); track lang) {
+              <p-tab [value]="lang">{{ lang.toUpperCase() }}</p-tab>
             }
           </p-tablist>
 
           <p-tabpanels>
-            @for (lang of langs(); track lang) {
+            @for (lang of tabCodes(); track lang) {
               <p-tabpanel [value]="lang">
-                @if (formsByLang()[lang]; as fg) {
-                  <div class="tab-toolbar">
+                <div class="lang-panel" formGroupName="translations">
+
+                  <div class="lang-toolbar">
                     <p-button
                       (click)="translateFromActiveTab()"
                       [disabled]="translating()"
                       [loading]="translating()"
                       icon="pi pi-language"
                       label="Traduire vers les autres langues"
+                      severity="info"
                       type="button">
                     </p-button>
                   </div>
-                  <div class="lang-grid">
-                    <div class="field">
-                      <label>Name</label>
-                      <input
-                        [disabled]="loading() || translating()"
-                        [formControl]="fg.controls.name"
-                        pInputText
-                        placeholder="Ex: Math"
-                      />
-                      @if (fg.controls.name.invalid && fg.controls.name.touched) {
-                        <small class="error">Champ requis</small>
+
+                  <div [formGroupName]="lang" class="meta-grid">
+                    <div class="meta-item meta-item--full">
+                      <label class="meta-label">Nom ({{ lang.toUpperCase() }})</label>
+                      <div class="meta-value">
+                        <input formControlName="name" pInputText placeholder="Ex: Math"/>
+                      </div>
+
+                      @if (langGroup(lang).get('name')?.invalid && langGroup(lang).get('name')?.touched) {
+                        <div class="meta-hint meta-hint--error">Champ requis.</div>
                       }
                     </div>
 
-                    <div class="field field--full">
-                      <label>Description</label>
-                      <p-editor
-                        [formControl]="fg.controls.description"
-                        [style]="{ height: '240px' }"
-                      ></p-editor>
+                    <div class="meta-item meta-item--full">
+                      <label class="meta-label">Description ({{ lang.toUpperCase() }})</label>
+                      <div class="meta-value">
+                        <p-editor class="editor-compact" formControlName="description"></p-editor>
+                      </div>
                     </div>
                   </div>
-                }
+
+                  @if (translating()) {
+                    <div class="inline-status">
+                      <i class="pi pi-spin pi-spinner"></i>
+                      <span>Traduction en cours…</span>
+                    </div>
+                  }
+                </div>
               </p-tabpanel>
             }
           </p-tabpanels>
         </p-tabs>
-
-        @if (translating()) {
-          <div class="inline-status">
-            <i class="pi pi-spin pi-spinner"></i>
-            <span>Traduction en cours…</span>
-          </div>
-        }
+      </form>
+    } @else if (selectedDomainId() && tabCodes().length === 0) {
+      <div class="card">
+        <div class="alert alert--info">
+          Ce domaine n’a pas de langues configurées.
+        </div>
       </div>
-    </div>
-  } @else if (selectedDomainId() && langs().length === 0) {
-    <div class="alert alert--info">Ce domaine n’a pas de langues configurées.</div>
-  }
+    }
 
-  @if (loading()) {
-    <div class="inline-status">
-      <i class="pi pi-spin pi-spinner"></i>
-      <span>Chargement…</span>
+    <!-- SUBMIT ERROR -->
+    @if (submitError()) {
+      <div class="card">
+        <div class="alert alert--error">{{ submitError() }}</div>
+      </div>
+    }
+
+    <!-- FOOTER ACTIONS -->
+    <div class="footer-actions">
+      <p-button
+        (onClick)="submit()"
+        icon="pi pi-save"
+        label="Créer"
+        type="button">
+      </p-button>
+
+      <p-button
+        (onClick)="goList()"
+        icon="pi pi-times"
+        label="Annuler"
+        severity="secondary"
+        type="button">
+      </p-button>
     </div>
   }
-  <div class="actions">
-    <button
-      (click)="submit()"
-      icon="pi pi-save"
-      label="Créer"
-      pButton
-      type="button">
-    </button>
-  </div>
-</p-card>
+</div>

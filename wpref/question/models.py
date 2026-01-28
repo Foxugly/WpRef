@@ -1,6 +1,7 @@
 # question/models.py
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import UniqueConstraint, Q
 from django.utils.translation import gettext_lazy as _
 from parler.models import TranslatedFields, TranslatableModel
 from subject.models import Subject
@@ -24,65 +25,103 @@ class Question(TranslatableModel):
     is_mode_exam = models.BooleanField("Pour les examens", default=False)
     subjects = models.ManyToManyField(Subject, related_name="questions", through="QuestionSubject")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-pk"]
 
     def __str__(self):
-        return self.safe_translation_getter("title", any_language=True) or f"Question#{self.pk}"
-
-    def clean(self):
-        # Règles métier sur les réponses
-        opts = list(self.answer_options.all())
-        if len(opts) < 2:
-            raise ValidationError(_("A Question must have at least 2 possible answers."))
-        correct_count = sum(1 for o in opts if o.is_correct)
-        if correct_count == 0:
-            raise ValidationError("Indique au moins une réponse correcte.")
-        if not self.allow_multiple_correct and correct_count != 1:
-            raise ValidationError(_("Only ONE answer allowed."))
+        title = self.safe_translation_getter("title", any_language=True)
+        if title:
+            return title
+        return f"Question#{self.pk}"
 
 
 class QuestionSubject(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     sort_order = models.PositiveIntegerField(default=0)
-    weight = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = [("question", "subject")]
-        ordering = ["-pk"]
+        ordering = ["sort_order", "id"]
+        constraints = [
+            UniqueConstraint(fields=["question", "subject"], name="uniq_question_subject")
+        ]
 
     def __str__(self):
         subj = self.subject.safe_translation_getter("name", any_language=True) or f"Subject#{self.subject_id}"
-        return f"Q{self.question_id}↔{subj}(ord:{self.sort_order},w:{self.weight})"
+        return f"Q{self.question_id}↔{subj}(ord:{self.sort_order})"
 
 
-class QuestionMedia(models.Model):
+class MediaAsset(models.Model):
     IMAGE = "image"
     VIDEO = "video"
     EXTERNAL = "external"
     KIND_CHOICES = [(IMAGE, "Image"), (VIDEO, "Vidéo"), (EXTERNAL, "Externe")]
 
-    question = models.ForeignKey(Question, related_name="media", on_delete=models.CASCADE)
     kind = models.CharField(max_length=10, choices=KIND_CHOICES)
     file = models.FileField(upload_to="question_media/", blank=True, null=True)
     external_url = models.URLField(blank=True, null=True)
-    sort_order = models.PositiveIntegerField(default=0)
+
+    # dédup (sha256 hex 64)
+    sha256 = models.CharField(max_length=64, blank=True, null=True, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["sort_order", "id"]
+        indexes = [
+            models.Index(fields=["kind", "sha256"]),
+        ]
+        constraints = [
+            UniqueConstraint(
+                fields=["kind", "sha256"],
+                condition=Q(sha256__isnull=False),
+                name="uniq_mediaasset_kind_sha256_notnull",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        file_present = bool(self.file and getattr(self.file, "name", ""))
+
+        if self.kind == self.EXTERNAL:
+            # EXTERNAL: url obligatoire + interdit file + interdit sha256 (optionnel mais conseillé)
+            if not self.external_url or file_present:
+                raise ValidationError("External media requires external_url only.")
+            if self.sha256:
+                raise ValidationError("External media must not have sha256.")
+        else:
+            # FILE: file obligatoire + interdit external_url + sha256 obligatoire
+            if not file_present or self.external_url:
+                raise ValidationError("File media requires file only.")
+            if not self.sha256:
+                raise ValidationError("File media requires sha256.")
 
     def __str__(self):
         return f"{self.kind} - {self.file or self.external_url}"
 
-    def clean(self):
-        if self.kind == self.EXTERNAL:
-            if not self.external_url or self.file:
-                raise ValidationError("External media requires external_url only.")
-        else:
-            if not self.file or self.external_url:
-                raise ValidationError("File media requires file only.")
+class QuestionMedia(models.Model):
+    question = models.ForeignKey(Question, related_name="media", on_delete=models.CASCADE)
+    asset = models.ForeignKey(MediaAsset, related_name="question_links", on_delete=models.PROTECT)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        constraints = [
+            UniqueConstraint(fields=["question", "asset"], name="uniq_question_media_asset")
+        ]
+
+    def __str__(self):
+        return f"Q{self.question_id} → Asset#{self.asset_id} (ord:{self.sort_order})"
+
 
 
 class AnswerOption(TranslatableModel):
@@ -90,9 +129,11 @@ class AnswerOption(TranslatableModel):
     translations = TranslatedFields(content=models.TextField(_("possible answer")))  # rich text
     is_correct = models.BooleanField(default=False)
     sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["sort_order", "id"]
+        ordering = ["id"]
 
     def __str__(self):
         return f"Option(Q{self.question_id}) [{'✔' if self.is_correct else '✗'}]"

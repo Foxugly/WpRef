@@ -2,10 +2,10 @@
   <div class="title">Supprimer une question</div>
   <div class="card">
     @if (question()) {
-      <p>Es-tu sûr de vouloir supprimer <b>{{ question()!.title }}</b> ?</p>
+      <p>Es-tu sûr de vouloir supprimer <b>{{ getTitle(question()) }}</b> ?</p>
       <div class="actions">
-        <p-button id="btn_delete" label="Supprimer" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
-        <p-button id="btn_back" label="Annuler" (onClick)="goBack()" severity="secondary"/>
+        <p-button id="btn_delete" icon="pi pi-trash" label="Supprimer" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
+        <p-button id="btn_back" icon="pi pi-times" label="Annuler" (onClick)="goBack()" severity="secondary"/>
       </div>
     } @else {
       <p class="muted">Chargement…</p>

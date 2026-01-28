@@ -5,6 +5,11 @@ import {SubjectEdit} from './pages/subject/edit/subject-edit';
 import {SubjectDelete} from './pages/subject/delete/subject-delete';
 
 export let ROUTES = {
+  home : () =>['/home'] as const,
+  auth : {
+    register: () => ['/register/'] as const,
+    login:() => ['/login/'] as const,
+  },
   question: {
     add: () => ['/question/add'] as const,
     edit: (question_id: number) => ['/question', question_id, 'edit' ] as const,

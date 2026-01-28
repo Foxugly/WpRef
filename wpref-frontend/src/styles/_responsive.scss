@@ -1,0 +1,7 @@
+/* src/styles/_responsive.scss */
+
+@media (max-width: 720px) {
+  .meta-grid {
+    grid-template-columns: 1fr;
+  }
+}

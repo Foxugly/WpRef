@@ -1,0 +1,62 @@
+/* src/styles/_cards.scss */
+@use 'tokens' as t;
+
+.card {
+  background: t.$surface;
+  border: 1px solid t.$border;
+  border-radius: t.$radius;
+  box-shadow: t.$shadow;
+  padding: 1rem;
+
+  .muted {
+    color: t.$muted;
+  }
+}
+
+.form-card {
+  padding: 1rem 1rem 0.85rem;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  .card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 650;
+  }
+}
+
+.card-head--with-badge {
+  .badge {
+    margin-left: auto;
+  }
+}
+
+.badge {
+  font-size: 0.8rem;
+  color: t.$muted;
+  border: 1px solid t.$border;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.divider {
+  height: 1px;
+  background: t.$border;
+  margin: 0.1rem 0 0.6rem;
+}
+
+/* Footer actions aligned right */
+.footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  //padding-top: 0.9rem;
+  //border-top: 1px solid t.$border;
+  //margin-top: 1rem;
+}

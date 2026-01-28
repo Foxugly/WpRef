@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {Component, computed, DestroyRef, effect, inject, OnInit, signal} from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -8,28 +8,23 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import {catchError, finalize} from 'rxjs/operators';
+import {EMPTY} from 'rxjs';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 
-import { Editor } from 'primeng/editor';
-import { TabsModule } from 'primeng/tabs';
-import { SelectModule } from 'primeng/select';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
+import {Editor} from 'primeng/editor';
+import {TabsModule} from 'primeng/tabs';
+import {SelectModule} from 'primeng/select';
+import {ButtonModule} from 'primeng/button';
+import {InputTextModule} from 'primeng/inputtext';
+import {CardModule} from 'primeng/card';
 
-import { DomainReadDto, LanguageEnumDto, SubjectWriteRequestDto } from '../../../api/generated';
-import { DomainService } from '../../../services/domain/domain';
-import { SubjectService } from '../../../services/subject/subject';
-import { TranslationService } from '../../../services/translation/translation';
-import {Card} from 'primeng/card';
+import {DomainReadDto, LanguageEnumDto, SubjectWriteRequestDto} from '../../../api/generated';
+import {DomainOption, DomainService, DomainTranslations} from '../../../services/domain/domain';
+import {SubjectService, SubjectLangGroup} from '../../../services/subject/subject';
+import {LangCode, TranslateBatchItem, TranslationService} from '../../../services/translation/translation';
+import {UserService} from '../../../services/user/user';
 
-type LangCode = `${LanguageEnumDto}`;
-
-type SubjectLangForm = FormGroup<{
-  name: FormControl<string>;
-  description: FormControl<string>;
-}>;
-
-// Adapte si tu as déjà ce type exporté ailleurs
-type TranslateBatchItem = { key: 'name' | 'description'; text: string; format: 'text' | 'html' };
 
 @Component({
   selector: 'app-subject-create',
@@ -45,7 +40,7 @@ type TranslateBatchItem = { key: 'name' | 'description'; text: string; format: '
     SelectModule,
     ButtonModule,
     InputTextModule,
-    Card,
+    CardModule,
   ],
 })
 export class SubjectCreate implements OnInit {
@@ -56,116 +51,120 @@ export class SubjectCreate implements OnInit {
   translating = signal(false);
   submitError = signal<string | null>(null);
 
-  // Domain select (staff only)
-  staffDomains = signal<DomainReadDto[]>([]);
-  selectedDomainId = signal<number | null>(null);
+  readonly isLocked = computed(() => this.loading() || this.translating());
 
-  // Tabs = languages of selected domain
+  // Domain list
+  domains = signal<DomainReadDto[]>([]);
+  selectedDomainId = signal<number>(0);
+
+  // Languages (from selected domain)
   domainLangs = signal<LangCode[]>([]);
-  formsByLang = signal<Partial<Record<LangCode, SubjectLangForm>>>({});
-  langs = computed(() => this.domainLangs());
-  activeLang = signal<LangCode | null>(null);
+  activeLang = signal<LangCode | undefined>(undefined);
 
-  // Traduction: si true => écrase même si déjà rempli
+  // current UI language (for labels)
+  currentLang = signal<LanguageEnumDto>(LanguageEnumDto.Fr);
   translateOverwrite = signal(false);
-
+  domainOptions = computed<DomainOption[]>(() => {
+    const lang = this.currentLang();
+    return (this.domains() ?? []).map((d) => ({
+      id: d.id,
+      name: this.getDomainLabel(d, lang),
+    }));
+  });
+  // Reactive form
   private fb = inject(NonNullableFormBuilder);
+  form = this.fb.group({
+    // domain stored here too (single source of truth for submit)
+    domain: this.fb.control<number>(0, {validators: [Validators.required]}),
+    translations: this.fb.group({}),
+  });
+  // deps
   private domainService = inject(DomainService);
   private subjectService = inject(SubjectService);
   private translator = inject(TranslationService);
+  private userService = inject(UserService);
+  private destroyRef = inject(DestroyRef);
+  private selectedDomainId$ = toObservable(this.selectedDomainId);
+
+  constructor() {
+    // lock/unlock the form
+    effect(() => {
+      const locked = this.isLocked();
+      if (locked) this.form.disable({emitEvent: false});
+      else this.form.enable({emitEvent: false});
+    });
+  }
 
   ngOnInit(): void {
-    this.fetchStaffDomains();
-  }
+    this.currentLang.set(this.userService.currentLang ?? LanguageEnumDto.Fr);
 
-  private fetchStaffDomains(): void {
+    // load domains
     this.loading.set(true);
-    this.error.set(null);
+    this.domainService
+      .list({asStaff: true} as any)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe({
+        next: (domains) => this.domains.set(domains ?? []),
+        error: (err) => {
+          console.error(err);
+          this.error.set('Impossible de charger les domaines.');
+        },
+      });
 
-    this.domainService.list({ asStaff: true } as any).subscribe({
-      next: (domains: DomainReadDto[]) => {
-        this.staffDomains.set(domains);
-        this.loading.set(false);
-      },
-      error: (err) => {
-        console.error(err);
-        this.error.set('Impossible de charger les domaines.');
-        this.loading.set(false);
-      },
-    });
-  }
+    // react: domain change => reset + load domain detail
+    this.selectedDomainId$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((id) => {
+        this.resetDomainState();
 
-  onDomainChange(value: number | DomainReadDto | null): void {
-    const domainId = typeof value === 'number' ? value : value?.id ?? null;
+        if (!id || id <= 0) return;
 
-    // reset UI immediately
-    this.selectedDomainId.set(domainId);
-    this.error.set(null);
-    this.submitError.set(null);
-    this.domainLangs.set([]);
-    this.formsByLang.set({});
-    this.activeLang.set(null);
+        this.form.controls.domain.setValue(id);
+        this.loading.set(true);
 
-    if (!domainId) return;
-
-    this.loading.set(true);
-
-    this.domainService.retrieve(domainId).subscribe({
-      next: (domain: DomainReadDto) => {
-        const langs = this.extractLangCodes(domain);
-        this.domainLangs.set(langs);
-
-        const map: Partial<Record<LangCode, SubjectLangForm>> = {};
-        for (const lang of langs) {
-          map[lang] = this.fb.group({
-            name: this.fb.control('', {
-              validators: [Validators.required, Validators.maxLength(120)],
+        this.domainService
+          .detail(id)
+          .pipe(
+            finalize(() => this.loading.set(false)),
+            catchError((err) => {
+              console.error(err);
+              this.error.set('Impossible de charger le domaine sélectionné.');
+              return EMPTY;
             }),
-            description: this.fb.control(''),
+          )
+          .subscribe((domain) => {
+            const codes = this.extractLangCodes(domain);
+            this.domainLangs.set(codes);
+
+            this.ensureLanguageControls(codes);
+            this.activeLang.set(codes[0] ?? null);
           });
-        }
-
-        this.formsByLang.set(map);
-        this.activeLang.set(langs[0] ?? null);
-
-        this.loading.set(false);
-      },
-      error: (err) => {
-        console.error(err);
-        this.error.set('Impossible de charger le domaine sélectionné.');
-        this.loading.set(false);
-      },
-    });
+      });
   }
 
-  onTabChange(lang: LangCode): void {
-    this.activeLang.set(lang);
+  // UI actions
+  onDomainChange(value: number): void {
+    this.selectedDomainId.set(value);
+  }
+
+  onTabChange(value: string | number | undefined): void {
+    if (value === undefined || value === null) return;
+    const code = String(value) as LangCode;
+    if (!this.domainLangs().includes(code)) return;
+    this.activeLang.set(code);
   }
 
   tabCodes(): LangCode[] {
     return this.domainLangs();
   }
 
-  private getLangGroup(code: LangCode): SubjectLangForm {
-    const fg = this.formsByLang()[code];
-    if (!fg) throw new Error(`Missing form group for language: ${code}`);
-    return fg;
+  langGroup(code: string): FormGroup {
+    return (this.form.get('translations') as FormGroup).get(code) as FormGroup;
   }
 
-  private isEmptyHtml(html: string): boolean {
-    // Convertit un HTML "vide" (<p><br></p>) en vide
-    const cleaned = (html ?? '')
-      .replace(/<br\s*\/?>/gi, '')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/<[^>]+>/g, '')
-      .trim();
-    return cleaned.length === 0;
-  }
-
-  /**
-   * Traduire depuis une langue source vers toutes les autres (batch par cible)
-   * - Ne remplit que si vide, sauf si translateOverwrite=true
-   */
   async translateFrom(sourceLang: LangCode): Promise<void> {
     const codes = this.tabCodes();
     if (!codes.includes(sourceLang)) return;
@@ -174,7 +173,7 @@ export class SubjectCreate implements OnInit {
     this.submitError.set(null);
 
     try {
-      const source = this.getLangGroup(sourceLang);
+      const source = this.getTranslationGroup(sourceLang);
       const sourceName = source.controls.name.value ?? '';
       const sourceDesc = source.controls.description.value ?? '';
 
@@ -183,7 +182,7 @@ export class SubjectCreate implements OnInit {
       for (const targetLang of codes) {
         if (targetLang === sourceLang) continue;
 
-        const target = this.getLangGroup(targetLang);
+        const target = this.getTranslationGroup(targetLang);
         const nameCtrl = target.controls.name;
         const descCtrl = target.controls.description;
 
@@ -191,17 +190,12 @@ export class SubjectCreate implements OnInit {
         const needDesc = overwrite || this.isEmptyHtml(descCtrl.value ?? '');
 
         const items: TranslateBatchItem[] = [];
-        if (needName) items.push({ key: 'name', text: sourceName, format: 'text' });
-        if (needDesc) items.push({ key: 'description', text: sourceDesc, format: 'html' });
+        if (needName) items.push({key: 'name', text: sourceName, format: 'text'});
+        if (needDesc) items.push({key: 'description', text: sourceDesc, format: 'html'});
 
         if (!items.length) continue;
 
-        // ✅ ta signature exacte
-        const out: Record<string, string> = await this.translator.translateBatch(
-          sourceLang,
-          targetLang,
-          items
-        );
+        const out = await this.translator.translateBatch(sourceLang, targetLang, items);
 
         if (needName && out['name'] !== undefined) {
           nameCtrl.setValue(out['name']);
@@ -226,41 +220,6 @@ export class SubjectCreate implements OnInit {
     await this.translateFrom(src);
   }
 
-  isValid(): boolean {
-    const domainId = this.selectedDomainId();
-    if (!domainId) return false;
-
-    const langs = this.domainLangs();
-    if (langs.length === 0) return false;
-
-    const forms = this.formsByLang();
-    return langs.every((l) => forms[l]?.valid === true);
-  }
-
-  buildPayload(): SubjectWriteRequestDto {
-    const domainId = this.selectedDomainId();
-    const langs = this.domainLangs();
-    const forms = this.formsByLang();
-
-    const translations: SubjectWriteRequestDto['translations'] = {};
-
-    for (const lang of langs) {
-      const fg = forms[lang];
-      if (!fg) continue;
-
-      const v = fg.getRawValue();
-      translations[lang] = {
-        name: v.name,
-        description: v.description,
-      };
-    }
-
-    return {
-      domain: domainId,
-      translations,
-    };
-  }
-
   submit(): void {
     this.error.set(null);
     this.submitError.set(null);
@@ -270,20 +229,108 @@ export class SubjectCreate implements OnInit {
       return;
     }
 
-    const payload: SubjectWriteRequestDto = this.buildPayload();
+    const payload = this.buildPayload();
     this.loading.set(true);
 
-    this.subjectService.create(payload).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.subjectService.goList();
-      },
-      error: (err) => {
-        console.error(err);
-        this.submitError.set('Erreur lors de la création du sujet.');
-        this.loading.set(false);
-      },
-    });
+    this.subjectService
+      .create(payload)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe({
+        next: () => this.subjectService.goList(),
+        error: (err) => {
+          console.error(err);
+          this.submitError.set('Erreur lors de la création du sujet.');
+        },
+      });
+  }
+
+  protected goList(): void {
+    this.subjectService.goList();
+  }
+
+  // ====== helpers ======
+
+  private resetDomainState(): void {
+    this.error.set(null);
+    this.submitError.set(null);
+    this.domainLangs.set([]);
+    this.activeLang.set(undefined);
+
+    // reset translations form group
+    const tg = this.translationsGroup();
+    Object.keys(tg.controls).forEach((key) => tg.removeControl(key));
+  }
+
+  private translationsGroup(): FormGroup {
+    return this.form.get('translations') as FormGroup;
+  }
+
+  private ensureLanguageControls(codes: LangCode[]): void {
+    const tg = this.translationsGroup();
+
+    for (const code of codes) {
+      if (!tg.contains(code)) {
+        tg.addControl(
+          code,
+          this.fb.group({
+            name: this.fb.control('', {validators: [Validators.required, Validators.minLength(2), Validators.maxLength(120)]}),
+            description: this.fb.control(''),
+          }),
+        );
+      }
+    }
+  }
+
+  private getTranslationGroup(code: LangCode): SubjectLangGroup {
+    const tg = this.translationsGroup();
+    const fg = tg.get(code) as SubjectLangGroup | null;
+    if (!fg) throw new Error(`Missing form group for language: ${code}`);
+    return fg;
+  }
+
+  private isValid(): boolean {
+    const domainId = this.form.controls.domain.value;
+    if (!domainId || domainId <= 0) return false;
+
+    const langs = this.domainLangs();
+    if (langs.length === 0) return false;
+
+    const tg = this.translationsGroup();
+    return langs.every((l) => (tg.get(l) as SubjectLangGroup | null)?.valid === true);
+  }
+
+  private buildPayload(): SubjectWriteRequestDto {
+    const domainId = this.form.controls.domain.value;
+    const langs = this.domainLangs();
+    const tg = this.translationsGroup();
+
+    const translations: Record<string, { name: string; description: string }> = {};
+    for (const lang of langs) {
+      const fg = tg.get(lang) as SubjectLangGroup | null;
+      if (!fg) continue;
+      const v = fg.getRawValue();
+      translations[lang] = {name: v.name, description: v.description};
+    }
+
+    return this.subjectService.buildWritePayload(domainId, translations);
+  }
+
+  private getDomainLabel(domain: DomainReadDto, lang: LanguageEnumDto): string {
+    const tr = domain.translations as DomainTranslations | undefined;
+
+    const inCurrent = tr?.[lang]?.name?.trim();
+    if (inCurrent) return inCurrent;
+
+    const fallbacks: LanguageEnumDto[] = [LanguageEnumDto.Fr, LanguageEnumDto.En, LanguageEnumDto.Nl];
+    for (const fb of fallbacks) {
+      const v = tr?.[fb]?.name?.trim();
+      if (v) return v;
+    }
+
+    return `Domain #${domain.id}`;
   }
 
   private extractLangCodes(domain: DomainReadDto): LangCode[] {
@@ -299,6 +346,15 @@ export class SubjectCreate implements OnInit {
         .filter(Boolean) as LangCode[];
     }
 
-    return [LanguageEnumDto.Fr as LangCode];
+    return [LanguageEnumDto.Fr as unknown as LangCode];
+  }
+
+  private isEmptyHtml(html: string): boolean {
+    const cleaned = (html ?? '')
+      .replace(/<br\s*\/?>/gi, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+    return cleaned.length === 0;
   }
 }

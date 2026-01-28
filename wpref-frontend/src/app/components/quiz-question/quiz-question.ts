@@ -1,9 +1,7 @@
 // src/app/components/quiz-question/quiz-question.ts
-import {Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges,} from '@angular/core';
+import {Component, EventEmitter, inject, Input, OnChanges, Output, signal, SimpleChanges,} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {DomSanitizer, SafeResourceUrl,} from '@angular/platform-browser';
-
-import {MediaSelectorValue} from '../media-selector/media-selector';
 import {CardModule} from 'primeng/card';
 import {ChipModule} from 'primeng/chip';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -13,7 +11,8 @@ import {ButtonModule} from 'primeng/button';
 import {FormsModule} from '@angular/forms';
 import {ToggleButtonModule} from 'primeng/togglebutton';
 import {QuizNavItem} from '../quiz-nav/quiz-nav';
-import {QuestionMediaDto, QuestionReadDto} from '../../api/generated';
+import {LanguageEnumDto, QuestionMediaReadDto, QuestionReadDto} from '../../api/generated';
+import {UserService} from '../../services/user/user';
 
 
 export interface AnswerPayload {
@@ -40,6 +39,7 @@ export interface AnswerPayload {
   ],
 })
 export class QuizQuestionComponent implements OnChanges {
+  userService: UserService = inject(UserService);
   @Input({required: true}) quizNavItem!: QuizNavItem;
   @Input() showCorrectAnswers = false;
   @Input() displayMode: 'preview' | 'exam' = 'preview';
@@ -50,12 +50,16 @@ export class QuizQuestionComponent implements OnChanges {
   // ➜ nouveaux events pour laisser le parent gérer la navigation
   @Output() goNext = new EventEmitter<AnswerPayload>();
   @Output() goPrevious = new EventEmitter<AnswerPayload>();
-
+  currentLang = signal<LanguageEnumDto>(LanguageEnumDto.Fr);
   selectedOptionIds: number[] = [];
   // Pour le radio uniquement (choix unique)
   selectedRadioId: number | null = null;
 
   private sanitizer = inject(DomSanitizer);
+
+  constructor() {
+    this.currentLang.set(this.userService.currentLang ?? LanguageEnumDto.Fr);
+  }
 
   get question(): QuestionReadDto {
     return this.quizNavItem.question;
@@ -113,9 +117,9 @@ export class QuizQuestionComponent implements OnChanges {
   }
 
 
-  mediaSrc(m:  QuestionMediaDto): string {
+  mediaSrc(m: QuestionMediaReadDto): string {
     // Pour images/vidéos : on part du principe que file est déjà une URL absolue ou relative
-    return (m.file as string | null) || m.external_url || '';
+    return (m.asset.file as string | null) || m.asset.external_url || '';
   }
 
   // ---------- Médias ----------
@@ -144,8 +148,8 @@ export class QuizQuestionComponent implements OnChanges {
     }
   }
 
-  externalSafeUrl(m:  QuestionMediaDto): SafeResourceUrl | null {
-    const raw = m.external_url || '';
+  externalSafeUrl(m: QuestionMediaReadDto): SafeResourceUrl | null {
+    const raw = m.asset.external_url || '';
     if (!raw) return null;
     const embed = this.isYoutubeUrl(raw) ? this.toYoutubeEmbed(raw) : raw;
     return this.sanitizer.bypassSecurityTrustResourceUrl(embed);
@@ -164,6 +168,23 @@ export class QuizQuestionComponent implements OnChanges {
       .replace(/&nbsp;/g, ' ')
       .replace(/\u00A0/g, ' ');
     return inner;
+  }
+
+  protected getT(question:QuestionReadDto):any {
+    const lang: LanguageEnumDto = this.currentLang();
+    const tr: any = question.translations;
+    return tr?.[lang];
+  }
+  protected getTitle(question: QuestionReadDto) {
+    return this.getT(question).title?.trim();
+  }
+
+  protected getDescription(question: QuestionReadDto) {
+    return this.getT(question).description?.trim();
+  }
+
+  protected getExplanation(question: QuestionReadDto) {
+    return this.getT(question).explanation?.trim();
   }
 
   private buildPayload(): AnswerPayload {

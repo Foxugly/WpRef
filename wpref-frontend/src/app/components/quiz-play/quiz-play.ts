@@ -3,13 +3,11 @@ import {QuizNav, QuizNavItem} from '../quiz-nav/quiz-nav';
 import {QuestionReadDto} from '../../api/generated';
 
 
-function createEmptyQuestion(id: number, title: string = ""): QuestionReadDto {
+/*function createEmptyQuestion(id: number, title: string = ""): QuestionReadDto {
   return {
     domain: 0,
     id: id,
-    title: title,
-    description: "question",
-    explanation: "parce que",
+    translations: {"fr":{"title":title, "description":title, "explanation":"explanation"}},
     allow_multiple_correct: true,
     active: true,
     is_mode_practice: true,
@@ -18,8 +16,8 @@ function createEmptyQuestion(id: number, title: string = ""): QuestionReadDto {
     media: [],
     answer_options: [],
     created_at: new Date().toISOString()
-  };
-}
+  }
+}*/
 
 @Component({
   selector: 'app-quiz-play',
@@ -29,7 +27,7 @@ function createEmptyQuestion(id: number, title: string = ""): QuestionReadDto {
   styleUrl: './quiz-play.scss',
 })
 export class QuizPlay {
-  questionNavItems: QuizNavItem[] = Array.from({length: 23}).map(
+  /*questionNavItems: QuizNavItem[] = Array.from({length: 23}).map(
     (_, i): QuizNavItem => ({
       index: i + 1,
       id: i + 1,                // ← identifiant interne fictif
@@ -37,7 +35,8 @@ export class QuizPlay {
       flagged: false,
       question: createEmptyQuestion(i + 1, `Question ${i + 1}`)
     })
-  );
+  );*/
+  questionNavItems: QuizNavItem[] = [];
 
   currentQuestionIndex = 1;
 

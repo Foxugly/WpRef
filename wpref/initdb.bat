@@ -1,0 +1,1 @@
+python manage.py reset_sqlite_and_seed

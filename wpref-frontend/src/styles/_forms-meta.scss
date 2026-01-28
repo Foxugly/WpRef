@@ -1,0 +1,88 @@
+/* src/styles/_forms-meta.scss */
+@use 'tokens' as t;
+
+.tabs {
+  margin-top: 0.25rem;
+}
+
+.lang-panel {
+  padding: 0.5rem 0.25rem 0.25rem;
+}
+
+.lang-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 0.75rem 0;
+}
+
+/* META GRID */
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  padding-bottom: 1rem;
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid t.$border;
+    border-radius: 10px;
+    background: #fafafa;
+
+    &.meta-item--full {
+      grid-column: 1 / -1;
+    }
+
+    &.meta-item--center {
+      align-items: center;
+      text-align: center;
+    }
+  }
+
+  .meta-label {
+    font-size: 0.82rem;
+    color: t.$muted;
+  }
+
+  .meta-value {
+    width: 100%;
+    font-size: 0.95rem;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &.meta-value--center {
+      justify-content: center;
+    }
+  }
+
+  .meta-hint {
+    font-size: 0.82rem;
+    color: t.$muted;
+    margin-top: 0.15rem;
+
+    &.meta-hint--error {
+      color: #d14343;
+    }
+  }
+}
+
+/* Centering helpers */
+.widget-center {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+:host ::ng-deep .w-full.p-password,
+:host ::ng-deep .w-full .p-inputtext {
+  width: 100%;
+}
+
+.p-password.w-full,
+.p-password.w-full .p-inputtext {
+  width: 100%;
+}

@@ -27,6 +27,8 @@ class Language(models.Model):
         default=True,
         help_text=_("Langue disponible pour la saisie et l'affichage")
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["code"]

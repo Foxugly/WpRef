@@ -13,7 +13,7 @@ import {PanelModule} from 'primeng/panel';
 import {MediaSelectorComponent, MediaSelectorValue} from '../../../components/media-selector/media-selector';
 import {
   QuestionAnswerOptionReadDto,
-  QuestionMediaDto,
+  QuestionMediaReadDto,
   QuestionReadDto,
   QuestionUpdateRequestParams,
   SubjectReadDto
@@ -179,6 +179,18 @@ export class QuestionEdit implements OnInit {
     });
   }
 
+  private getTitle(question: QuestionReadDto): string {
+    return this.questionService.getQuestionTranslationForm(question, this.currentLang()).title ?? ' ';
+  }
+
+  private getDescription(question: QuestionReadDto): string {
+    return this.questionService.getQuestionTranslationForm(question, this.currentLang()).description ?? ' ';
+  }
+
+  private getExplanation(question: QuestionReadDto): string {
+    return this.questionService.getQuestionTranslationForm(question, this.currentLang()).explanation ?? ' ';
+  }
+
   private loadQuestion(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -205,19 +217,17 @@ export class QuestionEdit implements OnInit {
 
         // médias → MediaSelectorValue[] pour le composant
         const mediaSelectorItems: MediaSelectorValue[] = (q.media || []).map(
-          (m: QuestionMediaDto, idx: number) => ({
+          (m: QuestionMediaReadDto, idx: number) => ({
             id: m.id,
-            kind: m.kind,
+            kind: m.asset.kind,
             sort_order: m.sort_order ?? idx + 1,
-            file: m.file ?? null,               // string (URL) côté backend
-            external_url: m.external_url ?? null,
+            file: m.asset.file ?? null,               // string (URL) côté backend
+            external_url: m.asset.external_url ?? null,
           }),
         );
 
         this.form.patchValue({
-          title: q.title,
-          description: q.description,
-          explanation: q.explanation,
+          translations: "todo",
           allow_multiple_correct: q.allow_multiple_correct,
           active: q.active,
           is_mode_practice: q.is_mode_practice,

@@ -1,0 +1,100 @@
+<div class="page">
+  <!-- HEADER -->
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
+
+    <div class="header-center">
+      <h1 class="title">Domaines</h1>
+      <p class="subtitle muted">Recherche, liste et actions</p>
+    </div>
+
+    <div class="header-actions">
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title"></h2>
+
+      <div class="card-actions">
+        <input
+          pInputText
+          placeholder="Rechercher…"
+          [ngModel]="q()"
+          (ngModelChange)="q.set($event); load()"
+        />
+
+        <p-button
+          (onClick)="goNew()"
+          icon="pi pi-plus"
+          id="btn_add_domain"
+          label="Nouveau"
+          severity="primary"
+          type="button">
+        </p-button>
+      </div>
+    </div>
+
+    <p-table
+      [value]="pagedDomains"
+      showGridlines
+      size="small"
+      stripedRows
+      styleClass="table"
+    >
+      <ng-template #header>
+        <tr>
+          <th>Nom</th>
+          <th>Description</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-d>
+        <tr>
+          <td class="truncate">{{ getName(d) }}</td>
+
+          <td class="muted desc-cell">
+            <div class="desc" [innerHTML]="getDescription(d) | stripP"></div>
+          </td>
+
+          <td class="col-actions">
+            <div class="row-actions">
+              <p-button
+                (click)="goEdit(d.id)"
+                icon="pi pi-pencil"
+                id="btn_edit_domain"
+                severity="info"
+                size="small"
+                type="button">
+              </p-button>
+
+              <p-button
+                (click)="goDelete(d.id)"
+                icon="pi pi-trash"
+                id="btn_delete_domain"
+                severity="danger"
+                size="small"
+                type="button">
+              </p-button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    @if (domains().length > rows) {
+      <div class="table-paginator">
+        <p-paginator
+          (onPageChange)="onPageChange($event)"
+          [first]="first"
+          [rowsPerPageOptions]="[5, 10, 20, 50]"
+          [rows]="rows"
+          [totalRecords]="domains().length">
+        </p-paginator>
+      </div>
+    }
+  </div>
+</div>
+

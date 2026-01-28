@@ -4,8 +4,8 @@
     @if (subject()) {
       <p>Es-tu sûr de vouloir supprimer <b>{{ getName(subject()) }}</b> ?</p>
       <div class="actions">
-        <p-button id="btn_delete" label="Supprimer" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
-        <p-button id="btn_back" label="Annuler" routerLink="/subject/list" severity="secondary"/>
+        <p-button id="btn_delete" label="Supprimer" icon="pi pi-trash" severity="danger" styleClass="w-full" (onClick)="confirm()"/>
+        <p-button id="btn_back" icon="pi pi-times" label="Annuler" (onClick)="goList()" severity="secondary"/>
       </div>
     } @else {
       <p class="muted">Chargement…</p>

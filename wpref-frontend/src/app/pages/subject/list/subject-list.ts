@@ -9,6 +9,7 @@ import {LanguageEnumDto, SubjectReadDto} from '../../../api/generated';
 import {StripPPipe} from '../../../shared/pipes/strip-p.pipe';
 import {selectTranslation } from '../../../shared/i18n/select-translation';
 import {UserService} from '../../../services/user/user';
+import {DomainService} from '../../../services/domain/domain';
 
 @Component({
   standalone: true,
@@ -20,24 +21,34 @@ import {UserService} from '../../../services/user/user';
 export class SubjectList implements OnInit {
   private subjectService : SubjectService = inject(SubjectService);
   private userService : UserService = inject(UserService);
+  private domainService : DomainService = inject(DomainService)
+
   subjects = signal<SubjectReadDto[]>([]);
   q = signal('');
   currentLang = computed(():LanguageEnumDto => this.userService.currentLang);
 
-  getName(d: SubjectReadDto): string {
-    const t = selectTranslation<SubjectTranslationDto>(
+  getSTDto(d:SubjectReadDto): SubjectTranslationDto{
+    return <SubjectTranslationDto>selectTranslation<SubjectTranslationDto>(
       d.translations as unknown as Record<string, SubjectTranslationDto>,
       this.currentLang(),
     );
+  }
+  getName(d: SubjectReadDto): string {
+    const t = this.getSTDto(d);
     return t?.name ?? '';
   }
 
   getDescription(d: SubjectReadDto): string {
-    const t = selectTranslation<SubjectTranslationDto>(
-      d.translations as unknown as Record<string, SubjectTranslationDto>,
-      this.currentLang(),
-    );
+    const t = this.getSTDto(d);
     return t?.description ?? '';
+  }
+  getDomain(d: SubjectReadDto): string {
+    const t = this.getSTDto(d);
+    return t?.domain?.name ?? '';
+  }
+
+  goDomain(d:{}): void{
+    return this.domainService.goEdit(1);
   }
   // 📌 Pagination
   first = 0;  // index de départ

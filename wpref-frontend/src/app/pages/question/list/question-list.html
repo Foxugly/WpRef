@@ -1,70 +1,152 @@
-<div class="toolbar">
-  <h2>Questions</h2>
-  <div class="actions">
-    <input (ngModelChange)="q.set($event); load()" [ngModel]="q()" pInputText placeholder="Rechercher…">
-    <p-button (onClick)="goNew()" icon="pi pi-plus" id="btn_add_subject" label="Nouveau" severity="primary"></p-button>
-  </div>
-</div>
+<div class="page">
+  <!-- HEADER -->
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
 
-<p-table
-  [value]="pagedQuestions"
-  showGridlines
-  size="small"
-  stripedRows
->
-  <ng-template #header>
-    <tr>
-      <th>Titre</th>
-      <th>Active</th>
-      <th>Subjects</th>
-      <th style="width:60px;">Actions</th>
-    </tr>
-  </ng-template>
-  <ng-template #body let-q>
-    <tr>
-      <td>{{ q.title }}</td>
-      <td class="center-cell"><i
-        [ngClass]="q.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
-        class="pi"
-      ></i></td>
-      <td class="center-cell">@if (q.subjects) {
-        @if (q.subjects.length) {
-          <div class="quiz-question__subjects">
-            @for (s of q.subjects; track s.id) {
+    <div class="header-center">
+      <h1 class="title">Questions</h1>
+      <p class="subtitle muted">Recherche, liste et actions</p>
+    </div>
+
+    <div class="header-actions">
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title"></h2>
+
+      <!-- actions dans le card-head -->
+      <div class="card-actions">
+        <input
+          (ngModelChange)="q.set($event); load()"
+          [ngModel]="q()"
+          pInputText
+          placeholder="Rechercher…"
+        />
+
+        <p-button
+          (onClick)="goNew()"
+          icon="pi pi-plus"
+          id="btn_add_question"
+          label="Nouveau"
+          severity="primary"
+          type="button">
+        </p-button>
+      </div>
+    </div>
+
+    <p-table
+      [value]="pagedQuestions"
+      showGridlines
+      size="small"
+      stripedRows
+      styleClass="table"
+    >
+      <ng-template #header>
+        <tr>
+          <th>Titre</th>
+          <th class="col-active">Actif</th>
+          <th>Domaines</th>
+          <th>Subjects</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-q>
+        <tr>
+          <td>{{ getTitle(q) }}
+            <p-button
+              icon="pi pi-info-circle"
+              size="small"
+              pTooltip="{{ getDescription(q) }}"
+              [escape]="false"
+              tooltipPosition="right"
+              variant="text"
+              severity="secondary"
+            ></p-button>
+          </td>
+
+          <td class="center-cell col-active">
+            <i
+              [ngClass]="q.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+              class="pi">
+            </i>
+          </td>
+
+          <td class="subjects-cell">
+                  <p-button
+                    (onClick)="goDomain(q.domain.id)"
+                    [label]="getDomain(q.domain)"
+                    severity="secondary"
+                    size="small"
+                    type="button"
+                    variant="outlined">
+                  </p-button>
+          </td>
+
+          <td class="subjects-cell">
+            @if (q.subjects?.length) {
+              <div class="quiz-question__subjects">
+                @for (s of q.subjects; track s.id) {
+                  <p-button
+                    (onClick)="goSubject(s.id)"
+                    [label]="getSubjectTitle(s)"
+                    severity="secondary"
+                    size="small"
+                    type="button"
+                    variant="outlined">
+                  </p-button>
+                }
+              </div>
+            }
+          </td>
+
+          <td class="col-actions">
+            <div class="row-actions">
               <p-button
-                (onClick)="goSubject(s.id)"
-                [label]="s.name"
-                [style]="{ marginRight: '5px' }"
+                (click)="goView(q.id)"
+                icon="pi pi-eye"
+                id="btn_view_question"
                 severity="secondary"
                 size="small"
-                variant="outlined"
-              ></p-button>
-            }
-          </div>
-        }
-      }</td>
-      <td class="row-actions">
-        <p-button (click)="goView(q.id)" icon="pi pi-eye" id="btn_add_question" severity="secondary"
-                  size="small"></p-button>
-        <p-button (click)="goEdit(q.id)" icon="pi pi-pencil" id="btn_add_question" severity="info"
-                  size="small"></p-button>
-        <p-button (click)="goDelete(q.id)" icon="pi pi-trash" id="btn_delete_question" severity="danger"
-                  size="small"></p-button>
-      </td>
-    </tr>
+                type="button">
+              </p-button>
 
-  </ng-template>
-</p-table>
-@if (questions().length > rows) {
-  <div class="table-paginator">
-    <p-paginator
-      (onPageChange)="onPageChange($event)"
-      [first]="first"
-      [rowsPerPageOptions]="[5, 10, 20, 50]"
-      [rows]="rows"
-      [totalRecords]="questions().length"
-    ></p-paginator>
+              <p-button
+                (click)="goEdit(q.id)"
+                icon="pi pi-pencil"
+                id="btn_edit_question"
+                severity="info"
+                size="small"
+                type="button">
+              </p-button>
+
+              <p-button
+                (click)="goDelete(q.id)"
+                icon="pi pi-trash"
+                id="btn_delete_question"
+                severity="danger"
+                size="small"
+                type="button">
+              </p-button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    @if (questions().length > rows) {
+      <div class="table-paginator">
+        <p-paginator
+          (onPageChange)="onPageChange($event)"
+          [first]="first"
+          [rowsPerPageOptions]="[5, 10, 20, 50]"
+          [rows]="rows"
+          [totalRecords]="questions().length">
+        </p-paginator>
+      </div>
+    }
   </div>
-}
-
-
+</div>

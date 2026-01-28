@@ -12,12 +12,14 @@ class Subject(TranslatableModel):
     domain = models.ForeignKey(
         Domain,
         on_delete=models.PROTECT,
-        related_name="subjects", blank=True, null=True
+        related_name="subjects",
     )
     active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-pk"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.safe_translation_getter("name", any_language=True) or f"Subject#{self.pk}"

@@ -2,10 +2,11 @@ import {Component, computed, inject, signal} from '@angular/core';
 import {RouterOutlet} from '@angular/router';
 import {TopmenuComponent} from './components/topmenu/topmenu';
 import {BackendStatusService} from './services/status/status';
+import {FooterComponent} from './components/footer/footer';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TopmenuComponent],
+  imports: [RouterOutlet, TopmenuComponent, FooterComponent],
   templateUrl: './app.html',
   //template: `
   //  <app-topmenu></app-topmenu>
@@ -18,5 +19,5 @@ import {BackendStatusService} from './services/status/status';
 export class App {
   status = inject(BackendStatusService);
   backendDown = computed(() => this.status.backendUp() === false);
-  protected readonly title = signal('wpref-frontend');
+  //protected readonly title = signal('wpref-frontend');
 }

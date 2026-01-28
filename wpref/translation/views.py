@@ -1,3 +1,6 @@
+import re
+from typing import List
+
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -10,10 +13,46 @@ from .serializers import (
 )
 from .services.deepl import deepl_translate_many, DeepLError
 
+USE_DEEPL = False
+
 
 def _is_effectively_empty_html(html: str) -> bool:
     s = (html or "").strip().lower()
     return (not s) or s in ["<p><br></p>", "<p></p>"]
+
+
+def mock_deepl(texts: List, source: str, target: str, fmt: str)->List:
+    print("MOCK", texts, source, target, fmt, f"[{len(texts)}]")
+    out = []
+    for t in texts:
+        if fmt == "html":
+            # remplace source par target (insensible à la casse) si présent
+            pattern = re.compile(rf"\b{re.escape(source)}\b", flags=re.IGNORECASE)
+            if pattern.search(t):
+                out.append(pattern.sub(target, t))
+            else:
+                if t.endswith("</p>"):
+                    out.append(t[:-4] + f" {target}</p>")
+                else:
+                    # fallback : injecter avant la dernière balise fermante
+                    idx = t.rfind("</")
+                    if idx == -1:
+                        out.append(f"{t} {target}")
+                    else:
+                        out.append(t[:idx] + f" {target}" + t[idx:])
+
+        elif fmt == "text":
+            pattern = re.compile(rf"\b{re.escape(source)}\b", flags=re.IGNORECASE)
+            if pattern.search(t):
+                out.append(pattern.sub(target, t))
+            else:
+                out.append(f"{t} {target}")
+
+        else:
+            raise ValueError(f"Unsupported fmt: {fmt}")
+
+    print(out, f"[{len(out)}]")
+    return out
 
 
 @extend_schema(
@@ -113,7 +152,10 @@ class TranslateBatchView(APIView):
             if text_items:
                 keys = [k for k, _ in text_items]
                 texts = [t for _, t in text_items]
-                out = deepl_translate_many(texts, source, target, fmt="text")
+                if USE_DEEPL:
+                    out = deepl_translate_many(texts, source, target, fmt="text")
+                else:
+                    out = mock_deepl(texts, source, target, fmt="text")
                 for k, translated in zip(keys, out):
                     translations[k] = translated
 
@@ -121,7 +163,10 @@ class TranslateBatchView(APIView):
             if html_items:
                 keys = [k for k, _ in html_items]
                 texts = [t for _, t in html_items]
-                out = deepl_translate_many(texts, source, target, fmt="html")
+                if USE_DEEPL:
+                    out = deepl_translate_many(texts, source, target, fmt="html")
+                else:
+                    out = mock_deepl(texts, source, target, fmt="text")
                 for k, translated in zip(keys, out):
                     translations[k] = translated
 

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core.apps.CoreConfig',
     'rest_framework',
     'schema_viewer',
     'corsheaders',
@@ -128,6 +129,8 @@ LANGUAGES = (
 )
 
 LANGUAGE_CODE = 'en'
+
+
 TIME_ZONE = "Europe/Brussels"
 USE_I18N = True
 USE_TZ = True
@@ -203,3 +206,12 @@ LOGGING = {
 
 DEEPL_AUTH_KEY = env("DEEPL_AUTH_KEY", default="")
 DEEPL_IS_FREE = env("DEEPL_IS_FREE")
+
+
+PARLER_LANGUAGES = {
+    None: tuple({"code": code} for code, _ in LANGUAGES),
+    "default": {
+        "fallbacks": ["fr"],
+        "hide_untranslated": False,
+    }
+}

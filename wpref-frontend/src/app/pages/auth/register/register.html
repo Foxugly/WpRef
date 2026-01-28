@@ -1,178 +1,244 @@
-<div class="container">
-  <div class="container__card">
-    <div class="card__brand">
-      <img src="assets/logo.svg" alt="Logo" class="brand__logo">
-      <h1 class="brand__title">WpRef</h1>
-      <p class="brand__subtitle">Création de compte</p>
+<div class="page">
+  <!-- HEADER -->
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
+
+    <div class="header-center">
+      <h1 class="title">Créer un compte</h1>
+      <p class="subtitle muted">Identité, langue et sécurité</p>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="card__form">
-      <!-- Nom d'utilisateur -->
-      <div class="field">
-        <label for="username">Nom d'utilisateur</label>
-        <input
-          id="username"
-          type="text"
-          formControlName="username"
-          placeholder="Nom d'utilisateur"
-          autofocus
-        />
-        @if (submitted && f['username'].invalid) {
-          <div class="error">
-            @if (f['username'].errors?.['required']) {
-              <div>
-                Le nom d'utilisateur est obligatoire.
-              </div>
-            }
-          </div>
-        }
-      </div>
+    <div class="header-actions">
+      <!-- optionnel: si tu as une action retour -->
+      <p-button
+        (onClick)="goLogin()"
+        icon="pi pi-arrow-left"
+        label="Retour"
+        severity="secondary"
+        type="button">
+      </p-button>
 
-      <!-- Email -->
-      <div class="field">
-        <label for="email">Adresse e-mail</label>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          placeholder="vous@example.com"
-        />
-        @if (submitted && f['email'].invalid) {
-          <div class="error">
-            @if (f['email'].errors?.['required']) {
-              <div>
-                L'adresse e-mail est obligatoire.
-              </div>
-            }
-            @if (f['email'].errors?.['email']) {
-              <div>
-                L'adresse e-mail n'est pas valide.
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <!-- Prénom -->
-      <div class="field">
-        <label for="first_name">Prénom</label>
-        <input
-          id="first_name"
-          type="text"
-          formControlName="first_name"
-          placeholder="Prénom"
-        />
-        @if (submitted && f['first_name'].invalid) {
-          <div class="error">
-            @if (f['first_name'].errors?.['required']) {
-              <div>
-                Le prénom est obligatoire.
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <!-- Nom -->
-      <div class="field">
-        <label for="last_name">Nom</label>
-        <input
-          id="last_name"
-          type="text"
-          formControlName="last_name"
-          placeholder="Nom"
-        />
-        @if (submitted && f['last_name'].invalid) {
-          <div class="error">
-            @if (f['last_name'].errors?.['required']) {
-              <div>
-                Le nom est obligatoire.
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <div class="field">
-        <label for="language">Langue</label>
-
-        <select id="language" formControlName="language">
-          <option value="fr">Français (FR)</option>
-          <option value="nl">Nederlands (NL)</option>
-          <option value="en">English (EN)</option>
-        </select>
-
-        @if (submitted && f['language'].invalid) {
-          <div class="error">
-            La langue est obligatoire.
-          </div>
-        }
-      </div>
-
-      <!-- Mot de passe -->
-      <div class="field">
-        <label for="password">Mot de passe</label>
-        <input id="password" [type]="hide ? 'password' : 'text'" formControlName="password" placeholder="••••••••">
-        <button type="button" class="password__toggle" (click)="toggleHide()" aria-label="Afficher/Masquer">
-          {{ hide ? '👁️' : '🙈' }}
-        </button>
-        @if (submitted && f['password'].invalid) {
-          <div class="error">
-            @if (f['password'].errors?.['required']) {
-              <div>
-                Le mot de passe est obligatoire.
-              </div>
-            }
-            @if (f['password'].errors?.['minlength']) {
-              <div>
-                Le mot de passe doit contenir au moins 8 caractères.
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <!-- Confirmation -->
-      <div class="field">
-        <label for="confirm_password">Confirmer le mot de passe</label>
-        <input
-          id="confirm_password" [type]="hide ? 'password' : 'text'"
-          type="password"
-          formControlName="confirm_password"
-          placeholder="Confirmez le mot de passe"
-        />
-        <button type="button" class="password__toggle" (click)="toggleHide()" aria-label="Afficher/Masquer">
-          {{ hide ? '👁️' : '🙈' }}
-        </button>
-        @if (submitted && f['confirm_password'].invalid) {
-          <div class="error">
-            @if (f['confirm_password'].errors?.['required']) {
-              <div>
-                La confirmation est obligatoire.
-              </div>
-            }
-            @if (f['confirm_password'].errors?.['passwordMismatch']) {
-              <div>
-                Les mots de passe ne correspondent pas.
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <button class="btn btn--primary" type="submit" [disabled]="isSubmitting || form.invalid">
-        {{ isSubmitting ? 'Création en cours…' : "S'inscrire" }}
-      </button>
-    </form>
-
-
-    <div class="container__footer">
-      @if (successMessage) {
-        <p class="success">{{ successMessage }}</p>
-      }
-      @if (errorMessage) {
-        <p class="error">{{ errorMessage }}</p>
-      }
+      <p-button
+        (onClick)="onSubmit()"
+        [disabled]="isSubmitting || form.invalid"
+        [loading]="isSubmitting"
+        icon="pi pi-user-plus"
+        label="Créer"
+        type="button">
+      </p-button>
     </div>
   </div>
+
+  <!-- LOADING (langues) -->
+  @if (loadingLanguages) {
+    <div class="card">
+      <p class="muted">Chargement…</p>
+    </div>
+  } @else {
+
+    <form (ngSubmit)="onSubmit()" [formGroup]="form" class="card form-card">
+      <!-- SECTION: Identité -->
+      <div class="card-head card-head--with-badge">
+        <h2 class="card-title">Identité</h2>
+        <span class="badge">profil</span>
+      </div>
+
+      <div class="meta-grid">
+        <!-- Username -->
+        <div class="meta-item">
+          <label class="meta-label" for="username">Nom d'utilisateur</label>
+          <div class="meta-value">
+            <input
+              id="username"
+              pInputText
+              type="text"
+              formControlName="username"
+              autocomplete="username"
+              autofocus
+              placeholder="Nom d'utilisateur" />
+          </div>
+
+          @if (submitted && f['username'].invalid) {
+            <div class="meta-hint meta-hint--error">
+              Nom d'utilisateur obligatoire.
+            </div>
+          }
+        </div>
+
+        <!-- Email -->
+        <div class="meta-item">
+          <label class="meta-label" for="email">Adresse e-mail</label>
+          <div class="meta-value">
+            <input
+              id="email"
+              pInputText
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+              placeholder="vous@example.com" />
+          </div>
+
+          @if (submitted && f['email'].invalid) {
+            <div class="meta-hint meta-hint--error">
+              @if (f['email'].errors?.['required']) { L'adresse e-mail est obligatoire. }
+              @if (f['email'].errors?.['email']) { L'adresse e-mail n'est pas valide. }
+            </div>
+          }
+        </div>
+
+        <!-- First / Last name en 2 colonnes (si ton CSS meta-grid supporte) -->
+        <div class="meta-item">
+          <label class="meta-label" for="first_name">Prénom</label>
+          <div class="meta-value">
+            <input
+              id="first_name"
+              pInputText
+              type="text"
+              formControlName="first_name"
+              autocomplete="given-name"
+              placeholder="Prénom" />
+          </div>
+
+          @if (submitted && f['first_name'].invalid) {
+            <div class="meta-hint meta-hint--error">
+              Le prénom est obligatoire.
+            </div>
+          }
+        </div>
+
+        <div class="meta-item">
+          <label class="meta-label" for="last_name">Nom</label>
+          <div class="meta-value">
+            <input
+              id="last_name"
+              pInputText
+              type="text"
+              formControlName="last_name"
+              autocomplete="family-name"
+              placeholder="Nom" />
+          </div>
+
+          @if (submitted && f['last_name'].invalid) {
+            <div class="meta-hint meta-hint--error">
+              Le nom est obligatoire.
+            </div>
+          }
+        </div>
+
+        <!-- Language -->
+        <div class="meta-item meta-item--full">
+          <label class="meta-label" for="language">Langue</label>
+          <div class="meta-value widget-center">
+            <p-select
+              inputId="language"
+              formControlName="language"
+              [options]="languages"
+              optionLabel="name"
+              optionValue="code"
+              placeholder="Choisir une langue"
+              [showClear]="true"
+              [filter]="true">
+            </p-select>
+          </div>
+
+          @if (submitted && f['language'].invalid) {
+            <div class="meta-hint meta-hint--error">
+              La langue est obligatoire.
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: Sécurité -->
+      <div class="card-head card-head--with-badge">
+        <h2 class="card-title">Sécurité</h2>
+        <span class="badge">mot de passe</span>
+      </div>
+
+      <div class="meta-grid">
+        <!-- Password -->
+        <div class="meta-item">
+          <label class="meta-label" for="password">Mot de passe</label>
+          <div class="meta-value">
+            <p-password
+              inputId="password"
+              formControlName="password"
+              [toggleMask]="true"
+              [feedback]="false"
+              autocomplete="new-password"
+              placeholder="••••••••"
+              class="w-full">
+            </p-password>
+          </div>
+
+          @if (submitted && f['password'].invalid) {
+            <div class="meta-hint meta-hint--error">
+              @if (f['password'].errors?.['required']) { Le mot de passe est obligatoire. }
+              @if (f['password'].errors?.['minlength']) { Minimum 8 caractères. }
+            </div>
+          }
+        </div>
+
+        <!-- Confirm -->
+        <div class="meta-item">
+          <label class="meta-label" for="confirm_password">Confirmer le mot de passe</label>
+          <div class="meta-value">
+            <p-password
+              inputId="confirm_password"
+              formControlName="confirm_password"
+              [toggleMask]="true"
+              [feedback]="false"
+              autocomplete="new-password"
+              class="w-full"
+              placeholder="••••••••">
+            </p-password>
+          </div>
+
+          @if (submitted && f['confirm_password'].invalid) {
+            <div class="meta-hint meta-hint--error">
+              @if (f['confirm_password'].errors?.['required']) {
+                La confirmation est obligatoire.
+              }
+              @if (f['confirm_password'].errors?.['passwordMismatch']) {
+                Les mots de passe ne correspondent pas.
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Messages -->
+      @if (successMessage) {
+        <div class="meta-hint meta-hint--success">
+          {{ successMessage }}
+        </div>
+      }
+      @if (errorMessage) {
+        <div class="meta-hint meta-hint--error">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <!-- FOOTER ACTIONS -->
+      <div class="footer-actions">
+        <p-button
+          icon="pi pi-user-plus"
+          label="Créer mon compte"
+          type="submit"
+          [loading]="isSubmitting"
+          [disabled]="isSubmitting || form.invalid">
+        </p-button>
+
+        <p-button
+          (onClick)="goLogin()"
+          icon="pi pi-times"
+          label="Annuler"
+          severity="secondary"
+          type="button">
+        </p-button>
+      </div>
+    </form>
+  }
 </div>

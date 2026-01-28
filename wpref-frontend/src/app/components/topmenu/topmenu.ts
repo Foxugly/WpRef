@@ -1,7 +1,7 @@
 import {Component, inject} from '@angular/core';
 
 import {Subscription} from 'rxjs';
-import {RouterLink, RouterLinkActive} from '@angular/router';
+import {Router, RouterLink, RouterLinkActive} from '@angular/router';
 import {MenubarModule} from 'primeng/menubar';
 import {FormsModule} from '@angular/forms';
 import {UserService} from '../../services/user/user';
@@ -12,6 +12,22 @@ import {QuestionService} from '../../services/question/question';
 import {QuizService} from '../../services/quiz/quiz';
 import {SupportedLanguage} from '../../../environments/language';
 import {DomainService} from '../../services/domain/domain';
+import {environment} from '../../../environments/environment';
+import {ROUTES} from '../../app.routes-paths';
+
+declare global {
+  interface Window {
+    __APP__?: {
+      name: string;
+      version: string;
+      author: string;
+      year: string;
+      logoSvg: string;
+      logoIco: string;
+      logoPng: string;
+    };
+  }
+}
 
 @Component({
   selector: 'app-topmenu',
@@ -28,12 +44,15 @@ import {DomainService} from '../../services/domain/domain';
   styleUrl: './topmenu.scss'
 })
 export class TopmenuComponent {
-
+  constructor(private router: Router) {
+  }
+  app = window.__APP__!;
   private subjectService = inject(SubjectService);
   private questionService = inject(QuestionService);
   private quizService = inject(QuizService);
   private userService = inject(UserService);
   private domainService = inject(DomainService);
+
 
   goQuizList(): void {
     this.quizService.goList();
@@ -57,8 +76,8 @@ export class TopmenuComponent {
 
   menuItems = [
     {
-      label: 'WpRef',
-      icon: 'pi pi-home'
+      label: environment.appName,
+      command: () => this.goHome()
     },
     {
       label: 'Domains',
@@ -110,5 +129,9 @@ export class TopmenuComponent {
 
   ngOnDestroy() {
     this.sub?.unsubscribe();
+  }
+
+  private goHome() {
+    this.router.navigate(ROUTES.home());
   }
 }

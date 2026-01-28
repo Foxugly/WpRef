@@ -1,139 +1,297 @@
 <div class="page">
-  <div class="title">Créer une question</div>
+  <!-- HEADER -->
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
 
-  @if (error()) {
-    <div class="error">
-      {{ error() }}
+    <div class="header-center">
+      <h1 class="title">Créer une question</h1>
+      <p class="subtitle muted">Domaine, sujets, traductions et réponses</p>
     </div>
-  }
+
+    <div class="header-actions">
+      <p-button
+        (onClick)="goBack()"
+        icon="pi pi-arrow-left"
+        label="Retour"
+        severity="secondary"
+        type="button">
+      </p-button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
   @if (loading()) {
-    <div>Chargement…</div>
+    <div class="card">
+      <p class="muted">Chargement…</p>
+    </div>
   } @else {
-    <form (ngSubmit)="save()" [formGroup]="form">
-      <!-- Titre -->
-      <div class="field">
-        <label for="title">Titre</label>
-        <input formControlName="title" id="title" pInputText type="text"/>
-        @if (form.get('title')?.invalid && form.get('title')?.touched) {
-          <div class="error">
-            Le titre est obligatoire.
+
+    <!-- ERROR -->
+    @if (error()) {
+      <div class="card">
+        <div class="alert alert--error">{{ error() }}</div>
+      </div>
+    }
+
+    <form (ngSubmit)="save()" [formGroup]="form" class="form-stack">
+      <!-- CARD: Contexte -->
+      <div class="card form-card">
+        <div class="card-head">
+          <h2 class="card-title">Contexte</h2>
+        </div>
+
+        <div class="meta-grid">
+          <!-- DOMAIN -->
+          <div class="meta-item">
+            <label class="meta-label">Domaine</label>
+            <div class="meta-value">
+              <p-select
+                [filter]="true"
+                [options]="domainOptions()"
+                formControlName="domain"
+                optionLabel="name"
+                optionValue="id"
+                placeholder="Choisir un domaine">
+              </p-select>
+            </div>
           </div>
-        }
-      </div>
-      <div class="field field--inline">
-        <label>
-          <p-checkbox [binary]="true" formControlName="active"></p-checkbox>
-          Active
-        </label>
-      </div>
-      <!-- Sujets -->
-      <div class="field">
-        <label for="subjects">Sujets</label>
-        <p-multiSelect
-          [options]="subjectOptions"
-          [showClear]="true"
-          formControlName="subject_ids"
-          id="subjects"
-          optionLabel="name"
-          optionValue="code"
-          placeholder="Sélectionner un ou plusieurs sujets"
-        ></p-multiSelect>
-        <small>
-          Tu peux sélectionner plusieurs sujets dans le menu.
-        </small>
-      </div>
 
-      <div class="field">
-        <label>Média</label>
-        <app-media-selector formControlName="media"></app-media-selector>
-      </div>
-
-      <!-- Description -->
-      <div class="field">
-        <label for="description">Description</label>
-        <p-editor
-          id="description"
-          [style]="{ height: '100px' }"
-          formControlName="description"
-          placeholder="Description…">
-        </p-editor>
-      </div>
-
-      <!-- Autorise plusieurs bonnes réponses -->
-      <div class="field field--inline">
-        <label>
-          <p-checkbox [binary]="true" formControlName="allow_multiple_correct"></p-checkbox>
-          Autoriser plusieurs réponses correctes
-        </label>
-      </div>
-      <div class="field field--inline">
-        <label>
-          <p-checkbox [binary]="true" formControlName="is_mode_practice"></p-checkbox>
-          Question pour s'exercer ?
-        </label>
-      </div>
-      <div class="field field--inline">
-        <label>
-          <p-checkbox [binary]="true" formControlName="is_mode_exam"></p-checkbox>
-          Question pour des examens ?
-        </label>
-      </div>
-
-      <!-- Réponses --> <!--legend="Réponses possibles"-->
-      <p-panel class="answers" formArrayName="answer_options" legend="Réponses possibles">
-        @for (group of answerOptions.controls; track group; let i = $index) {
-          <div [formGroupName]="i" class="answer">
-            <div class="field field--inline">
-              <label for="answer-{{ i }}-order">Ordre :</label>
-              <p-inputnumber [showButtons]="true" formControlName="sort_order"
-                             id="answer-{{ i }}-order"></p-inputnumber>
+          <!-- SUBJECTS -->
+          <div class="meta-item">
+            <label class="meta-label">Sujets</label>
+            <div class="meta-value">
+              <p-multiSelect
+                [filter]="true"
+                [options]="subjectOptions()"
+                [showClear]="true"
+                formControlName="subject_ids"
+                optionLabel="name"
+                optionValue="code"
+                placeholder="Sélectionner un ou plusieurs sujets">
+              </p-multiSelect>
             </div>
+          </div>
+        </div>
 
-            <div class="field">
-              <label for="answer-{{ i }}-content">Réponse {{ i + 1 }}</label>
-              <!-- <textarea class="form-textarea" id="answer-{{ i }}-content" formControlName="content"></textarea> -->
-              <p-editor [style]="{ height: '100px' }" formControlName="content" id="answer-{{ i }}-content"></p-editor>
+        <div class="meta-grid meta-grid--compact">
+          <div class="meta-item">
+            <label class="meta-label">Active</label>
+            <div class="meta-value widget-center">
+              <p-checkbox [binary]="true" formControlName="active"></p-checkbox>
             </div>
+          </div>
 
-            <div class="field field--inline">
-              <label>
-                <p-checkbox [binary]="true" formControlName="is_correct"></p-checkbox>
-                Bonne réponse
+          <div class="meta-item">
+            <label class="meta-label">Mode</label>
+            <div class="meta-value mode-row widget-center">
+              <label class="mode-chip">
+                <p-checkbox [binary]="true" formControlName="is_mode_practice"></p-checkbox>
+                <span>Pratique</span>
+                <p-button
+                  icon="pi pi-info-circle"
+                  pTooltip="la question sera publique et sélectionnable pour les quizzes générés."
+                  severity="secondary"
+                  tooltipPosition="top"
+                  type="button">
+                </p-button>
               </label>
-              <p-button (click)="setOnlyCorrect(i)" icon="pi pi-star" id="btn_only_answer_{{i}}"
-                        label="Marquer comme seule correcte"
-                        severity="info" size="small" variant="outlined"></p-button>
 
+              <label class="mode-chip">
+                <p-checkbox [binary]="true" formControlName="is_mode_exam"></p-checkbox>
+                <span>Examen</span>
+              </label>
             </div>
-            <p-button (click)="removeOption(i)" [style]="{'width':'100%'}" icon="pi pi-trash"
-                      id="btn_delete_answer_{{i}}"
-                      label="Supprimer cette réponse"
-                      severity="danger" size="small" variant="outlined"></p-button>
           </div>
-        }
-
-        <p-button (click)="addOption()" [style]="{'margin-top':'20px'}" icon="pi pi-plus" id="btn_add_response"
-                  label="Ajouter une réponse"
-                  severity="primary" size="small" variant="outlined"></p-button>
-
-      </p-panel>
-
-
-      <!-- Explication -->
-      <div class="field">
-        <label for="explanation">Explication</label>
-        <p-editor
-          id="explanation"
-          [style]="{ height: '100px' }"
-          formControlName="explanation"
-          placeholder="Description…"
-        ></p-editor>
+        </div>
       </div>
 
-      <div class="actions">
-        <p-button icon="pi pi-save" (onClick)="save()" icon="pi pi-save" id="btn_save" label="Enregistrer"
-                  severity="primary"></p-button>
-        <p-button id="btn_back" label="Annuler" (onClick)="goBack()" severity="secondary"></p-button>
+      <!-- 2 colonnes: Contenu (2/3) + Médias (1/3) -->
+      @if (form.controls.domain.value) {
+        <div class="split-grid">
+          <!-- LEFT: Tabs / contenu -->
+          <div class="card form-card split-left">
+            @if (tabCodes().length > 0) {
+              <div class="card-head">
+                <h2 class="card-title">Contenu</h2>
+              </div>
+
+              <p-tabs
+                (valueChange)="onTabChange($event)"
+                [value]="activeLang() ?? undefined"
+                class="tabs tabs--tight">
+
+                <p-tablist>
+                  @for (lang of tabCodes(); track lang) {
+                    <p-tab [value]="lang">{{ lang.toUpperCase() }}</p-tab>
+                  }
+                </p-tablist>
+
+                <p-tabpanels class="tabpanels-tight">
+                  @for (lang of tabCodes(); track lang) {
+                    <p-tabpanel [value]="lang">
+                      <div class="lang-panel">
+                        <div class="lang-toolbar">
+                          <p-button
+                            (click)="translateFromActiveTab()"
+                            [disabled]="translating()"
+                            [loading]="translating()"
+                            icon="pi pi-language"
+                            label="Traduire vers les autres langues"
+                            severity="info"
+                            type="button">
+                          </p-button>
+                        </div>
+
+                        <!-- Translations group -->
+                        <div formGroupName="translations">
+                          @if (translationsGroup().contains(lang)) {
+                            <div [formGroupName]="lang" class="meta-grid">
+                              <!-- TITLE -->
+                              <div class="meta-item meta-item--full">
+                                <label class="meta-label">Titre ({{ lang.toUpperCase() }})</label>
+                                <div class="meta-value">
+                                  <input formControlName="title" pInputText placeholder="Titre..."/>
+                                </div>
+                                @if (form.get(['translations', lang, 'title'])?.invalid && form.get(['translations', lang, 'title'])?.touched) {
+                                  <div class="meta-hint meta-hint--error">Titre requis (min. 2 caractères).</div>
+                                }
+                              </div>
+
+                              <!-- DESCRIPTION -->
+                              <div class="meta-item meta-item--full">
+                                <label class="meta-label">Description ({{ lang.toUpperCase() }})</label>
+                                <div class="meta-value">
+                                  <p-editor class="editor-compact" formControlName="description"></p-editor>
+                                </div>
+                              </div>
+
+                              <!-- ANSWERS -->
+                              <div class="meta-item meta-item--full">
+                                <label class="meta-label">Réponses possibles ({{ lang.toUpperCase() }})</label>
+
+                                <p-panel class="answers">
+                                  @for (group of answerOptions.controls; track i; let i = $index) {
+                                    <div class="answer">
+                                      <!-- checkbox -->
+                                      <div class="answer__correct" [formGroup]="answerMetaGroup(i)">
+                                        <label class="meta-label">Bonne réponse</label>
+                                        <p-checkbox
+                                          [binary]="true"
+                                          formControlName="is_correct"
+                                          (onChange)="answerMetaGroup(i).get('is_correct')?.setValue($event.checked)"
+                                          >
+                                        </p-checkbox>
+                                      </div>
+
+                                      <!-- contenu -->
+                                      <div class="answer__content">
+                                        <label class="meta-label">Contenu ({{ lang.toUpperCase() }})</label>
+                                        <p-editor
+                                          [formControl]="answerContentCtrl(i, lang)"
+                                          class="editor-compact">
+                                        </p-editor>
+                                      </div>
+
+                                      <!-- delete -->
+                                      <div class="answer__delete">
+                                        <p-button
+                                          (click)="removeOption(i)"
+                                          icon="pi pi-trash"
+                                          pTooltip="Supprimer cette réponse"
+                                          severity="danger"
+                                          size="small"
+                                          type="button"
+                                          variant="text">
+                                        </p-button>
+                                      </div>
+                                    </div>
+
+                                    <p-divider></p-divider>
+                                  }
+
+                                  <p-button
+                                    (click)="addOption()"
+                                    icon="pi pi-plus"
+                                    label="Ajouter une réponse"
+                                    severity="primary"
+                                    size="small"
+                                    type="button"
+                                    variant="outlined">
+                                  </p-button>
+                                </p-panel>
+                              </div>
+
+                              <!-- EXPLANATION -->
+                              <div class="meta-item meta-item--full">
+                                <label class="meta-label">Explication ({{ lang.toUpperCase() }})</label>
+                                <div class="meta-value">
+                                  <p-editor class="editor-compact" formControlName="explanation"></p-editor>
+                                </div>
+                              </div>
+                            </div>
+                          }
+                        </div>
+
+                        @if (translating()) {
+                          <div class="inline-status">
+                            <i class="pi pi-spin pi-spinner"></i>
+                            <span>Traduction en cours…</span>
+                          </div>
+                        }
+                      </div>
+                    </p-tabpanel>
+                  }
+                </p-tabpanels>
+              </p-tabs>
+            } @else {
+              <div class="alert alert--info">
+                Ce domaine n’a pas de langues actives configurées.
+              </div>
+            }
+          </div>
+
+          <!-- RIGHT: Media (1/3) -->
+          <div class="card form-card split-right">
+            <div class="card-head">
+              <h2 class="card-title">Médias</h2>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item meta-item--full">
+                <label class="meta-label">Média</label>
+                <div class="meta-value widget-center">
+                  <app-media-selector formControlName="media"></app-media-selector>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- SUBMIT ERROR -->
+      @if (submitError()) {
+        <div class="card">
+          <div class="alert alert--error">{{ submitError() }}</div>
+        </div>
+      }
+
+      <!-- FOOTER ACTIONS -->
+      <div class="footer-actions">
+        <p-button
+          [disabled]="saving() || translating()"
+          [loading]="saving()"
+          icon="pi pi-save"
+          label="Créer"
+          type="submit">
+        </p-button>
+
+        <p-button
+          (onClick)="goBack()"
+          icon="pi pi-times"
+          label="Annuler"
+          severity="secondary"
+          type="button">
+        </p-button>
       </div>
     </form>
   }

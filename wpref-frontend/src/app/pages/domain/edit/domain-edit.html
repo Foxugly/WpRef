@@ -1,0 +1,195 @@
+<div class="page">
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
+
+    <div class="header-center">
+      <h1 class="title">Éditer le domaine</h1>
+      <p class="subtitle muted">Traductions, statut et accès</p>
+    </div>
+
+    <div class="header-actions">
+      <p-button
+        (onClick)="goList()"
+        icon="pi pi-arrow-left"
+        label="Retour"
+        severity="secondary"
+        type="button">
+      </p-button>
+
+      <p-button
+        (onClick)="save()"
+        icon="pi pi-save"
+        label="Enregistrer"
+        type="button">
+      </p-button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card">
+      <p class="muted">Chargement…</p>
+    </div>
+  } @else {
+    <form (ngSubmit)="save()" [formGroup]="form" class="card form-card">
+
+      <div class="card-head card-head--with-badge">
+        <h2 class="card-title">Traductions</h2>
+        <span class="badge">{{ tabCodes().length }} langue(s)</span>
+      </div>
+
+      <!-- LANGUES (meta-item full + centré) -->
+      <div class="meta-grid">
+        <div class="meta-item meta-item--full meta-item--center">
+          <label class="meta-label">Langues autorisées</label>
+          <div class="meta-value meta-value--center">
+            <p-selectButton
+              [multiple]="true"
+              [options]="langCodeOptions()"
+              class="lang-select"
+              formControlName="allowed_language_codes"
+              optionLabel="label"
+              optionValue="value">
+            </p-selectButton>
+          </div>
+
+          @if (form.controls.allowed_language_codes.touched && form.controls.allowed_language_codes.invalid) {
+            <div class="meta-hint meta-hint--error">
+              Sélectionne au moins une langue.
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- TABS -->
+      @if (tabCodes().length > 0) {
+        <p-tabs (valueChange)="onTabValueChange($event)" [value]="activeTab()" class="tabs">
+          <p-tablist>
+            @for (code of tabCodes(); track code) {
+              <p-tab [value]="code">{{ code.toUpperCase() }}</p-tab>
+            }
+          </p-tablist>
+
+          <p-tabpanels>
+            @for (code of tabCodes(); track code) {
+              <p-tabpanel [value]="code">
+                <div [formGroup]="langGroup(code)" class="lang-panel">
+
+                  <div class="lang-toolbar">
+                    <p-button
+                      (click)="translateFrom(code)"
+                      [disabled]="translating()"
+                      [loading]="translating()"
+                      icon="pi pi-language"
+                      severity="info"
+                      label="Traduire vers les autres langues"
+                      type="button">
+                    </p-button>
+                  </div>
+                  <!-- NAME + DESCRIPTION en meta-items -->
+                  <div class="meta-grid">
+                    <div class="meta-item meta-item--full">
+                      <label class="meta-label">Nom ({{ code.toUpperCase() }})</label>
+                      <div class="meta-value">
+                        <input formControlName="name" pInputText placeholder="Nom du domaine"/>
+                      </div>
+                      @if (langGroup(code).get('name')?.touched && langGroup(code).get('name')?.invalid) {
+                        <div class="meta-hint meta-hint--error">
+                          Nom requis (min. 2 caractères)
+                        </div>
+                      }
+                    </div>
+
+                    <div class="meta-item meta-item--full">
+                      <label class="meta-label">Description ({{ code.toUpperCase() }})</label>
+                      <div class="meta-value">
+                        <p-editor
+                          class="editor-compact"
+                          formControlName="description">
+                        </p-editor>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </p-tabpanel>
+            }
+          </p-tabpanels>
+        </p-tabs>
+      }
+
+      <div class="divider"></div>
+
+      <div class="card-head">
+        <h2 class="card-title">Paramètres</h2>
+        <span class="badge">active + accès</span>
+      </div>
+
+      <div class="meta-grid">
+        <!-- Active -->
+        <div class="meta-item meta-item--full">
+          <label class="meta-label" for="active">Actif</label>
+          <div class="meta-value widget-center">
+            <p-toggleswitch formControlName="active" inputId="active"></p-toggleswitch>
+          </div>
+        </div>
+
+        <!-- Owner (Select) -->
+        <div class="meta-item meta-item--full">
+          <label class="meta-label" for="owner">Owner</label>
+          <div class="meta-value widget-center">
+            <p-select
+              [filter]="true"
+              [options]="ownerOptions()"
+              [showClear]="true"
+              formControlName="owner"
+              inputId="owner"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Choisir un owner">
+            </p-select>
+          </div>
+        </div>
+
+        <!-- Staff -->
+        <div class="meta-item meta-item--full">
+          <label class="meta-label" for="staff">Staff</label>
+          <div class="meta-value widget-center">
+            <p-picklist
+              (onMoveAllToSource)="onStaffPickListChange()"
+              (onMoveAllToTarget)="onStaffPickListChange()"
+              (onMoveToSource)="onStaffPickListChange()"
+              (onMoveToTarget)="onStaffPickListChange()"
+              [dragdrop]="true"
+              [filterBy]="'label'"
+              [showSourceControls]="false"
+              [showTargetControls]="false"
+              [sourceStyle]="{ height: '240px' }"
+              [source]="availableStaff()"
+              [targetStyle]="{ height: '240px' }"
+              [target]="selectedStaff()"
+              sourceHeader="Disponibles"
+              targetHeader="Sélectionnés"
+            >
+              <ng-template let-item pTemplate="item">
+                <div class="pick-item">
+                  <span class="pick-label">{{ item.label }}</span>
+                </div>
+              </ng-template>
+            </p-picklist>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <p-button icon="pi pi-save" label="Enregistrer" type="submit"></p-button>
+        <p-button
+          (onClick)="goList()"
+          icon="pi pi-times"
+          label="Annuler"
+          severity="secondary"
+          type="button">
+        </p-button>
+      </div>
+    </form>
+  }
+</div>

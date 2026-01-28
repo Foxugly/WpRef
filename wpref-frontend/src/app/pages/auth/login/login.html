@@ -1,17 +1,13 @@
 <div class="container">
   <div class="container__card">
     <div class="card__brand">
-      <img src="assets/logo.svg" alt="Logo" class="brand__logo">
-      <h1 class="brand__title">WpRef</h1>
+      <img src="{{app.logoSvg}}" alt="Logo" class="brand__logo">
+      <h1 class="brand__title">{{ app.name }}</h1>
       <p class="brand__subtitle">Connecte-toi pour continuer</p>
     </div>
 
     @if (errorMsg()) {
-      <p-message
-        severity="error"
-        [text]="errorMsg() ?? undefined"
-        styleClass="alert alert--error">
-      </p-message>
+      <p-message severity="error" styleClass="alert alert--error">{{errorMsg()}}</p-message>
     }
 
     <form

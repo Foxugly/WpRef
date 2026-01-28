@@ -76,7 +76,7 @@
         <label for="description">Description</label>
         <p-editor
           id="description"
-          [style]="{ height: '100px' }"
+          class="editor-compact"
           formControlName="description"
           placeholder="Description…">
         </p-editor>
@@ -115,8 +115,11 @@
             <div class="field">
               <label for="answer-{{ i }}-content">Réponse {{ i + 1 }}</label>
               <!-- <textarea class="form-textarea" id="answer-{{ i }}-content" formControlName="content"></textarea> -->
-              <p-editor [style]="{ height: '100px' }" formControlName="content"
-                        id="answer-{{ i }}-content"></p-editor>
+              <p-editor
+                class="editor-compact"
+                formControlName="content"
+                id="answer-{{ i }}-content">
+              </p-editor>
             </div>
 
             <div class="field field--inline">
