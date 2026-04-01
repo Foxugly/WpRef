@@ -34,11 +34,14 @@ export let ROUTES = {
   },
   quiz: {
     add: () => ['/quiz/add'] as const,
+    quick: () => ['/quiz/quick'] as const,
     list: () => ['/quiz/list'] as const,
     editTemplate: (templateId: number) => ['/quiz/template', templateId, 'edit'] as const,
     deleteTemplate: (templateId: number) => ['/quiz/template', templateId, 'delete'] as const,
     view: (quizId: number) => ['/quiz', quizId] as const,
     questions: (quizId: number) => ['/quiz', quizId, 'questions'] as const,
+    alerts: () => ['/quiz/alerts'] as const,
+    alertDetail: (alertId: number) => ['/quiz/alerts', alertId] as const,
   }
 };
 

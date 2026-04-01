@@ -1,118 +1,65 @@
 <div class="page">
-  <div class="question__header">
-    <div class="header-left">
-      <p-button
-        (onClick)="goBack()"
-        icon="pi pi-arrow-left"
-        label="Retour à la liste"
-        severity="secondary"
-        text
-      ></p-button>
-    </div>
-
-    <h1 class="header-title">Résumé du quiz</h1>
+  <div class="summary-header">
+    <p-button
+      (onClick)="goBack()"
+      icon="pi pi-arrow-left"
+      label="Retour a la liste"
+      severity="secondary"
+      text
+    ></p-button>
   </div>
+
   @if (loading()) {
-    <div class="question-detail__status">Chargement…</div>
+    <div class="question-detail__status">Chargement...</div>
   } @else if (error()) {
     <div class="question-detail__status question-detail__status--error">
       {{ error() }}
     </div>
-  } @else {
-    @if (quizSession()) {
-      <p-card class="quiz-summary-card">
-        <div class="quiz-summary-grid">
-          <!-- Colonne 1 -->
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Titre</span>
-            <span class="quiz-summary-value">{{ quizSession()?.quiz_template_title }}</span>
-          </div>
-
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Utilisateur</span>
-            <span class="quiz-summary-value">{{ quizSession()?.user_summary?.username || '-' }}</span>
-          </div>
-
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Description</span>
-            <span class="quiz-summary-value">{{ quizSession()?.quiz_template_description || '-' }}</span>
-          </div>
-
-          <!-- Colonne 2 -->
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Mode</span>
-            <span class="quiz-summary-value">{{ quizSession()?.mode }}</span>
-          </div>
-
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Nombre de questions</span>
-            <span class="quiz-summary-value">{{ quizSession()?.max_questions }}</span>
-          </div>
-
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Timer</span>
-            <span class="quiz-summary-value">
-              {{ quizSession()?.with_duration ? 'Activé' : 'Désactivé' }}
-              @if (quizSession()?.with_duration) {
-                <span> ({{ quizSession()?.duration }} min)</span>
-              }
-            </span>
-          </div>
-
-          <!-- Colonne 3 -->
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Créé le</span>
-            <span class="quiz-summary-value">
-              {{ quizSession()?.created_at | date : 'short' }}
-            </span>
-          </div>
-
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Démarré le</span>
-            <span class="quiz-summary-value">
-              {{ quizSession()?.started_at | date : 'short' }}
-            </span>
-          </div>
-
-          <div class="quiz-summary-item">
-            <span class="quiz-summary-label">Expire le</span>
-            <span class="quiz-summary-value">
-              {{ quizSession()?.ended_at | date : 'short' }}
-            </span>
-          </div>
-
-          @if (quizSession()?.total_answers !== null) {
-            <div class="quiz-summary-item">
-              <span class="quiz-summary-label">Réponses</span>
-              <span class="quiz-summary-value">{{ quizSession()?.total_answers }}</span>
-            </div>
-
-            <div class="quiz-summary-item">
-              <span class="quiz-summary-label">Correctes</span>
-              <span class="quiz-summary-value">{{ quizSession()?.correct_answers }}</span>
-            </div>
-
-            <div class="quiz-summary-item">
-              <span class="quiz-summary-label">Score</span>
-              <span class="quiz-summary-value">{{ quizSession()?.earned_score }} / {{ quizSession()?.max_score }}</span>
-            </div>
+  } @else if (quizSession(); as session) {
+    <section class="summary-hero">
+      <div class="summary-hero__main">
+        <div class="summary-hero__eyebrow">
+          <p-tag [severity]="status().severity" [value]="status().label"></p-tag>
+          <span class="summary-hero__mode">{{ session.mode }}</span>
+          @if (!session.can_answer && session.answer_correctness_state) {
+            <span class="summary-hero__detail">Correction {{ session.answer_correctness_state }}</span>
           }
         </div>
 
-        <div class="quiz-summary-footer">
-          @if (!quizSession()?.started_at) {
-            <p-button (onClick)="goStart()" icon="pi pi-play" label="Démarrer le quiz" severity="primary"></p-button>
-          } @else if (quizSession()?.can_answer) {
-            <p-button (onClick)="goQuestion()" icon="pi pi-arrow-right" label="Aller au quiz"
-                      severity="primary"></p-button>
-          } @else if (canReview()) {
-            <p-button (onClick)="goQuestion()" icon="pi pi-eye" label="Revoir le quiz" severity="primary"></p-button>
-          } @else {
-            <p-button [disabled]="true" icon="pi pi-check" label="Quiz terminé" severity="secondary"></p-button>
+        <h1 class="summary-hero__title">{{ session.quiz_template_title }}</h1>
+
+        @if (session.quiz_template_description) {
+          <p class="summary-hero__description">{{ session.quiz_template_description }}</p>
+        }
+
+        <div class="summary-hero__facts">
+          @for (fact of summaryFacts(); track fact.label) {
+            <div class="summary-hero__fact">
+              <span class="summary-hero__fact-label">{{ fact.label }}</span>
+              <span class="summary-hero__fact-value">{{ fact.value }}</span>
+            </div>
           }
         </div>
-      </p-card>
-    }
+      </div>
+
+      <div class="summary-hero__score">
+        <span class="summary-hero__score-label">Score</span>
+        <span class="summary-hero__score-value">{{ scoreLabel() }}</span>
+        <span class="summary-hero__score-meta">{{ scoreMetaLabel() }}</span>
+      </div>
+
+      <div class="summary-hero__aside">
+        @if (!session.started_at) {
+          <p-button (onClick)="goStart()" icon="pi pi-play" label="Demarrer le quiz" severity="primary"></p-button>
+        } @else if (session.can_answer) {
+          <p-button (onClick)="goQuestion()" icon="pi pi-arrow-right" label="Continuer le quiz" severity="primary"></p-button>
+        } @else if (canReview()) {
+          <p-button (onClick)="goQuestion()" icon="pi pi-eye" label="Voir la correction" severity="primary"></p-button>
+        } @else {
+          <p-button [disabled]="true" icon="pi pi-check" label="Quiz termine" severity="secondary"></p-button>
+        }
+      </div>
+    </section>
+
   }
 </div>
-

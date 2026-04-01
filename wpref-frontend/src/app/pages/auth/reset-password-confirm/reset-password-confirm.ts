@@ -18,7 +18,7 @@ import {ROUTES} from '../../../app.routes-paths';
   templateUrl: './reset-password-confirm.html',
   styleUrl: './reset-password-confirm.scss',
 })
-export class ResetPasswordConfirm {
+export class ResetPasswordConfirmPage {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
@@ -40,7 +40,7 @@ export class ResetPasswordConfirm {
       new_password2: this.fb.control('', [Validators.required]),
     },
     {
-      validators: [ResetPasswordConfirm.passwordsMatchValidator],
+      validators: [ResetPasswordConfirmPage.passwordsMatchValidator],
     },
   );
 

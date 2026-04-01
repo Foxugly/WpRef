@@ -6,7 +6,25 @@ from question.serializers import QuestionInQuizQuestionSerializer, QuestionReadS
 from rest_framework import serializers
 from wpref.serializers import UserSummarySerializer
 
-from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
+from .models import (
+    QuizTemplate,
+    QuizQuestion,
+    Quiz,
+    QuizQuestionAnswer,
+    QuizAlertThread,
+    QuizAlertMessage,
+)
+from .alerting import (
+    alert_last_message_preview,
+    append_alert_message,
+    can_manage_alert,
+    can_reply_to_alert,
+    create_alert_thread,
+    is_alert_unread,
+    message_is_mine,
+    message_is_unread_for_user,
+    unread_count_for_alert,
+)
 from .policies import (
     ANSWER_CORRECTNESS_FULL,
     ANSWER_CORRECTNESS_HIDDEN,
@@ -17,6 +35,11 @@ from .policies import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class RequestUserMixin:
+    def request_user(self):
+        return getattr(self.context.get("request"), "user", None)
 
 
 class ShowCorrectContextMixin:
@@ -556,3 +579,216 @@ class QuizQuestionAnswerPartialSerializer(QuizQuestionAnswerWriteSerializer):
         many=True,
         required=False,
     )
+
+
+class QuizAlertMessageSerializer(RequestUserMixin, serializers.ModelSerializer):
+    author_summary = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+    is_unread = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuizAlertMessage
+        fields = [
+            "id",
+            "author",
+            "author_summary",
+            "body",
+            "created_at",
+            "is_mine",
+            "is_unread",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(UserSummarySerializer(allow_null=True))
+    def get_author_summary(self, obj) -> dict | None:
+        if obj.author_id is None:
+            return None
+        return {
+            "id": obj.author_id,
+            "username": obj.author.username,
+        }
+
+    def get_is_mine(self, obj) -> bool:
+        return message_is_mine(obj, self.request_user())
+
+    def get_is_unread(self, obj) -> bool:
+        return message_is_unread_for_user(obj, self.request_user())
+
+
+class QuizAlertThreadListSerializer(RequestUserMixin, serializers.ModelSerializer):
+    unread = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    last_message_preview = serializers.SerializerMethodField()
+    question_id = serializers.IntegerField(read_only=True)
+    question_order = serializers.IntegerField(read_only=True)
+    question_title = serializers.CharField(read_only=True)
+    quiz_template_title = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = QuizAlertThread
+        fields = [
+            "id",
+            "quiz",
+            "question_id",
+            "question_order",
+            "question_title",
+            "quiz_template_title",
+            "reported_language",
+            "status",
+            "reporter_reply_allowed",
+            "last_message_at",
+            "created_at",
+            "unread",
+            "unread_count",
+            "last_message_preview",
+        ]
+        read_only_fields = fields
+
+    def get_unread(self, obj) -> bool:
+        user = self.request_user()
+        return bool(user and user.is_authenticated and is_alert_unread(obj, user))
+
+    def get_unread_count(self, obj) -> int:
+        user = self.request_user()
+        return unread_count_for_alert(obj, user) if user and user.is_authenticated else 0
+
+    def get_last_message_preview(self, obj) -> str:
+        return alert_last_message_preview(obj)
+
+
+class QuizAlertThreadDetailSerializer(QuizAlertThreadListSerializer):
+    reporter_summary = serializers.SerializerMethodField()
+    owner_summary = serializers.SerializerMethodField()
+    messages = QuizAlertMessageSerializer(many=True, read_only=True)
+    can_reply = serializers.SerializerMethodField()
+    can_manage = serializers.SerializerMethodField()
+
+    class Meta(QuizAlertThreadListSerializer.Meta):
+        fields = QuizAlertThreadListSerializer.Meta.fields + [
+            "reporter",
+            "reporter_summary",
+            "owner",
+            "owner_summary",
+            "closed_at",
+            "closed_by",
+            "messages",
+            "can_reply",
+            "can_manage",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(UserSummarySerializer(allow_null=True))
+    def get_reporter_summary(self, obj) -> dict | None:
+        if obj.reporter_id is None:
+            return None
+        return {
+            "id": obj.reporter_id,
+            "username": obj.reporter.username,
+        }
+
+    @extend_schema_field(UserSummarySerializer(allow_null=True))
+    def get_owner_summary(self, obj) -> dict | None:
+        if obj.owner_id is None:
+            return None
+        return {
+            "id": obj.owner_id,
+            "username": obj.owner.username,
+        }
+
+    def get_can_reply(self, obj) -> bool:
+        user = self.request_user()
+        return bool(user and user.is_authenticated and can_reply_to_alert(obj, user))
+
+    def get_can_manage(self, obj) -> bool:
+        user = self.request_user()
+        return bool(user and user.is_authenticated and can_manage_alert(obj, user))
+
+
+class QuizAlertThreadCreateSerializer(serializers.Serializer):
+    quiz_id = serializers.IntegerField()
+    question_id = serializers.IntegerField()
+    body = serializers.CharField(trim_whitespace=True, min_length=3, max_length=4000)
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        user = request.user
+        quiz_id = attrs["quiz_id"]
+        question_id = attrs["question_id"]
+
+        try:
+            quiz = Quiz.objects.select_related("quiz_template", "user").get(pk=quiz_id)
+        except Quiz.DoesNotExist:
+            raise serializers.ValidationError({"quiz_id": "Quiz introuvable."})
+
+        if not (user.is_staff or user.is_superuser) and quiz.user_id != user.id:
+            raise serializers.ValidationError({"quiz_id": "Ce quiz ne vous appartient pas."})
+
+        try:
+            quizquestion = QuizQuestion.objects.select_related("question", "quiz").get(
+                quiz=quiz.quiz_template,
+                question_id=question_id,
+            )
+        except QuizQuestion.DoesNotExist:
+            raise serializers.ValidationError({"question_id": "Cette question n'appartient pas à ce quiz."})
+
+        owner = quiz.quiz_template.created_by
+        if owner is None:
+            raise serializers.ValidationError({"quiz_id": "Ce quiz n'a pas de propriétaire contactable."})
+
+        attrs["quiz"] = quiz
+        attrs["quizquestion"] = quizquestion
+        attrs["owner"] = owner
+        return attrs
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        user = request.user
+        now = self.context.get("now")
+        language = getattr(user, "language", None) or getattr(request, "LANGUAGE_CODE", None) or "en"
+        return create_alert_thread(
+            reporter=user,
+            quiz=validated_data["quiz"],
+            quizquestion=validated_data["quizquestion"],
+            owner=validated_data["owner"],
+            body=validated_data["body"],
+            language=str(language),
+            now=now,
+        )
+
+
+class QuizAlertMessageCreateSerializer(serializers.Serializer):
+    body = serializers.CharField(trim_whitespace=True, min_length=1, max_length=4000)
+
+    def validate(self, attrs):
+        thread: QuizAlertThread = self.context["thread"]
+        user = self.context["request"].user
+
+        if not thread.can_user_reply(user):
+            raise serializers.ValidationError({"detail": "Vous ne pouvez pas répondre à cette conversation."})
+
+        attrs["body"] = attrs["body"].strip()
+        return attrs
+
+    def create(self, validated_data):
+        thread: QuizAlertThread = self.context["thread"]
+        user = self.context["request"].user
+        now = self.context.get("now")
+        return append_alert_message(
+            thread=thread,
+            author=user,
+            body=validated_data["body"],
+            now=now,
+        )
+
+
+class QuizAlertThreadPartialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizAlertThread
+        fields = ["reporter_reply_allowed"]
+
+    def validate(self, attrs):
+        thread: QuizAlertThread = self.instance
+        user = self.context["request"].user
+        if thread is None or not thread.is_owner_user(user):
+            raise serializers.ValidationError({"detail": "Seul le créateur du quiz peut modifier cette conversation."})
+        return attrs

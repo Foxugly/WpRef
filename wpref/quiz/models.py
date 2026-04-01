@@ -388,3 +388,152 @@ class QuizQuestionAnswer(models.Model):
         if save:
             super().save(update_fields=["earned_score", "max_score", "is_correct"])
         return earned, max_score
+
+
+class QuizAlertThread(models.Model):
+    STATUS_OPEN = "open"
+    STATUS_CLOSED = "closed"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Open"),
+        (STATUS_CLOSED, "Closed"),
+    ]
+
+    quiz = models.ForeignKey(
+        Quiz,
+        on_delete=models.CASCADE,
+        related_name="alert_threads",
+    )
+    quizquestion = models.ForeignKey(
+        QuizQuestion,
+        on_delete=models.CASCADE,
+        related_name="alert_threads",
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reported_quiz_alert_threads",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_quiz_alert_threads",
+    )
+    reported_language = models.CharField(max_length=10, blank=True, default="")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    reporter_reply_allowed = models.BooleanField(default=False)
+    last_message_at = models.DateTimeField(auto_now_add=True)
+    reporter_last_read_at = models.DateTimeField(null=True, blank=True)
+    owner_last_read_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="closed_quiz_alert_threads",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-last_message_at"]
+
+    def __str__(self):
+        return f"Alert #{self.pk} quiz={self.quiz_id} question={self.quizquestion_id}"
+
+    @property
+    def question_id(self):
+        return self.quizquestion.question_id
+
+    @property
+    def question_order(self):
+        return self.quizquestion.sort_order
+
+    @property
+    def question_title(self):
+        question = self.quizquestion.question
+        return question.safe_translation_getter("title", any_language=True) or f"Question #{question.pk}"
+
+    @property
+    def quiz_template_title(self):
+        return self.quiz.quiz_template.title
+
+    def is_participant(self, user) -> bool:
+        from .alerting import is_alert_participant
+
+        return is_alert_participant(self, user)
+
+    def is_owner_user(self, user) -> bool:
+        from .alerting import is_alert_owner
+
+        return is_alert_owner(self, user)
+
+    def is_reporter_user(self, user) -> bool:
+        from .alerting import is_alert_reporter
+
+        return is_alert_reporter(self, user)
+
+    def can_user_reply(self, user) -> bool:
+        from .alerting import can_reply_to_alert
+
+        return can_reply_to_alert(self, user)
+
+    def unread_for(self, user) -> bool:
+        from .alerting import is_alert_unread
+
+        return is_alert_unread(self, user)
+
+    def unread_count_for(self, user) -> int:
+        from .alerting import unread_count_for_alert
+
+        return unread_count_for_alert(self, user)
+
+    def mark_read_for(self, user, *, at=None, save=True) -> None:
+        from .alerting import mark_alert_read
+
+        mark_alert_read(self, user, at=at, save=save)
+
+    def touch_last_message(self, *, at=None, save=True) -> None:
+        self.last_message_at = at or timezone.now()
+        if save:
+            self.save(update_fields=["last_message_at"])
+
+    def close(self, *, user=None, save=True) -> None:
+        self.status = self.STATUS_CLOSED
+        self.closed_at = timezone.now()
+        self.closed_by = user
+        if save:
+            self.save(update_fields=["status", "closed_at", "closed_by"])
+
+    def reopen(self, save=True) -> None:
+        self.status = self.STATUS_OPEN
+        self.closed_at = None
+        self.closed_by = None
+        if save:
+            self.save(update_fields=["status", "closed_at", "closed_by"])
+
+
+class QuizAlertMessage(models.Model):
+    thread = models.ForeignKey(
+        QuizAlertThread,
+        on_delete=models.CASCADE,
+        related_name="messages",
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="quiz_alert_messages",
+    )
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"AlertMessage #{self.pk} thread={self.thread_id} author={self.author_id}"
+
+    def save(self, *args, **kwargs):
+        creating = self.pk is None
+        super().save(*args, **kwargs)
+        if creating and self.thread_id:
+            QuizAlertThread.objects.filter(pk=self.thread_id).update(last_message_at=self.created_at)

@@ -1,0 +1,82 @@
+<section class="page">
+  <div class="page__header">
+    <div>
+      <h1>Alertes quiz</h1>
+      <p>Suivi des messages entre utilisateur et créateur du quiz.</p>
+    </div>
+    <div class="page__tools">
+      <input
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        pInputText
+        placeholder="Rechercher dans les alertes..."
+      >
+      <p-select
+        [ngModel]="statusFilter()"
+        (ngModelChange)="statusFilter.set($event)"
+        [options]="statusOptions"
+        styleClass="page__tools-select"
+        optionLabel="label"
+        optionValue="value"
+      ></p-select>
+      <p-select
+        [ngModel]="readFilter()"
+        (ngModelChange)="readFilter.set($event)"
+        [options]="readOptions"
+        styleClass="page__tools-select"
+        optionLabel="label"
+        optionValue="value"
+      ></p-select>
+      <p-button (onClick)="load()" icon="pi pi-refresh" label="Actualiser" severity="secondary"></p-button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p-card styleClass="alert-card alert-card--error">
+      <p>{{ error() }}</p>
+    </p-card>
+  }
+
+  @if (loading()) {
+    <p-card styleClass="alert-card">
+      <p>Chargement des alertes…</p>
+    </p-card>
+  } @else if (!filteredThreads().length) {
+    <p-card styleClass="alert-card">
+      <p>Aucune alerte ne correspond au filtre.</p>
+    </p-card>
+  } @else {
+    <div class="alert-list">
+      @for (thread of filteredThreads(); track thread.id) {
+        <a
+          [routerLink]="routes.quiz.alertDetail(thread.id)"
+          class="alert-card alert-card--link"
+          [class.alert-card--unread]="thread.unread_count > 0"
+        >
+          <div class="alert-card__row">
+            <div class="alert-card__main">
+              @if (thread.unread_count > 0) {
+                <span class="alert-card__dot" aria-hidden="true"></span>
+              }
+              <span class="alert-card__topic">#{{ thread.question_order }}</span>
+              <strong class="alert-card__title">{{ thread.question_title }}</strong>
+              <span class="alert-card__pill">{{ thread.quiz_template_title }}</span>
+              <span class="alert-card__pill">Langue {{ thread.reported_language || '-' }}</span>
+              <span class="alert-card__pill">Question #{{ thread.question_id }}</span>
+              <span class="alert-card__time">{{ thread.last_message_at | date : 'short' }}</span>
+            </div>
+
+            <div class="alert-card__status">
+              @if (thread.unread_count > 0) {
+                <span class="alert-card__badge">{{ thread.unread_count }}</span>
+              }
+              <p-tag [severity]="statusSeverity(thread)" [value]="statusLabel(thread)"></p-tag>
+            </div>
+          </div>
+
+          <p class="alert-card__preview">{{ thread.last_message_preview || 'Aucun message.' }}</p>
+        </a>
+      }
+    </div>
+  }
+</section>

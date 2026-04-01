@@ -55,7 +55,6 @@
             inputId="remember"
             formControlName="remember"
             [binary]="true"
-            label="Se souvenir de moi"
           ></p-checkbox>
           <label for="remember">Se souvenir de moi</label>
         </div>
@@ -66,16 +65,13 @@
       </div>
 
       <!-- Bouton submit -->
-      <button
-        pButton
+      <p-button
         type="submit"
         label="Se connecter"
-        class="btn btn--primary"
-        [disabled]="loading() || form.invalid">
-        @if (loading()) {
-          <span class="spinner"></span>
-        }
-      </button>
+        styleClass="btn btn--primary"
+        [disabled]="loading() || form.invalid"
+        [loading]="loading()"
+      ></p-button>
     </form>
 
     <div class="card__footer">

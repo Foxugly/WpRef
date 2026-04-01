@@ -1,0 +1,190 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.page__header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page__tools {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.page__tools input {
+  min-width: 18rem;
+}
+
+:host ::ng-deep .page__tools-select {
+  min-width: 11rem;
+}
+
+.page__header h1,
+.page__header p {
+  margin: 0;
+}
+
+.page__header p {
+  color: #5f6b76;
+  margin-top: 0.35rem;
+}
+
+.alert-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.alert-card {
+  background: linear-gradient(180deg, #ffffff, #f8fbfd);
+  border: 1px solid #d8e1e8;
+  border-radius: 16px;
+  display: block;
+  padding: 0.8rem 1rem;
+}
+
+.alert-card--link {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.alert-card--link:hover {
+  border-color: #7cc1d8;
+  box-shadow: 0 16px 36px rgba(13, 63, 92, 0.08);
+  transform: translateY(-1px);
+}
+
+.alert-card--unread {
+  border-color: #93c5fd;
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.alert-card--error {
+  border-color: #f0b7b7;
+  color: #8b1e1e;
+}
+
+.alert-card__header {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.alert-card__preview {
+  margin: 0;
+}
+
+.alert-card__preview {
+  color: #20323f;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alert-card__row {
+  align-items: center;
+  display: flex;
+  gap: 0.9rem;
+  justify-content: space-between;
+}
+
+.alert-card__main {
+  align-items: center;
+  display: inline-flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.alert-card__dot {
+  background: #2563eb;
+  border-radius: 999px;
+  display: inline-flex;
+  flex: 0 0 0.55rem;
+  height: 0.55rem;
+  width: 0.55rem;
+}
+
+.alert-card__topic {
+  background: #e0f2fe;
+  border-radius: 999px;
+  color: #0c4a6e;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+}
+
+.alert-card__title {
+  color: #12222f;
+  font-size: 0.98rem;
+}
+
+.alert-card__pill {
+  background: #f1f5f9;
+  border: 1px solid #d8e1e8;
+  border-radius: 999px;
+  color: #435565;
+  display: inline-flex;
+  font-size: 0.8rem;
+  padding: 0.22rem 0.55rem;
+}
+
+.alert-card__time {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.alert-card__status {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.alert-card__badge {
+  align-items: center;
+  background: #ef4444;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 1.3rem;
+  justify-content: center;
+  min-width: 1.3rem;
+  padding: 0 0.34rem;
+}
+
+@media (max-width: 768px) {
+  .page__header,
+  .alert-card__row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page__tools {
+    width: 100%;
+  }
+
+  .page__tools input {
+    width: 100%;
+  }
+
+  :host ::ng-deep .page__tools-select {
+    width: 100%;
+  }
+
+  .alert-card__status {
+    justify-content: flex-start;
+  }
+}

@@ -5,7 +5,7 @@ import {staffGuard} from './guards/staff.guard';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'home', pathMatch: 'full'},
-  {path: 'login', loadComponent: () => import('./pages/auth/login/login').then((m) => m.Login)},
+  {path: 'login', loadComponent: () => import('./pages/auth/login/login').then((m) => m.LoginPage)},
   {path: 'home', loadComponent: () => import('./pages/home/home').then((m) => m.Home)},
   {path: 'about', loadComponent: () => import('./pages/about/about').then((m) => m.About)},
   {
@@ -19,11 +19,11 @@ export const routes: Routes = [
   },
   {
     path: 'user/reset-password/:uid/:token',
-    loadComponent: () => import('./pages/auth/reset-password-confirm/reset-password-confirm').then((m) => m.ResetPasswordConfirm),
+    loadComponent: () => import('./pages/auth/reset-password-confirm/reset-password-confirm').then((m) => m.ResetPasswordConfirmPage),
   },
   {
     path: 'change-password',
-    loadComponent: () => import('./pages/auth/change-password/change-password').then((m) => m.ChangePassword),
+    loadComponent: () => import('./pages/auth/change-password/change-password').then((m) => m.ChangePasswordPage),
   },
   {path: 'register', loadComponent: () => import('./pages/auth/register/register').then((m) => m.Register)},
   {
@@ -108,7 +108,22 @@ export const routes: Routes = [
   },
   {
     path: 'quiz/list',
-    loadComponent: () => import('./pages/quiz/list/quiz-list').then((m) => m.QuizList),
+    loadComponent: () => import('./pages/quiz/list/quiz-list').then((m) => m.QuizListPage),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'quiz/quick',
+    loadComponent: () => import('./pages/quiz/quick/quiz-quick').then((m) => m.QuizQuickPage),
+    canActivate: [authGuard, staffGuard],
+  },
+  {
+    path: 'quiz/alerts',
+    loadComponent: () => import('./pages/quiz/alerts/list/quiz-alert-list').then((m) => m.QuizAlertList),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'quiz/alerts/:alertId',
+    loadComponent: () => import('./pages/quiz/alerts/detail/quiz-alert-detail').then((m) => m.QuizAlertDetail),
     canActivate: [authGuard],
   },
   {
@@ -121,5 +136,5 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/quiz/question-view/question-view').then((m) => m.QuizQuestionView),
     canActivate: [authGuard],
   },
-  {path: 'quiz/test', loadComponent: () => import('./components/quiz-play/quiz-play').then((m) => m.QuizPlay)},
+  {path: 'quiz/test', loadComponent: () => import('./components/quiz-play/quiz-play').then((m) => m.QuizPlayComponent)},
 ];

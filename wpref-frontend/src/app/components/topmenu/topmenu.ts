@@ -1,15 +1,14 @@
-import {CommonModule} from '@angular/common';
-import {Component, inject} from '@angular/core';
-
-import {Subscription} from 'rxjs';
-import {Router, RouterLink, RouterLinkActive} from '@angular/router';
-import {FormsModule} from '@angular/forms';
+import {Component, DestroyRef, inject, OnInit} from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {filter} from 'rxjs/operators';
+import {NavigationEnd, Router, RouterLink, RouterLinkActive} from '@angular/router';
+import {ButtonModule} from 'primeng/button';
 import {UserService} from '../../services/user/user';
 import {LangSelectComponent} from '../lang-select/lang-select';
 import {UserMenuComponent} from '../user-menu/user-menu';
 import {SupportedLanguage} from '../../../environments/language';
-import {environment} from '../../../environments/environment';
 import {ROUTES} from '../../app.routes-paths';
+import {QuizAlertService} from '../../services/quiz-alert/quiz-alert';
 
 declare global {
   interface Window {
@@ -35,8 +34,7 @@ type NavItem = {
   selector: 'app-topmenu',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
+    ButtonModule,
     RouterLink,
     RouterLinkActive,
     LangSelectComponent,
@@ -45,19 +43,16 @@ type NavItem = {
   templateUrl: './topmenu.html',
   styleUrl: './topmenu.scss'
 })
-export class TopmenuComponent {
+export class TopMenuComponent implements OnInit {
   constructor(private router: Router) {
   }
 
   app = window.__APP__!;
   private userService = inject(UserService);
+  private readonly quizAlertService = inject(QuizAlertService);
+  private readonly destroyRef = inject(DestroyRef);
 
   currentLang: SupportedLanguage = this.userService.currentLang;
-  private sub?: Subscription;
-
-  get isStaff(): boolean {
-    return this.userService.isAdmin();
-  }
 
   get navItems(): NavItem[] {
     const isStaff = this.userService.isAdmin();
@@ -110,11 +105,41 @@ export class TopmenuComponent {
     });
   }
 
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
+  ngOnInit(): void {
+    this.refreshUnreadCount();
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshUnreadCount());
   }
 
   goHome() {
     this.router.navigate(ROUTES.home());
+  }
+
+  goAlerts(): void {
+    this.router.navigate(ROUTES.quiz.alerts());
+  }
+
+  get unreadAlertCount(): number {
+    return this.quizAlertService.unreadCount();
+  }
+
+  private refreshUnreadCount(): void {
+    if (this.userService.currentUser()) {
+      this.quizAlertService.refreshUnreadCount().subscribe({
+        error: () => this.quizAlertService.clearUnreadCount(),
+      });
+      return;
+    }
+
+    this.userService.getMe().subscribe({
+      next: () => {
+        this.quizAlertService.refreshUnreadCount().subscribe({
+          error: () => this.quizAlertService.clearUnreadCount(),
+        });
+      },
+      error: () => this.quizAlertService.clearUnreadCount(),
+    });
   }
 }

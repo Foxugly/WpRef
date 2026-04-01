@@ -32,7 +32,11 @@
 }
 
 .header-right {
-  width: 90px;
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+  min-width: 220px;
   text-align: left;
 }
 

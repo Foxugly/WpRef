@@ -2,6 +2,8 @@ import {Component} from '@angular/core';
 
 import {InputTextModule} from 'primeng/inputtext';
 import {PasswordModule} from 'primeng/password';
+import {ButtonModule} from 'primeng/button';
+import {MessageModule} from 'primeng/message';
 
 import {AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 import {AuthService} from '../../../services/auth/auth';
@@ -20,11 +22,11 @@ import {environment} from '../../../../environments/environment';
 @Component({
   selector: 'app-change-password',
   standalone: true,
-  imports: [ReactiveFormsModule, InputTextModule, PasswordModule],
+  imports: [ReactiveFormsModule, InputTextModule, PasswordModule, ButtonModule, MessageModule],
   templateUrl: './change-password.html',
   styleUrl: './change-password.scss',
 })
-export class ChangePassword {
+export class ChangePasswordPage {
   app = window.__APP__!;
   form!: FormGroup;
   submitted = false;

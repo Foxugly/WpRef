@@ -36,13 +36,14 @@
         [quizNavItem]="quizNavItem()!"
         [readonlyMode]="reviewMode"
         [showCorrectAnswers]="showCorrect"
-        displayMode="preview"
+        displayMode="exam"
         (answeredToggled)="toggleFlag()"
         (finish)="onFinishQuiz($event)"
         (goNext)="onNextQuestion($event)"
         (goPrevious)="onPreviousQuestion($event)"
         (goBack)="goBackToQuiz()"
         (flagToggled)="toggleFlag()"
+        (reportRequested)="openReportDialog()"
         [hasNext]="hasQuestionNext(index)"
         [hasPrevious]="hasQuestionPrev(index)"
       ></app-quiz-question>
@@ -52,3 +53,38 @@
     }
   </main>
 </div>
+
+<p-dialog
+  [(visible)]="reportDialogVisible"
+  [modal]="true"
+  [style]="{ width: '42rem', maxWidth: '96vw' }"
+  header="Signaler une question"
+>
+  <div class="report-dialog">
+    <p>Votre message sera envoyé au créateur du quiz avec la question courante et la langue active.</p>
+    <textarea
+      [ngModel]="reportMessage()"
+      (ngModelChange)="reportMessage.set($event)"
+      pInputTextarea
+      rows="6"
+      placeholder="Décrivez le problème rencontré…"
+    ></textarea>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      (onClick)="submitAlert()"
+      [disabled]="!reportMessage().trim()"
+      [loading]="reportSaving()"
+      icon="pi pi-send"
+      label="Envoyer"
+    ></p-button>
+    <p-button
+      (onClick)="closeReportDialog()"
+      [disabled]="reportSaving()"
+      label="Annuler"
+      severity="secondary"
+      variant="text"
+    ></p-button>
+  </ng-template>
+</p-dialog>

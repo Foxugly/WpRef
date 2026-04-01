@@ -2,6 +2,10 @@ import {Component, DestroyRef, inject, OnInit, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from '@angular/router';
 import {finalize, forkJoin} from 'rxjs';
+import {FormsModule} from '@angular/forms';
+import {DialogModule} from 'primeng/dialog';
+import {TextareaModule} from 'primeng/textarea';
+import {ButtonModule} from 'primeng/button';
 import {AnswerPayload, QuizQuestionComponent} from '../../../components/quiz-question/quiz-question';
 import {QuizNav, QuizNavItem} from '../../../components/quiz-nav/quiz-nav';
 import {
@@ -16,10 +20,15 @@ import {
   updateQuizNavItem,
 } from '../../../shared/quiz/quiz-session-state';
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
+import {QuizAlertService} from '../../../services/quiz-alert/quiz-alert';
 
 @Component({
   selector: 'app-quiz-question-view',
   imports: [
+    FormsModule,
+    DialogModule,
+    TextareaModule,
+    ButtonModule,
     QuizQuestionComponent,
     QuizNav,
   ],
@@ -36,11 +45,15 @@ export class QuizQuestionView implements OnInit {
   quizNavItems = signal<QuizNavItem[]>([]);
   remainingSeconds = signal<number | null>(null);
   autoClosing = signal(false);
+  reportDialogVisible = signal(false);
+  reportMessage = signal('');
+  reportSaving = signal(false);
   protected showCorrect = false;
   protected reviewMode = false;
 
   private readonly route = inject(ActivatedRoute);
   private readonly quizService = inject(QuizService);
+  private readonly quizAlertService = inject(QuizAlertService);
   private readonly destroyRef = inject(DestroyRef);
   private timerId: number | null = null;
 
@@ -94,6 +107,45 @@ export class QuizQuestionView implements OnInit {
 
   goBackToQuiz(): void {
     this.quizService.goView(this.quiz_id);
+  }
+
+  openReportDialog(): void {
+    this.reportMessage.set('');
+    this.reportDialogVisible.set(true);
+  }
+
+  closeReportDialog(): void {
+    this.reportDialogVisible.set(false);
+  }
+
+  submitAlert(): void {
+    const current = this.quizNavItem();
+    const body = this.reportMessage().trim();
+    if (!current || !body) {
+      return;
+    }
+
+    this.reportSaving.set(true);
+    this.quizAlertService.create({
+      quiz_id: this.quiz_id,
+      question_id: current.question.id,
+      body,
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.reportSaving.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.reportDialogVisible.set(false);
+          this.reportMessage.set('');
+          this.quizAlertService.refreshUnreadCount().subscribe();
+        },
+        error: (err: unknown) => {
+          logApiError('quiz.question.alert', err);
+          this.error.set(userFacingApiMessage(err, 'Impossible d’envoyer cette alerte.'));
+        },
+      });
   }
 
   toggleFlag(): void {

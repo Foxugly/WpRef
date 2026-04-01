@@ -146,21 +146,6 @@
   cursor: not-allowed;
 }
 
-.spinner {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, .6);
-  border-top-color: transparent;
-  animation: spin .9s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .card__footer {
   margin-top: var(--s-6, 24px);
   display: flex;

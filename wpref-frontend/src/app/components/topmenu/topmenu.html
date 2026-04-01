@@ -1,6 +1,6 @@
 <header class="topbar">
   <div class="topbar__inner">
-    <button (click)="goHome()" class="brand" type="button">
+    <button pButton (click)="goHome()" class="brand" type="button">
       <span class="brand__mark">
         <img [alt]="app.name" [src]="app.logoSvg" class="brand__logo">
       </span>
@@ -23,11 +23,12 @@
     </nav>
 
     <div class="topbar__actions">
-      @if (isStaff) {
-        <span class="role-chip">Staff</span>
-      } @else {
-        <span class="role-chip role-chip--user">Utilisateur</span>
-      }
+      <button pButton (click)="goAlerts()" aria-label="Alertes" class="alert-link" type="button">
+        <i class="pi pi-envelope"></i>
+        @if (unreadAlertCount > 0) {
+          <span class="alert-link__badge">{{ unreadAlertCount }}</span>
+        }
+      </button>
       <app-lang-select
         (langChange)="onLangChange($event)"
         [lang]="currentLang"

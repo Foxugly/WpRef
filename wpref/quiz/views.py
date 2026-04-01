@@ -2,7 +2,7 @@ import logging
 import random
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from drf_spectacular.utils import (
     extend_schema,
@@ -22,8 +22,13 @@ from subject.models import Subject
 from wpref.tools import ErrorDetailSerializer
 from wpref.tools import MyModelViewSet
 
-from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
-from .permissions import IsOwnerOrStaff, IsStaffOrSuperuser
+from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer, QuizAlertThread
+from .permissions import IsOwnerOrStaff, IsStaffOrSuperuser, IsQuizAlertParticipant
+from .alerting import (
+    alert_thread_queryset_for_user,
+    require_alert_owner,
+    unread_total_for_queryset,
+)
 from .serializers import (
     QuizTemplateSerializer,
     QuizTemplateWriteSerializer,
@@ -41,6 +46,12 @@ from .serializers import (
     GenerateFromSubjectsInputSerializer,
     BulkCreateFromTemplateInputSerializer,
     CreateQuizInputSerializer,
+    QuizAlertThreadListSerializer,
+    QuizAlertThreadDetailSerializer,
+    QuizAlertThreadCreateSerializer,
+    QuizAlertThreadPartialSerializer,
+    QuizAlertMessageSerializer,
+    QuizAlertMessageCreateSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -669,6 +680,81 @@ class QuizViewSet(MyModelViewSet):
         quiz.expire_if_needed()
         return quiz
 
+    def _synchronize_closed_quiz_answers(self, quiz: Quiz) -> Quiz:
+        if quiz.started_at is None or quiz.active:
+            return quiz
+
+        quiz_questions = list(
+            quiz.quiz_template.quiz_questions
+            .select_related("question")
+            .prefetch_related("question__answer_options")
+            .order_by("sort_order", "id")
+        )
+
+        existing_answers = list(
+            quiz.answers
+            .select_related("quizquestion__question")
+            .prefetch_related(
+                "selected_options",
+                "quizquestion__question__answer_options",
+            )
+        )
+        existing_answer_ids = {answer.quizquestion_id for answer in existing_answers}
+
+        missing_answers = [
+            QuizQuestionAnswer(
+                quiz=quiz,
+                quizquestion=quiz_question,
+                question_order=quiz_question.sort_order,
+            )
+            for quiz_question in quiz_questions
+            if quiz_question.id not in existing_answer_ids
+        ]
+        if missing_answers:
+            QuizQuestionAnswer.objects.bulk_create(missing_answers)
+            existing_answers = list(
+                quiz.answers
+                .select_related("quizquestion__question")
+                .prefetch_related(
+                    "selected_options",
+                    "quizquestion__question__answer_options",
+                )
+            )
+
+        to_update = []
+        for answer in existing_answers:
+            correct_ids = {
+                opt.id for opt in answer.quizquestion.question.answer_options.all()
+                if opt.is_correct
+            }
+            selected_ids = {opt.id for opt in answer.selected_options.all()}
+            weight = float(answer.quizquestion.weight or 0)
+            earned_score = weight if correct_ids and selected_ids == correct_ids else 0.0
+            is_correct = bool(correct_ids and selected_ids == correct_ids)
+
+            if (
+                float(answer.max_score or 0) != weight
+                or float(answer.earned_score or 0) != earned_score
+                or answer.is_correct != is_correct
+            ):
+                answer.max_score = weight
+                answer.earned_score = earned_score
+                answer.is_correct = is_correct
+                to_update.append(answer)
+
+        if to_update:
+            QuizQuestionAnswer.objects.bulk_update(
+                to_update,
+                ["earned_score", "max_score", "is_correct"],
+            )
+
+        if hasattr(quiz, "_prefetched_objects_cache"):
+            quiz._prefetched_objects_cache = {}
+        if hasattr(quiz, "_answers_cache"):
+            delattr(quiz, "_answers_cache")
+
+        return quiz
+
     def _user_matches_template_domain(self, user, quiz_template: QuizTemplate) -> bool:
         if quiz_template.domain_id is None:
             return True
@@ -727,6 +813,7 @@ class QuizViewSet(MyModelViewSet):
             extra={"pk": kwargs.get("quiz_id")},
         )
         quiz = self._expire_quiz_if_needed(self.get_object())
+        quiz = self._synchronize_closed_quiz_answers(quiz)
         serializer = self.get_serializer(quiz)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -908,10 +995,24 @@ class QuizViewSet(MyModelViewSet):
                     {"detail": "Impossible de clôturer : le quiz est déjà clôturé."},
                     status=status.HTTP_409_CONFLICT,
                 )
-            quiz.active = False
-            if not quiz.ended_at:
-                quiz.ended_at = timezone.now()
-            quiz.save(update_fields=["active", "ended_at"])
+            quiz_questions = list(
+                quiz.quiz_template.quiz_questions
+                .select_related("question")
+                .prefetch_related("question__answer_options")
+                .order_by("sort_order", "id")
+            )
+
+            existing_answer_ids = set(
+                quiz.answers.values_list("quizquestion_id", flat=True)
+            )
+            for quiz_question in quiz_questions:
+                if quiz_question.id in existing_answer_ids:
+                    continue
+                QuizQuestionAnswer.objects.create(
+                    quiz=quiz,
+                    quizquestion=quiz_question,
+                    question_order=quiz_question.sort_order,
+                )
 
             # 3) calcule les scores des réponses
             answers = (
@@ -948,8 +1049,180 @@ class QuizViewSet(MyModelViewSet):
                     to_update,
                     ["earned_score", "max_score", "is_correct"]
                 )
+
+            quiz.active = False
+            if not quiz.ended_at:
+                quiz.ended_at = timezone.now()
+            quiz.save(update_fields=["active", "ended_at"])
         logger.debug("close: closed quiz_id=%s ended_at=%s", quiz.id, quiz.ended_at)
         return self.retrieve(request, *args, **kwargs)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=["QuizAlert"],
+        summary="Lister les conversations d'alerte quiz",
+        responses={200: QuizAlertThreadListSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        tags=["QuizAlert"],
+        summary="Lire une conversation d'alerte quiz",
+        responses={200: QuizAlertThreadDetailSerializer},
+    ),
+    create=extend_schema(
+        tags=["QuizAlert"],
+        summary="Créer une alerte sur une question de quiz",
+        request=QuizAlertThreadCreateSerializer,
+        responses={201: QuizAlertThreadDetailSerializer},
+    ),
+    partial_update=extend_schema(
+        tags=["QuizAlert"],
+        summary="Modifier les droits de réponse de l'utilisateur",
+        request=QuizAlertThreadPartialSerializer,
+        responses={200: QuizAlertThreadDetailSerializer},
+    ),
+)
+class QuizAlertThreadViewSet(MyModelViewSet):
+    permission_classes = [IsQuizAlertParticipant]
+    lookup_field = "pk"
+    lookup_url_kwarg = "alert_id"
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return QuizAlertThread.objects.none()
+        return alert_thread_queryset_for_user(self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return QuizAlertThreadCreateSerializer
+        if self.action == "partial_update":
+            return QuizAlertThreadPartialSerializer
+        if self.action == "post_message":
+            return QuizAlertMessageCreateSerializer
+        if self.action == "retrieve":
+            return QuizAlertThreadDetailSerializer
+        return QuizAlertThreadListSerializer
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["now"] = timezone.now()
+        if self.action == "post_message" and not getattr(self, "swagger_fake_view", False):
+            ctx["thread"] = self.get_object()
+        return ctx
+
+    def retrieve(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="retrieve",
+            endpoint="GET /api/quiz/alerts/{alert_id}/",
+            input_expected="path alert_id",
+            output="200 + QuizAlertThreadDetailSerializer | 404",
+            extra={"alert_id": kwargs.get("alert_id")},
+        )
+        instance = self.get_object()
+        instance.mark_read_for(request.user)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="create",
+            endpoint="POST /api/quiz/alerts/",
+            input_expected="body {quiz_id, question_id, body}",
+            output="201 + QuizAlertThreadDetailSerializer | 400",
+        )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        thread = serializer.save()
+        out = QuizAlertThreadDetailSerializer(thread, context=self.get_serializer_context())
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="partial_update",
+            endpoint="PATCH /api/quiz/alerts/{alert_id}/",
+            input_expected="body {reporter_reply_allowed}",
+            output="200 + QuizAlertThreadDetailSerializer | 400 | 404",
+            extra={"alert_id": kwargs.get("alert_id")},
+        )
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        thread = serializer.save()
+        out = QuizAlertThreadDetailSerializer(thread, context=self.get_serializer_context())
+        return Response(out.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=["QuizAlert"],
+        summary="Répondre à une conversation d'alerte quiz",
+        request=QuizAlertMessageCreateSerializer,
+        responses={201: QuizAlertMessageSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="message")
+    def post_message(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="post_message",
+            endpoint="POST /api/quiz/alerts/{alert_id}/message/",
+            input_expected="body {body}",
+            output="201 + QuizAlertMessageSerializer | 400 | 404",
+            extra={"alert_id": kwargs.get("alert_id")},
+        )
+        thread = self.get_object()
+        serializer = self.get_serializer(data=request.data, context={**self.get_serializer_context(), "thread": thread})
+        serializer.is_valid(raise_exception=True)
+        message = serializer.save()
+        out = QuizAlertMessageSerializer(message, context=self.get_serializer_context())
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        tags=["QuizAlert"],
+        summary="Clôturer une conversation d'alerte quiz",
+        responses={200: QuizAlertThreadDetailSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="close")
+    def close(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="close",
+            endpoint="POST /api/quiz/alerts/{alert_id}/close/",
+            input_expected="body vide",
+            output="200 + QuizAlertThreadDetailSerializer | 403 | 404",
+            extra={"alert_id": kwargs.get("alert_id")},
+        )
+        thread = self.get_object()
+        require_alert_owner(thread, request.user, "clôturer")
+        thread.close(user=request.user)
+        out = QuizAlertThreadDetailSerializer(thread, context=self.get_serializer_context())
+        return Response(out.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=["QuizAlert"],
+        summary="Rouvrir une conversation d'alerte quiz",
+        responses={200: QuizAlertThreadDetailSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="reopen")
+    def reopen(self, request, *args, **kwargs):
+        self._log_call(
+            method_name="reopen",
+            endpoint="POST /api/quiz/alerts/{alert_id}/reopen/",
+            input_expected="body vide",
+            output="200 + QuizAlertThreadDetailSerializer | 403 | 404",
+            extra={"alert_id": kwargs.get("alert_id")},
+        )
+        thread = self.get_object()
+        require_alert_owner(thread, request.user, "rouvrir")
+        thread.reopen()
+        out = QuizAlertThreadDetailSerializer(thread, context=self.get_serializer_context())
+        return Response(out.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=["QuizAlert"],
+        summary="Compter les alertes non lues de l'utilisateur courant",
+        responses={200: OpenApiResponse(description='{"count": int}')},
+    )
+    @action(detail=False, methods=["get"], url_path="unread-count")
+    def unread_count(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        count = unread_total_for_queryset(qs, request.user)
+        return Response({"count": count}, status=status.HTTP_200_OK)
 
 
 # ---------- QuizQuestionAnswer (nested sous /quiz/{quiz_id}/answer/) ----------

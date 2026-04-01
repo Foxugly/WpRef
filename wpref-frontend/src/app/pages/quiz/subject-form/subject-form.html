@@ -1,70 +1,91 @@
-<p-card>
-  <form [formGroup]="form" (ngSubmit)="onSubmit()">
-    @if (error()) {
-      <p class="field-error">{{ error() }}</p>
-    }
+<p-card class="quick-quiz-card">
+  @if (error()) {
+    <p-message severity="error" [text]="error() ?? ''"></p-message>
+  }
 
-    <div class="field">
-      <label for="title">Titre</label>
-      <input formControlName="title" id="title" pInputText type="text" />
+  @if (success) {
+    <p-message severity="success" [text]="success"></p-message>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="quick-quiz-form">
+    <div class="quick-quiz-form__grid">
+      <div class="field field--wide">
+        <label for="title">Titre</label>
+        <input formControlName="title" id="title" pInputText type="text" />
+        <small>Titre propose automatiquement, modifiable avant generation.</small>
+      </div>
+
+      <div class="field">
+        <label for="domain">Domaine</label>
+        <p-select
+          formControlName="domain_id"
+          [options]="domainOptions"
+          optionLabel="name"
+          optionValue="code"
+          appendTo="body"
+          id="domain"
+          placeholder="Choisir un domaine">
+        </p-select>
+      </div>
+
+      <div class="field field--full">
+        <label for="subjects">Sujets</label>
+        <p-multiSelect
+          formControlName="subject_ids"
+          [options]="subjectOptions"
+          [showClear]="true"
+          class="w-full"
+          id="subjects"
+          optionLabel="name"
+          optionValue="code"
+          (onChange)="onChangeSubjects()"
+          [panelStyle]="{ 'max-height': '250px', 'overflow-y': 'auto' }"
+          placeholder="Choisir un ou plusieurs sujets">
+        </p-multiSelect>
+      </div>
     </div>
 
-    <div class="field">
-      <label for="domain">Domaine</label>
-      <p-select
-        formControlName="domain_id"
-        [options]="domainOptions"
-        optionLabel="name"
-        optionValue="code"
-        appendTo="body"
-        id="domain"
-        placeholder="Choisir un domaine">
-      </p-select>
-    </div>
+    <div class="quick-quiz-config">
+      <div class="field field--stat">
+        <label for="nbQuestions">
+          @if (availableQuestionCount() > 0) {
+            Nombre de questions (max : {{ availableQuestionCount() }})
+          } @else {
+            Nombre de questions
+          }
+        </label>
+        <p-inputNumber
+          formControlName="max_questions"
+          [max]="availableQuestionCount()"
+          [min]="questionCountMin()"
+          [showButtons]="true"
+          [useGrouping]="false"
+          inputId="nbQuestions"
+        >
+        </p-inputNumber>
+      </div>
 
-    <div class="field">
-      <label for="subjects">Sujets</label>
-      <p-multiSelect
-        formControlName="subject_ids"
-        [options]="subjectOptions"
-        [showClear]="true"
-        class="w-full"
-        id="subjects"
-        optionLabel="name"
-        optionValue="code"
-        (onChange)="onChangeSubjects()"
-        [panelStyle]="{ 'max-height': '250px', 'overflow-y': 'auto' }"
-        placeholder="Choisir un ou plusieurs sujets">
-      </p-multiSelect>
-    </div>
+      <div class="field field--switch">
+        <label for="with-duration">Timer</label>
+        <div class="timer-switch">
+          <p-toggleswitch formControlName="with_duration" inputId="with-duration"></p-toggleswitch>
+          <span>{{ form.controls.with_duration.getRawValue() ? 'Active' : 'Desactive' }}</span>
+        </div>
+      </div>
 
-    <div class="field">
-      <label for="nbQuestions">Nombre de questions <span *ngIf="maxQuestions"> (max: {{ maxQuestions }})</span></label>
-      <p-inputNumber
-        formControlName="max_questions"
-        [max]="100"
-        [min]="1"
-        [showButtons]="true"
-        id="nbQuestions">
-      </p-inputNumber>
-    </div>
-
-    <div class="field field--inline">
-      <label>
-        <p-checkbox [binary]="true" formControlName="with_duration"></p-checkbox>
-        Timer activé
-      </label>
-    </div>
-
-    <div class="field">
-      <label for="timer">Timer (in minutes)</label>
-      <p-inputNumber
-        formControlName="duration"
-        [max]="120"
-        [min]="1"
-        [showButtons]="true"
-        id="timer">
-      </p-inputNumber>
+      <div class="field field--stat">
+        <label for="timer">Duree</label>
+        <p-inputNumber
+          formControlName="duration"
+          [max]="120"
+          [min]="1"
+          [showButtons]="true"
+          [useGrouping]="false"
+          inputId="timer"
+          suffix=" min"
+        >
+        </p-inputNumber>
+      </div>
     </div>
   </form>
 </p-card>

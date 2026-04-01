@@ -14,10 +14,21 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-bottom: 1.5rem;
   gap: 1rem;
 
-  h2 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 600;
+  &__title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+
+    p {
+      color: $color-muted;
+      margin: 0;
+    }
   }
 
   .actions {
@@ -25,6 +36,10 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     align-items: center;
     gap: 1rem;
   }
+}
+
+.quiz-tabs {
+  display: block;
 }
 
 .list-section {
@@ -141,5 +156,9 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
   .toolbar .actions {
     flex-wrap: wrap;
+  }
+
+  .toolbar__title {
+    width: 100%;
   }
 }

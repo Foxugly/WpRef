@@ -1,6 +1,6 @@
 import {Component, computed, inject, OnInit} from '@angular/core';
 import {RouterOutlet} from '@angular/router';
-import {TopmenuComponent} from './components/topmenu/topmenu';
+import {TopMenuComponent} from './components/topmenu/topmenu';
 import {BackendStatusService} from './services/status/status';
 import {FooterComponent} from './components/footer/footer';
 import {AuthService} from './services/auth/auth';
@@ -9,7 +9,7 @@ import {logApiError} from './shared/api/api-errors';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TopmenuComponent, FooterComponent],
+  imports: [RouterOutlet, TopMenuComponent, FooterComponent],
   templateUrl: './app.html',
   //template: `
   //  <app-topmenu></app-topmenu>

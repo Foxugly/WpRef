@@ -1,4 +1,5 @@
 import {Component} from '@angular/core';
+import {ButtonModule} from 'primeng/button';
 import {QuizNav, QuizNavItem} from '../quiz-nav/quiz-nav';
 import {QuestionReadDto} from '../../api/generated';
 
@@ -22,11 +23,11 @@ import {QuestionReadDto} from '../../api/generated';
 @Component({
   selector: 'app-quiz-play',
   standalone: true,
-  imports: [QuizNav],
+  imports: [QuizNav, ButtonModule],
   templateUrl: './quiz-play.html',
   styleUrl: './quiz-play.scss',
 })
-export class QuizPlay {
+export class QuizPlayComponent {
   /*questionNavItems: QuizNavItem[] = Array.from({length: 23}).map(
     (_, i): QuizNavItem => ({
       index: i + 1,

@@ -89,3 +89,18 @@
 .center {
   text-align: center;
 }
+
+.report-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.report-dialog p {
+  margin: 0;
+  color: #5f6b76;
+}
+
+.report-dialog textarea {
+  width: 100%;
+}

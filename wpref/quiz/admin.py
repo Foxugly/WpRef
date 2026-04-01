@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
+from .models import (
+    QuizTemplate,
+    QuizQuestion,
+    Quiz,
+    QuizQuestionAnswer,
+    QuizAlertThread,
+    QuizAlertMessage,
+)
 
 
 class QuizQuestionInline(admin.TabularInline):
@@ -201,3 +208,50 @@ class QuizQuestionAnswerAdmin(admin.ModelAdmin):
         return obj.quizquestion.question.title
 
     get_question_title.short_description = "Question"
+
+
+class QuizAlertMessageInline(admin.TabularInline):
+    model = QuizAlertMessage
+    extra = 0
+    readonly_fields = ("author", "body", "created_at")
+    can_delete = False
+
+
+@admin.register(QuizAlertThread)
+class QuizAlertThreadAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "quiz",
+        "question_order",
+        "reporter",
+        "owner",
+        "reported_language",
+        "status",
+        "reporter_reply_allowed",
+        "last_message_at",
+        "created_at",
+    )
+    list_filter = ("status", "reported_language", "reporter_reply_allowed", "created_at")
+    search_fields = (
+        "quiz__quiz_template__title",
+        "quizquestion__question__title",
+        "reporter__username",
+        "owner__username",
+    )
+    autocomplete_fields = ("quiz", "quizquestion", "reporter", "owner", "closed_by")
+    readonly_fields = (
+        "created_at",
+        "last_message_at",
+        "reporter_last_read_at",
+        "owner_last_read_at",
+        "closed_at",
+    )
+    inlines = [QuizAlertMessageInline]
+
+
+@admin.register(QuizAlertMessage)
+class QuizAlertMessageAdmin(admin.ModelAdmin):
+    list_display = ("id", "thread", "author", "created_at")
+    search_fields = ("thread__quiz__quiz_template__title", "author__username", "body")
+    autocomplete_fields = ("thread", "author")
+    readonly_fields = ("created_at",)

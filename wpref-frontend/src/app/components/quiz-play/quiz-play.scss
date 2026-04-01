@@ -46,3 +46,10 @@
 .center {
   text-align: center;
 }
+
+.layout__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}

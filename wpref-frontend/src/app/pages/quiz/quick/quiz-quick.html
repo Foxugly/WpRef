@@ -1,0 +1,49 @@
+<div class="page">
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
+
+    <div class="header-center">
+      <h1 class="title">Quiz rapide</h1>
+      <p class="subtitle muted">Genere une session de quiz a partir d'un domaine et de sujets cibles.</p>
+    </div>
+
+    <div class="header-actions">
+      <p-button
+        (onClick)="goBack()"
+        icon="pi pi-arrow-left"
+        label="Retour"
+        severity="secondary"
+        type="button">
+      </p-button>
+    </div>
+  </div>
+
+  <div class="quick-page">
+    <app-quiz-subject-form
+      #subjectForm
+      (generate)="onGenerate($event)"
+      (subjectsChange)="onSubjectsChange($event)"
+      [maxQuestions]="maxQuestions()"
+      [saving]="saving()"
+      [success]="success()">
+    </app-quiz-subject-form>
+
+    <div class="quick-page__actions">
+      <p-button
+        (onClick)="submit()"
+        [disabled]="saving()"
+        [loading]="saving()"
+        icon="pi pi-sync"
+        label="Generer le quiz"
+        type="button">
+      </p-button>
+      <p-button
+        (onClick)="goBack()"
+        label="Annuler"
+        severity="secondary"
+        type="button"
+        variant="text">
+      </p-button>
+    </div>
+  </div>
+</div>

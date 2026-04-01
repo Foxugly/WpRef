@@ -17,7 +17,19 @@
     Question actuelle : {{ currentQuestionIndex }}
 
     <!-- exemples de boutons de test -->
-    <button (click)="markAnswered(currentQuestionIndex)">Marquer comme répondue</button>
-    <button (click)="toggleFlag(currentQuestionIndex)">Basculer flag</button>
+    <div class="layout__actions">
+      <p-button
+        (onClick)="markAnswered(currentQuestionIndex)"
+        icon="pi pi-check"
+        label="Marquer comme répondue"
+      ></p-button>
+      <p-button
+        (onClick)="toggleFlag(currentQuestionIndex)"
+        icon="pi pi-flag"
+        label="Basculer flag"
+        severity="secondary"
+        variant="outlined"
+      ></p-button>
+    </div>
   </main>
 </div>

@@ -66,6 +66,7 @@ export class QuizQuestionComponent implements OnChanges {
 
   @Output() answeredToggled = new EventEmitter<void>();
   @Output() flagToggled = new EventEmitter<boolean>();
+  @Output() reportRequested = new EventEmitter<void>();
   @Output() goNext = new EventEmitter<AnswerPayload>();
   @Output() goPrevious = new EventEmitter<AnswerPayload>();
   @Output() goBack = new EventEmitter<void>();
@@ -171,11 +172,11 @@ export class QuizQuestionComponent implements OnChanges {
   }
 
   answerLineClass(option: QuestionAnswerOptionReadDto): string {
-    if ((this.showCorrectAnswers || this.readonlyMode) && this.hasCorrection(option) && this.isCorrectOption(option)) {
+    if (this.canShowCorrectionState() && this.hasCorrection(option) && this.isCorrectOption(option)) {
       return 'answer-line answer-line--correct';
     }
 
-    if ((this.showCorrectAnswers || this.readonlyMode) && this.isSelectedWrongOption(option)) {
+    if (this.canShowCorrectionState() && this.isSelectedWrongOption(option)) {
       return 'answer-line answer-line--wrong';
     }
 
@@ -269,6 +270,10 @@ export class QuizQuestionComponent implements OnChanges {
       .find((content) => !!content);
 
     return fallback ?? option.content ?? '';
+  }
+
+  protected canShowCorrectionState(): boolean {
+    return this.readonlyMode || (this.displayMode === 'preview' && this.showCorrectAnswers);
   }
 
   private buildPayload(): AnswerPayload {

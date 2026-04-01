@@ -1,7 +1,7 @@
-import {TopmenuComponent} from './topmenu';
+import {TopMenuComponent} from './topmenu';
 
-describe('TopmenuComponent', () => {
+describe('TopMenuComponent', () => {
   it('exports the component', () => {
-    expect(TopmenuComponent).toBeTruthy();
+    expect(TopMenuComponent).toBeTruthy();
   });
 });

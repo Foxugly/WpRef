@@ -1,6 +1,12 @@
 from django.urls import path
 
-from .views import QuizTemplateViewSet, QuizViewSet, QuizQuestionAnswerViewSet, QuizTemplateQuizQuestionViewSet
+from .views import (
+    QuizTemplateViewSet,
+    QuizViewSet,
+    QuizQuestionAnswerViewSet,
+    QuizTemplateQuizQuestionViewSet,
+    QuizAlertThreadViewSet,
+)
 
 app_name = "quiz-api"
 #
@@ -34,6 +40,14 @@ quiz_start = QuizViewSet.as_view({"post": "start"})
 quiz_close = QuizViewSet.as_view({"post": "close"})
 quiz_bulk = QuizViewSet.as_view({"post": "bulk_create_from_template"})
 #
+# # --- Alert threads ---
+quiz_alert_list = QuizAlertThreadViewSet.as_view({"get": "list", "post": "create"})
+quiz_alert_detail = QuizAlertThreadViewSet.as_view({"get": "retrieve", "patch": "partial_update"})
+quiz_alert_message = QuizAlertThreadViewSet.as_view({"post": "post_message"})
+quiz_alert_close = QuizAlertThreadViewSet.as_view({"post": "close"})
+quiz_alert_reopen = QuizAlertThreadViewSet.as_view({"post": "reopen"})
+quiz_alert_unread_count = QuizAlertThreadViewSet.as_view({"get": "unread_count"})
+#
 # # --- Answers nested under quiz ---
 quiz_answer_list = QuizQuestionAnswerViewSet.as_view({"get": "list", "post": "create"})
 quiz_answer_detail = QuizQuestionAnswerViewSet.as_view({
@@ -63,6 +77,14 @@ urlpatterns = [
     path("bulk-create-from-template/", quiz_bulk, name="quiz-bulk-create-from-template"),
     path("<int:quiz_id>/start/", quiz_start, name="quiz-start"),
     path("<int:quiz_id>/close/", quiz_close, name="quiz-close"),
+    #
+    #     # Quiz alerts
+    path("alerts/", quiz_alert_list, name="quiz-alert-list"),
+    path("alerts/unread-count/", quiz_alert_unread_count, name="quiz-alert-unread-count"),
+    path("alerts/<int:alert_id>/", quiz_alert_detail, name="quiz-alert-detail"),
+    path("alerts/<int:alert_id>/message/", quiz_alert_message, name="quiz-alert-message"),
+    path("alerts/<int:alert_id>/close/", quiz_alert_close, name="quiz-alert-close"),
+    path("alerts/<int:alert_id>/reopen/", quiz_alert_reopen, name="quiz-alert-reopen"),
     #
     #     # Quiz -> answers
     path("<int:quiz_id>/answer/", quiz_answer_list, name="quiz-answer-list"),

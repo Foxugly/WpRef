@@ -18,7 +18,7 @@ import {MessageModule} from 'primeng/message';
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
-export class Login {
+export class LoginPage {
   app = window.__APP__!;
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);

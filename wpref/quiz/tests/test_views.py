@@ -889,6 +889,40 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertEqual(float(a2.earned_score), 0.0)
         self.assertFalse(a2.is_correct)
 
+    def test_close_quiz_counts_unanswered_questions_in_total_score(self):
+        q3 = self._make_question("Q3", subjects=[self.subj1], active=True)
+        q4 = self._make_question("Q4", subjects=[self.subj2], active=True)
+        qq3 = QuizQuestion.objects.create(quiz=self.qt_ok, question=q3, sort_order=3, weight=1)
+        qq4 = QuizQuestion.objects.create(quiz=self.qt_ok, question=q4, sort_order=4, weight=1)
+
+        quiz = self._create_quiz(self.qt_ok, self.u1, active=True, started_at=timezone.now())
+
+        self._make_answer(quiz, self.qq1, selected_correct=True, order=1)
+        self._make_answer(quiz, self.qq2, selected_correct=True, order=2)
+        self._make_answer(quiz, qq3, selected_correct=True, order=3)
+
+        url = self._rev(
+            "api:quiz-api:quiz-close",
+            "quiz-api:quiz-close",
+            quiz_id=quiz.id,
+        )
+        self._auth(self.u1)
+        res = self.client.post(url, {}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        quiz.refresh_from_db()
+        self.assertFalse(quiz.active)
+
+        a4 = QuizQuestionAnswer.objects.get(quiz=quiz, quizquestion=qq4)
+        self.assertEqual(float(a4.max_score), 1.0)
+        self.assertEqual(float(a4.earned_score), 0.0)
+        self.assertFalse(a4.is_correct)
+
+        self.assertEqual(quiz.answers.count(), 4)
+        self.assertEqual(float(res.data["earned_score"]), 4.0)
+        self.assertEqual(float(res.data["max_score"]), 5.0)
+        self.assertEqual(res.data["total_answers"], 4)
+
     def test_close_quiz_does_not_override_existing_ended_at(self):
         ended = timezone.now() - timezone.timedelta(days=1)
         quiz = self._create_quiz(self.qt_ok, self.u1, active=True, started_at=timezone.now(), ended_at=ended)
@@ -928,6 +962,69 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
 
         quiz.refresh_from_db()
         self.assertFalse(quiz.active)
+
+    def test_quiz_retrieve_repairs_inconsistent_closed_quiz_scores(self):
+        repair_template = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_REPAIR",
+            mode=QuizTemplate.MODE_PRACTICE,
+            description="",
+            max_questions=1,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=True,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+        )
+        repair_question = self._make_question("Q_REPAIR", subjects=[self.subj1], active=True)
+        repair_quiz_question = QuizQuestion.objects.create(
+            quiz=repair_template,
+            question=repair_question,
+            sort_order=1,
+            weight=1,
+        )
+
+        quiz = self._create_quiz(
+            repair_template,
+            self.u1,
+            active=True,
+            started_at=timezone.now() - timezone.timedelta(minutes=10),
+            ended_at=timezone.now() + timezone.timedelta(minutes=10),
+        )
+        broken = QuizQuestionAnswer.objects.create(
+            quiz=quiz,
+            quizquestion=repair_quiz_question,
+            question_order=1,
+            is_correct=True,
+            earned_score=1,
+            max_score=1,
+        )
+        self.assertEqual(list(broken.selected_options.values_list("id", flat=True)), [])
+
+        quiz.ended_at = timezone.now() - timezone.timedelta(minutes=1)
+        quiz.save(update_fields=["ended_at"])
+
+        url = self._rev(
+            "api:quiz-api:quiz-detail",
+            "quiz-api:quiz-detail",
+            quiz_id=quiz.id,
+        )
+
+        self._auth(self.u1)
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        broken.refresh_from_db()
+        self.assertFalse(broken.is_correct)
+        self.assertEqual(float(broken.earned_score), 0.0)
+        self.assertEqual(float(res.data["max_score"]), 1.0)
+        self.assertLess(float(res.data["earned_score"]), float(res.data["max_score"]))
 
     def test_quiz_retrieve_uses_accept_language_for_answer_options(self):
         quiz = self._create_quiz(self.qt_ok, self.u1, active=True, started_at=timezone.now())

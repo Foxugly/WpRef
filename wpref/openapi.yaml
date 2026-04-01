@@ -1226,6 +1226,187 @@ paths:
           description: Input invalide / quiz non disponible
         '404':
           description: QuizTemplate introuvable
+  /api/quiz/alerts/:
+    get:
+      operationId: quiz_alerts_list
+      summary: Lister les conversations d'alerte quiz
+      tags:
+      - QuizAlert
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuizAlertThreadList'
+          description: ''
+    post:
+      operationId: quiz_alerts_create
+      summary: Créer une alerte sur une question de quiz
+      tags:
+      - QuizAlert
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizAlertThreadCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QuizAlertThreadCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuizAlertThreadCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAlertThreadDetail'
+          description: ''
+  /api/quiz/alerts/{alert_id}/:
+    get:
+      operationId: quiz_alerts_retrieve
+      summary: Lire une conversation d'alerte quiz
+      parameters:
+      - in: path
+        name: alert_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - QuizAlert
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAlertThreadDetail'
+          description: ''
+    patch:
+      operationId: quiz_alerts_partial_update
+      summary: Modifier les droits de réponse de l'utilisateur
+      parameters:
+      - in: path
+        name: alert_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - QuizAlert
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedQuizAlertThreadPartialRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedQuizAlertThreadPartialRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedQuizAlertThreadPartialRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAlertThreadDetail'
+          description: ''
+  /api/quiz/alerts/{alert_id}/close/:
+    post:
+      operationId: quiz_alerts_close_create
+      summary: Clôturer une conversation d'alerte quiz
+      parameters:
+      - in: path
+        name: alert_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - QuizAlert
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAlertThreadDetail'
+          description: ''
+  /api/quiz/alerts/{alert_id}/message/:
+    post:
+      operationId: quiz_alerts_message_create
+      summary: Répondre à une conversation d'alerte quiz
+      parameters:
+      - in: path
+        name: alert_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - QuizAlert
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizAlertMessageCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QuizAlertMessageCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuizAlertMessageCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAlertMessage'
+          description: ''
+  /api/quiz/alerts/{alert_id}/reopen/:
+    post:
+      operationId: quiz_alerts_reopen_create
+      summary: Rouvrir une conversation d'alerte quiz
+      parameters:
+      - in: path
+        name: alert_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - QuizAlert
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAlertThreadDetail'
+          description: ''
+  /api/quiz/alerts/unread-count/:
+    get:
+      operationId: quiz_alerts_unread_count_retrieve
+      summary: Compter les alertes non lues de l'utilisateur courant
+      tags:
+      - QuizAlert
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: '{"count": int}'
   /api/quiz/bulk-create-from-template/:
     post:
       operationId: quiz_bulk_create_from_template_create
@@ -3273,6 +3454,11 @@ components:
             type: integer
           writeOnly: true
           description: Ordered MediaAsset IDs linked to the question.
+    PatchedQuizAlertThreadPartialRequest:
+      type: object
+      properties:
+        reporter_reply_allowed:
+          type: boolean
     PatchedQuizPartialUpdateRequest:
       type: object
       properties:
@@ -3774,6 +3960,236 @@ components:
       - user
       - user_summary
       - with_duration
+    QuizAlertMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        author:
+          type: integer
+          readOnly: true
+        author_summary:
+          allOf:
+          - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_mine:
+          type: boolean
+          readOnly: true
+        is_unread:
+          type: boolean
+          readOnly: true
+      required:
+      - author
+      - author_summary
+      - body
+      - created_at
+      - id
+      - is_mine
+      - is_unread
+    QuizAlertMessageCreateRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 4000
+      required:
+      - body
+    QuizAlertThreadCreateRequest:
+      type: object
+      properties:
+        quiz_id:
+          type: integer
+        question_id:
+          type: integer
+        body:
+          type: string
+          minLength: 3
+          maxLength: 4000
+      required:
+      - body
+      - question_id
+      - quiz_id
+    QuizAlertThreadDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        quiz:
+          type: integer
+          readOnly: true
+        question_id:
+          type: integer
+          readOnly: true
+        question_order:
+          type: integer
+          readOnly: true
+        question_title:
+          type: string
+          readOnly: true
+        quiz_template_title:
+          type: string
+          readOnly: true
+        reported_language:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        reporter_reply_allowed:
+          type: boolean
+          readOnly: true
+        last_message_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        unread:
+          type: boolean
+          readOnly: true
+        unread_count:
+          type: integer
+          readOnly: true
+        last_message_preview:
+          type: string
+          readOnly: true
+        reporter:
+          type: integer
+          readOnly: true
+        reporter_summary:
+          allOf:
+          - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+          readOnly: true
+        owner:
+          type: integer
+          readOnly: true
+        owner_summary:
+          allOf:
+          - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+          readOnly: true
+        closed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        closed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizAlertMessage'
+          readOnly: true
+        can_reply:
+          type: boolean
+          readOnly: true
+        can_manage:
+          type: boolean
+          readOnly: true
+      required:
+      - can_manage
+      - can_reply
+      - closed_at
+      - closed_by
+      - created_at
+      - id
+      - last_message_at
+      - last_message_preview
+      - messages
+      - owner
+      - owner_summary
+      - question_id
+      - question_order
+      - question_title
+      - quiz
+      - quiz_template_title
+      - reported_language
+      - reporter
+      - reporter_reply_allowed
+      - reporter_summary
+      - status
+      - unread
+      - unread_count
+    QuizAlertThreadList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        quiz:
+          type: integer
+          readOnly: true
+        question_id:
+          type: integer
+          readOnly: true
+        question_order:
+          type: integer
+          readOnly: true
+        question_title:
+          type: string
+          readOnly: true
+        quiz_template_title:
+          type: string
+          readOnly: true
+        reported_language:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        reporter_reply_allowed:
+          type: boolean
+          readOnly: true
+        last_message_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        unread:
+          type: boolean
+          readOnly: true
+        unread_count:
+          type: integer
+          readOnly: true
+        last_message_preview:
+          type: string
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - last_message_at
+      - last_message_preview
+      - question_id
+      - question_order
+      - question_title
+      - quiz
+      - quiz_template_title
+      - reported_language
+      - reporter_reply_allowed
+      - status
+      - unread
+      - unread_count
     QuizList:
       type: object
       description: RÃ©sumÃ© lÃ©ger d'une session de quiz pour la liste.
@@ -4210,6 +4626,14 @@ components:
         domain_id:
           type: integer
           nullable: true
+    StatusEnum:
+      enum:
+      - open
+      - closed
+      type: string
+      description: |-
+        * `open` - Open
+        * `closed` - Closed
     SubjectDetail:
       type: object
       properties:

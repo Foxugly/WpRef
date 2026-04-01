@@ -1,0 +1,16 @@
+.quick-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.quick-page__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .quick-page__actions {
+    flex-direction: column-reverse;
+  }
+}

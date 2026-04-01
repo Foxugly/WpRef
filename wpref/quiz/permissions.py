@@ -1,7 +1,7 @@
 # quiz/permissions.py
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-from .models import Quiz, QuizQuestionAnswer
+from .models import Quiz, QuizAlertThread, QuizQuestionAnswer
 
 
 class IsStaffOrReadOnly(BasePermission):
@@ -57,3 +57,26 @@ class IsOwnerOrStaff(BasePermission):
         # fallback générique : attribut "user"
         owner = getattr(obj, "user", None)
         return owner is not None and owner.id == user.id
+
+
+class IsQuizAlertParticipant(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated)
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+
+        if user.is_staff or user.is_superuser:
+            return True
+
+        if isinstance(obj, QuizAlertThread):
+            return obj.is_participant(user)
+
+        thread = getattr(obj, "thread", None)
+        if isinstance(thread, QuizAlertThread):
+            return thread.is_participant(user)
+
+        return False

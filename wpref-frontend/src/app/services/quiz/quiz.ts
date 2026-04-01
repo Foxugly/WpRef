@@ -129,6 +129,6 @@ export class QuizService {
   }
 
   goSubject(): void {
-    this.router.navigate(['/quiz/subject']);
+    this.router.navigate(['/quiz/quick']);
   }
 }

@@ -92,10 +92,10 @@ export class MediaSelectorComponent implements ControlValueAccessor, OnDestroy {
       return m.file.name;
     }
     if (typeof m.file === 'string') {
-      return m.file;
+      return this.extractDisplayName(m.file);
     }
     if (typeof m.external_url === 'string') {
-      return m.external_url;
+      return this.extractDisplayName(m.external_url);
     }
     return '(sans nom)';
   }
@@ -263,6 +263,24 @@ export class MediaSelectorComponent implements ControlValueAccessor, OnDestroy {
     this._items.set(normalized);
     this.onChange(normalized);
     this.onTouched();
+  }
+
+  private extractDisplayName(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return '(sans nom)';
+    }
+
+    try {
+      const url = new URL(trimmed);
+      const pathname = decodeURIComponent(url.pathname);
+      const segments = pathname.split('/').filter(Boolean);
+      return segments.at(-1) || url.hostname;
+    } catch {
+      const normalized = trimmed.replace(/\\/g, '/');
+      const segments = normalized.split('/').filter(Boolean);
+      return segments.at(-1) || trimmed;
+    }
   }
 
 

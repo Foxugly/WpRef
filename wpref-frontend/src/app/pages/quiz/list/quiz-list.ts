@@ -5,13 +5,12 @@ import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
 import {catchError, finalize, forkJoin, map, of, switchMap} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
-import {DialogModule} from 'primeng/dialog';
 import {InputTextModule} from 'primeng/inputtext';
 import {TableModule} from 'primeng/table';
+import {TabsModule} from 'primeng/tabs';
 import {QuizListDto, QuizTemplateDto} from '../../../api/generated';
-import {QuizService, QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
+import {QuizService} from '../../../services/quiz/quiz';
 import {UserService} from '../../../services/user/user';
-import {QuizSubjectForm} from '../subject-form/subject-form';
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
 
 interface UserQuizListItem extends QuizListDto {
@@ -20,47 +19,55 @@ interface UserQuizListItem extends QuizListDto {
   status: 'in_progress' | 'answered';
 }
 
+type QuizTemplateListItem = QuizTemplateDto & {
+  is_public?: boolean;
+  created_by?: number | null;
+};
+
 @Component({
   selector: 'app-quiz-list',
   imports: [
     CommonModule,
-    DialogModule,
     FormsModule,
     ButtonModule,
     InputTextModule,
     TableModule,
-    QuizSubjectForm,
+    TabsModule,
   ],
   templateUrl: './quiz-list.html',
   styleUrl: './quiz-list.scss',
 })
-export class QuizList implements OnInit {
-  availableTemplates = signal<QuizTemplateDto[]>([]);
-  managedTemplates = signal<QuizTemplateDto[]>([]);
+export class QuizListPage implements OnInit {
+  templates = signal<QuizTemplateListItem[]>([]);
   myQuizzes = signal<UserQuizListItem[]>([]);
+  activeTab = signal<'templates' | 'sessions'>('templates');
+  currentUserId = signal<number | null>(null);
   q = signal('');
-  saving = signal(false);
   loading = signal(false);
   success = signal<string | null>(null);
-  maxQuestions = signal<number | null>(null);
-  visible = false;
   creatingTemplateId = signal<number | null>(null);
 
   private readonly quizService = inject(QuizService);
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
-  readonly isAdmin = this.userService.isAdmin;
   private readonly destroyRef = inject(DestroyRef);
-  readonly filteredAvailableTemplates = computed(() => {
-    const term = this.normalize(this.q());
-    if (!term) {
-      return this.availableTemplates();
-    }
 
-    return this.availableTemplates().filter((template) =>
-      this.matchesSearch(term, template.title, template.description ?? '', template.mode ?? ''),
+  readonly isAdmin = this.userService.isAdmin;
+
+  readonly filteredCreatedTemplates = computed(() => {
+    const term = this.normalize(this.q());
+    return this.createdTemplates().filter((template) =>
+      !term || this.matchesSearch(term, template.title, template.description ?? '', template.mode ?? ''),
     );
   });
+
+  readonly filteredPublicTemplates = computed(() => {
+    const term = this.normalize(this.q());
+    return this.publicTemplates().filter((template) =>
+      !term || this.matchesSearch(term, template.title, template.description ?? '', template.mode ?? ''),
+    );
+  });
+
   readonly filteredMyQuizzes = computed(() => {
     const term = this.normalize(this.q());
     if (!term) {
@@ -71,35 +78,44 @@ export class QuizList implements OnInit {
       this.matchesSearch(term, quiz.quiz_template_title, quiz.quiz_template_description, quiz.mode),
     );
   });
-  readonly filteredManagedTemplates = computed(() => {
-    const term = this.normalize(this.q());
-    if (!term) {
-      return this.managedTemplates();
+
+  readonly createdTemplates = computed(() => {
+    const userId = this.currentUserId();
+    if (!userId) {
+      return [];
     }
 
-    return this.managedTemplates().filter((template) =>
-      this.matchesSearch(term, template.title, template.description ?? '', template.mode ?? ''),
-    );
+    return this.templates()
+      .filter((template) => template.created_by === userId)
+      .sort((left, right) => left.title.localeCompare(right.title));
   });
+
+  readonly publicTemplates = computed(() =>
+    this.templates()
+      .filter((template) => template.is_public)
+      .sort((left, right) => left.title.localeCompare(right.title)),
+  );
 
   ngOnInit(): void {
     this.load();
+  }
+
+  setActiveTab(value: string | number | undefined): void {
+    this.activeTab.set(value === 'sessions' ? 'sessions' : 'templates');
   }
 
   load(): void {
     this.loading.set(true);
     forkJoin({
       templates: this.quizService.listTemplates(),
-      quizzes: this.quizService.listQuiz({search: this.q() || undefined}),
+      quizzes: this.quizService.listQuiz(),
       me: this.getCurrentUser(),
     })
       .pipe(
         switchMap(({templates, quizzes, me}) => {
-          const managedTemplates = [...templates].sort((left, right) => left.title.localeCompare(right.title));
-          const availableTemplates = templates.filter((template) => template.active && template.can_answer);
-          const myQuizSessions = me
-            ? quizzes.filter((quiz) => quiz.user === me.id)
-            : [];
+          const currentUserId = me?.id ?? null;
+          const normalizedTemplates = templates as QuizTemplateListItem[];
+          const myQuizSessions = me ? quizzes.filter((quiz) => quiz.user === me.id) : [];
           const visibleMyQuizzes = myQuizSessions.filter((quiz) => quiz.started_at || quiz.ended_at);
           const answeredQuizIds = visibleMyQuizzes
             .filter((quiz) => !!quiz.ended_at)
@@ -107,8 +123,8 @@ export class QuizList implements OnInit {
 
           if (!answeredQuizIds.length) {
             return of({
-              managedTemplates,
-              availableTemplates,
+              currentUserId,
+              templates: normalizedTemplates,
               myQuizzes: visibleMyQuizzes.map((quiz) => this.toUserQuizListItem(quiz)),
             });
           }
@@ -128,8 +144,8 @@ export class QuizList implements OnInit {
             map((scores) => {
               const scoreByQuizId = new Map(scores.map((score) => [score.id, score]));
               return {
-                managedTemplates,
-                availableTemplates,
+                currentUserId,
+                templates: normalizedTemplates,
                 myQuizzes: visibleMyQuizzes.map((quiz) =>
                   this.toUserQuizListItem(quiz, scoreByQuizId.get(quiz.id)),
                 ),
@@ -141,65 +157,23 @@ export class QuizList implements OnInit {
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: ({managedTemplates, availableTemplates, myQuizzes}) => {
-          this.availableTemplates.set(availableTemplates);
-          this.managedTemplates.set(this.isAdmin() ? managedTemplates : []);
+        next: ({currentUserId, templates, myQuizzes}) => {
+          this.currentUserId.set(currentUserId);
+          this.templates.set(templates);
           this.myQuizzes.set(myQuizzes);
         },
         error: (err: unknown) => {
           logApiError('quiz.list.load', err);
           this.success.set(userFacingApiMessage(err, 'Impossible de charger les quiz.'));
-          this.availableTemplates.set([]);
-          this.managedTemplates.set([]);
+          this.currentUserId.set(null);
+          this.templates.set([]);
           this.myQuizzes.set([]);
         },
       });
   }
 
-  closeDialog(): void {
-    this.visible = false;
-  }
-
-  onGenerate(payload: QuizSubjectCreatePayload): void {
-    this.saving.set(true);
-    this.success.set(null);
-
-    this.quizService
-      .generateQuiz(payload)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.saving.set(false)),
-      )
-      .subscribe({
-        next: (): void => {
-          this.success.set('Quiz généré avec succès.');
-          this.closeDialog();
-          this.load();
-        },
-        error: (err: unknown): void => {
-          logApiError('quiz.list.generate', err);
-          this.success.set(userFacingApiMessage(err, 'Impossible de générer ce quiz.'));
-        },
-      });
-  }
-
-  onSubjectsChange(ids: number[]): void {
-    this.quizService
-      .getQuestionCountBySubjects(ids)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data): void => {
-          this.maxQuestions.set(data.count);
-        },
-        error: (err: unknown): void => {
-          logApiError('quiz.list.questions-count', err);
-        },
-      });
-  }
-
   goNew(): void {
-    this.success.set(null);
-    this.visible = true;
+    this.quizService.goSubject();
   }
 
   goCompose(): void {
@@ -223,12 +197,10 @@ export class QuizList implements OnInit {
         finalize(() => this.creatingTemplateId.set(null)),
       )
       .subscribe({
-        next: (quiz) => {
-          this.quizService.goView(quiz.id);
-        },
+        next: (quiz) => this.quizService.goView(quiz.id),
         error: (err: unknown) => {
           logApiError('quiz.list.create-session', err);
-          this.success.set(userFacingApiMessage(err, 'Impossible de créer ce quiz.'));
+          this.success.set(userFacingApiMessage(err, 'Impossible de creer ce quiz.'));
         },
       });
   }
@@ -238,7 +210,11 @@ export class QuizList implements OnInit {
   }
 
   statusLabel(status: UserQuizListItem['status']): string {
-    return status === 'answered' ? 'Répondu' : 'En cours';
+    return status === 'answered' ? 'Repondu' : 'En cours';
+  }
+
+  canStartTemplate(template: QuizTemplateListItem): boolean {
+    return !!template.active && !!template.can_answer;
   }
 
   private getCurrentUser() {

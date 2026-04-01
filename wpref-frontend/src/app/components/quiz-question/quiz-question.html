@@ -10,6 +10,13 @@
 
         <div class="header-right">
           @if (!readonlyMode) {
+            <p-button
+              (onClick)="reportRequested.emit()"
+              icon="pi pi-envelope"
+              label="Alerter"
+              severity="secondary"
+              variant="text"
+            ></p-button>
             <p-togglebutton
               (onChange)="flagToggled.emit($event.checked)"
               [ngModel]="quizNavItem.flagged"
@@ -111,7 +118,7 @@
         </div>
       }
 
-      @if ((showCorrectAnswers || readonlyMode) && getExplanation(question)) {
+      @if (canShowCorrectionState() && getExplanation(question)) {
         <section class="quiz-question__explanation">
           <p class="quiz-question__explanation-label">Explication</p>
           <div

@@ -5,11 +5,12 @@ import {NonNullableFormBuilder, ReactiveFormsModule} from '@angular/forms';
 import {finalize} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
-import {CheckboxModule} from 'primeng/checkbox';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
+import {MessageModule} from 'primeng/message';
 import {MultiSelectModule} from 'primeng/multiselect';
 import {SelectModule} from 'primeng/select';
+import {ToggleSwitchModule} from 'primeng/toggleswitch';
 import {DomainReadDto, SubjectReadDto} from '../../../api/generated';
 import {DomainService, DomainTranslations} from '../../../services/domain/domain';
 import {QuizSubjectCreatePayload} from '../../../services/quiz/quiz';
@@ -39,9 +40,10 @@ type QuizSubjectFormModel = {
     SelectModule,
     InputNumberModule,
     InputTextModule,
-    CheckboxModule,
+    ToggleSwitchModule,
     ButtonModule,
     CardModule,
+    MessageModule,
   ],
 })
 export class QuizSubjectForm implements OnInit {
@@ -60,13 +62,17 @@ export class QuizSubjectForm implements OnInit {
   private readonly userService = inject(UserService);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private defaultDomainId = 0;
 
   currentLang = computed(() => this.userService.currentLang);
+  readonly availableQuestionCount = signal(0);
+  readonly questionCountLimit = computed(() => this.availableQuestionCount());
+  readonly questionCountMin = computed(() => (this.availableQuestionCount() > 0 ? 1 : 0));
   form = this.fb.group({
-    title: this.fb.control('Quiz'),
+    title: this.fb.control(''),
     domain_id: this.fb.control(0),
     subject_ids: this.fb.control<number[]>({value: [], disabled: true}),
-    max_questions: this.fb.control(10),
+    max_questions: this.fb.control(0),
     with_duration: this.fb.control(true),
     duration: this.fb.control(10),
   });
@@ -79,9 +85,7 @@ export class QuizSubjectForm implements OnInit {
 
   @Input() set maxQuestions(value: number | null) {
     this._maxQuestions = value;
-    if (value != null) {
-      this.applyMaxQuestions(value);
-    }
+    this.applyMaxQuestions(value);
   }
 
   get domainOptions(): {name: string; code: number}[] {
@@ -119,10 +123,41 @@ export class QuizSubjectForm implements OnInit {
       .subscribe((domainId) => {
         this.syncSubjectControlState(domainId);
         this.form.controls.subject_ids.setValue([], {emitEvent: false});
+        this.applyMaxQuestions(0);
         this.subjectsChange.emit([]);
       });
 
+    this.form.controls.with_duration.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((enabled) => {
+        if (enabled) {
+          this.form.controls.duration.enable({emitEvent: false});
+          if (this.form.controls.duration.getRawValue() < 1) {
+            this.form.controls.duration.setValue(10, {emitEvent: false});
+          }
+          return;
+        }
+
+        this.form.controls.duration.disable({emitEvent: false});
+      });
+
     this.loadData();
+  }
+
+  prepareForOpen(): void {
+    const defaultDomainId = this.defaultDomainId;
+    this.error.set(null);
+    this.form.reset({
+      title: this.buildDefaultTitle(),
+      domain_id: defaultDomainId,
+      subject_ids: [],
+      max_questions: 0,
+      with_duration: true,
+      duration: 10,
+    });
+    this.syncSubjectControlState(defaultDomainId);
+    this.form.controls.duration.enable({emitEvent: false});
+    this.applyMaxQuestions(0);
   }
 
   submitForm(): void {
@@ -147,6 +182,16 @@ export class QuizSubjectForm implements OnInit {
       return;
     }
 
+    if (!rawValue.subject_ids.length) {
+      this.error.set('Selectionne au moins un sujet.');
+      return;
+    }
+
+    if (rawValue.max_questions < 1) {
+      this.error.set('Le nombre de questions doit etre superieur a zero.');
+      return;
+    }
+
     this.generate.emit({
       title: rawValue.title.trim(),
       subject_ids: rawValue.subject_ids,
@@ -157,14 +202,28 @@ export class QuizSubjectForm implements OnInit {
   }
 
   onChangeSubjects(): void {
+    this.error.set(null);
     this.subjectsChange.emit(this.form.controls.subject_ids.getRawValue());
   }
 
-  private applyMaxQuestions(maxQuestions: number): void {
-    const current = this.form.controls.max_questions.getRawValue();
-    if (current > maxQuestions) {
-      this.form.controls.max_questions.setValue(maxQuestions);
+  private applyMaxQuestions(maxQuestions: number | null): void {
+    const normalizedMax = Math.max(maxQuestions ?? 0, 0);
+    this.availableQuestionCount.set(normalizedMax);
+
+    if (normalizedMax > 0) {
+      this.form.controls.max_questions.enable({emitEvent: false});
+      this.form.controls.max_questions.setValidators([]);
+      this.form.controls.max_questions.updateValueAndValidity({emitEvent: false});
+      const current = this.form.controls.max_questions.getRawValue();
+      const nextValue = current > 0 ? Math.min(current, normalizedMax) : normalizedMax;
+      this.form.controls.max_questions.setValue(nextValue, {emitEvent: false});
+      return;
     }
+
+    this.form.controls.max_questions.setValidators([]);
+    this.form.controls.max_questions.updateValueAndValidity({emitEvent: false});
+    this.form.controls.max_questions.setValue(0, {emitEvent: false});
+    this.form.controls.max_questions.disable({emitEvent: false});
   }
 
   private loadData(): void {
@@ -185,9 +244,11 @@ export class QuizSubjectForm implements OnInit {
             domains.find((domain) => domain.id === preferredDomain)?.id ??
             (domains.length === 1 ? domains[0].id : 0);
 
+          this.defaultDomainId = defaultDomainId;
           if (defaultDomainId) {
             this.form.controls.domain_id.setValue(defaultDomainId);
           }
+          this.prepareForOpen();
         },
         error: (err: unknown) => {
           logApiError('quiz.subject-form.load-domains', err);
@@ -224,5 +285,28 @@ export class QuizSubjectForm implements OnInit {
     }
 
     this.form.controls.subject_ids.disable({emitEvent: false});
+  }
+
+  private buildDefaultTitle(): string {
+    const stamp = this.formatTimestamp(new Date());
+    const user = this.userService.currentUser();
+    const userLabel = [user?.first_name?.trim(), user?.last_name?.trim()]
+      .filter((value): value is string => !!value)
+      .join('-') || user?.username || 'user';
+
+    return `${stamp}-quiz-${userLabel}`;
+  }
+
+  private formatTimestamp(date: Date): string {
+    const parts = [
+      date.getFullYear().toString(),
+      (date.getMonth() + 1).toString().padStart(2, '0'),
+      date.getDate().toString().padStart(2, '0'),
+      date.getHours().toString().padStart(2, '0'),
+      date.getMinutes().toString().padStart(2, '0'),
+      date.getSeconds().toString().padStart(2, '0'),
+    ];
+
+    return parts.join('');
   }
 }

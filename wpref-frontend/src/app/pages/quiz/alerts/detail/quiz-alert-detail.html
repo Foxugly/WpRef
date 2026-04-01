@@ -1,0 +1,119 @@
+<section class="page">
+  <div class="page__header">
+    <a [routerLink]="routes.quiz.alerts()" class="page__back">← Retour aux alertes</a>
+  </div>
+
+  @if (error()) {
+    <p-card styleClass="panel panel--error">
+      <p>{{ error() }}</p>
+    </p-card>
+  }
+
+  @if (loading()) {
+    <p-card styleClass="panel">
+      <p>Chargement de la conversation…</p>
+    </p-card>
+  } @else if (thread(); as currentThread) {
+    <p-card styleClass="panel">
+      <div class="thread-banner">
+        <div class="thread-banner__main">
+          <span class="thread-banner__topic">#{{ currentThread.question_order }}</span>
+          <strong class="thread-banner__title">{{ currentThread.question_title }}</strong>
+          <span class="thread-banner__template">{{ currentThread.quiz_template_title }}</span>
+        </div>
+
+        <div class="thread-banner__meta">
+          @if (currentThread.unread_count > 0) {
+            <span class="thread-head__badge">{{ currentThread.unread_count }}</span>
+          }
+          <p-tag [severity]="statusSeverity(currentThread)" [value]="currentThread.status === 'open' ? 'Ouverte' : 'Clôturée'"></p-tag>
+          <span class="thread-banner__pill">Langue {{ currentThread.reported_language || '-' }}</span>
+          <a [routerLink]="routes.quiz.view(currentThread.quiz)" class="thread-banner__pill">Quiz #{{ currentThread.quiz }}</a>
+          @if (currentThread.can_manage) {
+            <a [routerLink]="routes.question.view(currentThread.question_id)" class="thread-banner__pill">Question #{{ currentThread.question_id }}</a>
+          }
+        </div>
+      </div>
+    </p-card>
+
+    <div class="conversation">
+      @for (message of currentThread.messages; track message.id) {
+        <article class="message" [class.message--mine]="message.is_mine">
+          <header class="message__header">
+            <div class="message__author-line">
+              <strong>{{ message.author_summary?.username || ('Utilisateur #' + message.author) }}</strong>
+              <span class="message__date">{{ formatMessageDate(message.created_at) }}</span>
+              @if (message.is_unread) {
+                <span class="message__badge">Non lu</span>
+              }
+            </div>
+          </header>
+          <p>{{ message.body }}</p>
+        </article>
+      }
+    </div>
+
+    @if (canShowComposer(currentThread)) {
+      <p-card styleClass="panel">
+        <div class="reply-box">
+          @if (!isClosed(currentThread)) {
+            <textarea
+              [ngModel]="replyBody()"
+              (ngModelChange)="replyBody.set($event)"
+              pInputTextarea
+              rows="3"
+              placeholder="Écrire votre réponse…"
+            ></textarea>
+          } @else if (currentThread.can_manage) {
+            <p class="reply-box__closed-note">Conversation clôturée. Rouvrez-la pour répondre ou réautoriser les réponses.</p>
+          }
+
+          <div class="reply-box__actions">
+            @if (currentThread.can_manage) {
+              <div class="reply-box__owner-actions">
+                <div class="reply-box__toggle">
+                  <span>Réponses utilisateur</span>
+                  <p-toggleswitch
+                    [disabled]="saving() || isClosed(currentThread)"
+                    [ngModel]="currentThread.reporter_reply_allowed"
+                    (ngModelChange)="toggleReporterReplyAllowed($event)"
+                  ></p-toggleswitch>
+                </div>
+
+                @if (!isClosed(currentThread)) {
+                  <p-button
+                    (onClick)="closeThread()"
+                    [disabled]="saving()"
+                    icon="pi pi-lock"
+                    label="Clôturer"
+                    severity="danger"
+                    variant="outlined"
+                  ></p-button>
+                } @else {
+                  <p-button
+                    (onClick)="reopenThread()"
+                    [disabled]="saving()"
+                    icon="pi pi-refresh"
+                    label="Rouvrir"
+                    severity="contrast"
+                    variant="outlined"
+                  ></p-button>
+                }
+              </div>
+            }
+
+            @if (canSendReply(currentThread)) {
+              <p-button
+                (onClick)="sendReply()"
+                [disabled]="saving() || !replyBody().trim()"
+                [loading]="saving()"
+                icon="pi pi-send"
+                label="Envoyer"
+              ></p-button>
+            }
+          </div>
+        </div>
+      </p-card>
+    }
+  }
+</section>
