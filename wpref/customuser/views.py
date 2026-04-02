@@ -20,6 +20,7 @@ from rest_framework.decorators import action
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from core.emailing import send_registration_confirmation_email
 from wpref.tools import ErrorDetailSerializer
 
 from .permissions import IsSelf, IsSelfOrStaffOrSuperuser
@@ -128,6 +129,10 @@ class CustomUserViewSet(
         if self.action in ("me", "set_current_domain"):
             return [IsSelf()]
         return [IsSelfOrStaffOrSuperuser()]
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_registration_confirmation_email(user)
 
     def get_serializer_class(self):
         if self.action == "create":

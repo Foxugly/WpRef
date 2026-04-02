@@ -19,6 +19,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from subject.models import Subject
+from core.emailing import send_quiz_assignment_email, send_quiz_completed_email
 from wpref.tools import ErrorDetailSerializer
 from wpref.tools import MyModelViewSet
 
@@ -905,14 +906,14 @@ class QuizViewSet(MyModelViewSet):
         with transaction.atomic():
             for u in users:
                 self._validate_target_user_domain(qt, u)
-                created.append(
-                    Quiz.objects.create(
-                        domain=qt.domain,
-                        quiz_template=qt,
-                        user=u,
-                        active=False,
-                    )
+                quiz = Quiz.objects.create(
+                    domain=qt.domain,
+                    quiz_template=qt,
+                    user=u,
+                    active=False,
                 )
+                created.append(quiz)
+                send_quiz_assignment_email(quiz)
         logger.debug(
             "bulk_create_from_template: created=%s quiz_template_id=%s users_count=%s",
             len(created),
@@ -1028,6 +1029,7 @@ class QuizViewSet(MyModelViewSet):
             if not quiz.ended_at:
                 quiz.ended_at = timezone.now()
             quiz.save(update_fields=["active", "ended_at"])
+            send_quiz_completed_email(quiz)
         logger.debug("close: closed quiz_id=%s ended_at=%s", quiz.id, quiz.ended_at)
         return self.retrieve(request, *args, **kwargs)
 

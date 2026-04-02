@@ -759,7 +759,8 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertEqual(res2.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(res2.data), 2)
 
-    def test_bulk_create_from_template_template_creator_allowed(self):
+    @patch("quiz.views.send_quiz_assignment_email")
+    def test_bulk_create_from_template_template_creator_allowed(self, send_quiz_assignment_email):
         creator = User.objects.create_user(username="creator", password="pass", is_staff=False)
         template = QuizTemplate.objects.create(
             domain=self.domain,
@@ -791,6 +792,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         res = self.client.post(url, payload, format="json")
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(res.data), 1)
+        self.assertEqual(send_quiz_assignment_email.call_count, 1)
 
     def test_bulk_create_from_template_invalid_input_400(self):
         url = self._rev(
@@ -921,7 +923,8 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         res = self.client.post(url, {}, format="json")
         self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
 
-    def test_close_quiz_computes_scores_and_deactivates(self):
+    @patch("quiz.views.send_quiz_completed_email")
+    def test_close_quiz_computes_scores_and_deactivates(self, send_quiz_completed_email):
         quiz = self._create_quiz(self.qt_ok, self.u1, active=True, started_at=timezone.now())
 
         # réponses : qq1 (weight=1) correct, qq2 (weight=2) wrong
@@ -951,6 +954,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertEqual(float(a2.max_score), 2.0)
         self.assertEqual(float(a2.earned_score), 0.0)
         self.assertFalse(a2.is_correct)
+        send_quiz_completed_email.assert_called_once_with(quiz)
 
     def test_close_quiz_counts_unanswered_questions_in_total_score(self):
         q3 = self._make_question("Q3", subjects=[self.subj1], active=True)

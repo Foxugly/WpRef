@@ -1,10 +1,12 @@
 from customuser.models import CustomUser
 from django.urls import reverse
 from rest_framework.test import APITestCase
+from unittest.mock import patch
 
 
 class CustomUserApiTests(APITestCase):
-    def test_create_user(self):
+    @patch("customuser.views.send_registration_confirmation_email")
+    def test_create_user(self, send_registration_confirmation_email):
         url = reverse("api:user-api:api-root")  # /api/user/
         payload = {
             "username": "JohnDoe",
@@ -20,6 +22,7 @@ class CustomUserApiTests(APITestCase):
         self.assertEqual(CustomUser.objects.count(), 1)
         user = CustomUser.objects.get(username="JohnDoe")
         self.assertEqual(user.email, "john@example.com")
+        send_registration_confirmation_email.assert_called_once_with(user)
 
 
 class CustomUserListTests(APITestCase):
