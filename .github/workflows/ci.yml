@@ -158,8 +158,14 @@ jobs:
 
       - name: Run unit tests
         env:
-          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
-        run: npm test -- --watch=false --browsers=ChromeHeadless
+          CHROME_REAL_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: |
+          cat <<'EOF' > chrome-no-sandbox
+          #!/usr/bin/env bash
+          exec "$CHROME_REAL_BIN" --no-sandbox --disable-dev-shm-usage "$@"
+          EOF
+          chmod +x chrome-no-sandbox
+          CHROME_BIN="$PWD/chrome-no-sandbox" npm test -- --watch=false --browsers=ChromeHeadless
 
       - name: Run production build
         run: npm run build
