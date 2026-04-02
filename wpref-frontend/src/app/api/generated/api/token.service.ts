@@ -17,9 +17,7 @@ import { CustomHttpParameterCodec }                          from '../encoder';
 import { Observable }                                        from 'rxjs';
 
 // @ts-ignore
-import { TokenObtainPairDto } from '../model/token-obtain-pair';
-// @ts-ignore
-import { TokenObtainPairRequestDto } from '../model/token-obtain-pair-request';
+import { EmailConfirmedTokenObtainPairRequestDto } from '../model/email-confirmed-token-obtain-pair-request';
 // @ts-ignore
 import { TokenRefreshDto } from '../model/token-refresh';
 // @ts-ignore
@@ -32,7 +30,7 @@ import { BaseService } from '../api.base.service';
 
 
 export interface TokenCreateRequestParams {
-    tokenObtainPairRequestDto: TokenObtainPairRequestDto;
+    emailConfirmedTokenObtainPairRequestDto: EmailConfirmedTokenObtainPairRequestDto;
 }
 
 export interface TokenRefreshCreateRequestParams {
@@ -56,19 +54,18 @@ export class TokenApi extends BaseService {
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      */
-    public tokenCreate(requestParameters: TokenCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<TokenObtainPairDto>;
-    public tokenCreate(requestParameters: TokenCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<TokenObtainPairDto>>;
-    public tokenCreate(requestParameters: TokenCreateRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<TokenObtainPairDto>>;
-    public tokenCreate(requestParameters: TokenCreateRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
-        const tokenObtainPairRequestDto = requestParameters?.tokenObtainPairRequestDto;
-        if (tokenObtainPairRequestDto === null || tokenObtainPairRequestDto === undefined) {
-            throw new Error('Required parameter tokenObtainPairRequestDto was null or undefined when calling tokenCreate.');
+    public tokenCreate(requestParameters: TokenCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined, context?: HttpContext, transferCache?: boolean}): Observable<any>;
+    public tokenCreate(requestParameters: TokenCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined, context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
+    public tokenCreate(requestParameters: TokenCreateRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined, context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<any>>;
+    public tokenCreate(requestParameters: TokenCreateRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined, context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const emailConfirmedTokenObtainPairRequestDto = requestParameters?.emailConfirmedTokenObtainPairRequestDto;
+        if (emailConfirmedTokenObtainPairRequestDto === null || emailConfirmedTokenObtainPairRequestDto === undefined) {
+            throw new Error('Required parameter emailConfirmedTokenObtainPairRequestDto was null or undefined when calling tokenCreate.');
         }
 
         let localVarHeaders = this.defaultHeaders;
 
         const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
-            'application/json'
         ]);
         if (localVarHttpHeaderAcceptSelected !== undefined) {
             localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
@@ -103,10 +100,10 @@ export class TokenApi extends BaseService {
 
         let localVarPath = `/api/token/`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<TokenObtainPairDto>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<any>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
-                body: tokenObtainPairRequestDto,
+                body: emailConfirmedTokenObtainPairRequestDto,
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,

@@ -2,7 +2,7 @@ import {expect, test} from '@playwright/test';
 
 import {mockApi, seedAuthenticatedSession} from './support/mock-api';
 
-test('compose un quiz depuis un domaine avec ordre et ponderation personnalises', async ({page}) => {
+test('compose un quiz depuis un domaine avec ponderation personnalisee', async ({page}) => {
   await seedAuthenticatedSession(page);
   const api = await mockApi(page, {
     questions: [
@@ -87,7 +87,7 @@ test('compose un quiz depuis un domaine avec ordre et ponderation personnalises'
 
   await page.goto('/quiz/add');
 
-  await expect(page.getByRole('heading', {name: 'Composer un quiz'})).toBeVisible();
+  await expect(page.getByRole('heading', {name: /template de quiz/i})).toBeVisible();
   await page.locator('input[formControlName="title"]').fill('Quiz compose E2E');
 
   const questionCards = page.locator('.question-card');
@@ -95,20 +95,16 @@ test('compose un quiz depuis un domaine avec ordre et ponderation personnalises'
   await questionCards.filter({hasText: 'Question B'}).getByRole('button', {name: 'Ajouter'}).click();
 
   const selectedCards = page.locator('.selected-card');
-  await selectedCards
-    .filter({hasText: 'Question B'})
-    .locator('label', {hasText: 'Ordre'})
-    .locator('input')
-    .fill('1');
+  await selectedCards.filter({hasText: 'Question B'}).getByRole('button').nth(1).click();
   await selectedCards
     .filter({hasText: 'Question A'})
     .locator('label', {hasText: 'Poids'})
     .locator('input')
     .fill('3');
 
-  await page.getByRole('button', {name: 'Créer le quiz'}).click();
+  await page.getByRole('button', {name: /template/i}).click();
 
-  await expect(page).toHaveURL(/\/quiz\/701$/);
+  await expect(page).toHaveURL(/\/quiz\/list$/);
   expect(api.requests.quizTemplateCreate).toHaveLength(1);
   expect(api.requests.quizTemplateCreate[0]).toMatchObject({
     domain: 1,
@@ -129,7 +125,5 @@ test('compose un quiz depuis un domaine avec ordre et ponderation personnalises'
       weight: 3,
     },
   ]);
-  expect(api.requests.quizCreate).toEqual([
-    {quiz_template_id: 950},
-  ]);
+  expect(api.requests.quizCreate).toEqual([]);
 });

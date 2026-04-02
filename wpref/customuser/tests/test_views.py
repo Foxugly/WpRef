@@ -161,36 +161,23 @@ class UserViewsTests(APITestCase):
         FRONTEND_BASE_URL="http://127.0.0.1:4200",
         PASSWORD_RESET_FRONTEND_PATH_PREFIX="/reset-password",
     )
-    def test_password_reset_request_always_returns_200_and_passes_frontend_link_context(self):
-        with patch("customuser.services.PasswordResetForm") as MockForm:
-            instance = MockForm.return_value
-            instance.is_valid.return_value = True
-
+    def test_password_reset_request_always_returns_200_and_enqueues_password_reset_mail(self):
+        with patch("customuser.services.send_password_reset_email") as send_password_reset_email:
             res = self.client.post(self.PASSWORD_RESET_REQUEST_URL, {"email": "u1@example.com"}, format="json")
             self.assertEqual(res.status_code, status.HTTP_200_OK)
             self.assertIn("detail", res.data)
-
-            instance.save.assert_called_once()
-            kwargs = instance.save.call_args.kwargs
-            self.assertEqual(kwargs["from_email"], "noreply@example.com")
-            self.assertEqual(kwargs["extra_email_context"]["frontend_base_url"], "http://127.0.0.1:4200")
-            self.assertEqual(kwargs["extra_email_context"]["password_reset_path_prefix"], "/reset-password")
+            send_password_reset_email.assert_called_once_with(self.u1)
 
     def test_password_reset_request_returns_200_even_if_form_invalid(self):
-        with patch("customuser.services.PasswordResetForm") as MockForm:
-            instance = MockForm.return_value
-            instance.is_valid.return_value = False
-
+        with patch("customuser.services.send_password_reset_email") as send_password_reset_email:
             res = self.client.post(self.PASSWORD_RESET_REQUEST_URL, {"email": "u1@example.com"}, format="json")
             self.assertEqual(res.status_code, status.HTTP_200_OK)
-            instance.save.assert_not_called()
+            send_password_reset_email.assert_called_once_with(self.u1)
 
     def test_password_reset_request_marks_user_as_new_password_asked(self):
         self.assertFalse(self.u1.new_password_asked)
 
-        with patch("customuser.services.PasswordResetForm") as MockForm:
-            instance = MockForm.return_value
-            instance.is_valid.return_value = False
+        with patch("customuser.services.send_password_reset_email"):
             res = self.client.post(self.PASSWORD_RESET_REQUEST_URL, {"email": "u1@example.com"}, format="json")
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)

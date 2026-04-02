@@ -1,0 +1,31 @@
+<div class="toolbar">
+  <div class="toolbar__title">
+    <h2>Quizz</h2>
+    <p>Accede a tes templates et a tes sessions depuis une seule vue.</p>
+  </div>
+
+  <div class="toolbar__actions">
+    <input
+      [ngModel]="search()"
+      (ngModelChange)="searchChange.emit($event)"
+      pInputText
+      placeholder="Rechercher..."
+    >
+    @if (isAdmin()) {
+      <p-button
+        (onClick)="compose.emit()"
+        icon="pi pi-plus"
+        id="btn_compose_quiz"
+        label="Nouveau template"
+        severity="primary"
+      ></p-button>
+      <p-button
+        (onClick)="quickCreate.emit()"
+        icon="pi pi-plus"
+        id="btn_add_subject"
+        label="Rapide"
+        severity="secondary"
+      ></p-button>
+    }
+  </div>
+</div>

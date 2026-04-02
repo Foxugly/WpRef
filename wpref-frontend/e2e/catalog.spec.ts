@@ -31,14 +31,14 @@ test.describe('catalog pages', () => {
     await page.locator('#btn_view_question').first().click();
 
     await expect(page).toHaveURL(/\/question\/200\/view$/);
-    await expect(page.getByRole('heading', {name: 'Détail de la question'})).toBeVisible();
+    await expect(page.getByRole('heading', {name: /question/i})).toBeVisible();
   });
 
   test('rend les medias image, video et YouTube sur le detail de question', async ({page}) => {
     await page.goto('/question/200/view');
 
     await expect(page.getByText('Bonne reponse')).toBeVisible();
-    await expect(page.locator('img.quiz-question__media-image')).toHaveAttribute('src', /image\.png/);
+    await expect(page.locator('p-image.quiz-question__media-image img')).toHaveAttribute('src', /image\.png/);
     await expect(page.locator('video.quiz-question__media-video')).toHaveAttribute('src', /video\.mp4/);
     await expect(page.locator('iframe')).toHaveAttribute('src', /youtube\.com\/embed\/dQw4w9WgXcQ/);
   });

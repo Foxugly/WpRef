@@ -4,10 +4,13 @@ type JsonObject = Record<string, unknown>;
 
 type MockApiOptions = {
   me?: JsonObject;
+  users?: JsonObject[];
   domains?: JsonObject[];
   domainDetails?: Record<string, JsonObject>;
   subjects?: JsonObject[];
   questions?: JsonObject[];
+  templates?: JsonObject[];
+  templateSessions?: Record<string, JsonObject[]>;
   questionDetails?: Record<string, JsonObject>;
   quizzes?: JsonObject[];
   quizDetails?: Record<string, JsonObject>;
@@ -15,18 +18,21 @@ type MockApiOptions = {
 };
 
 export type MockApiState = {
-  requests: {
-    login: JsonObject[];
-    passwordReset: JsonObject[];
-    passwordResetConfirm: JsonObject[];
-    mediaCreate: JsonObject[];
-    questionCreate: JsonObject[];
-    quizTemplateCreate: JsonObject[];
-    quizTemplateQuestionCreate: JsonObject[];
-    quizCreate: JsonObject[];
-    quizAnswerCreate: JsonObject[];
-    quizAnswerUpdate: JsonObject[];
-  };
+    requests: {
+      login: JsonObject[];
+      register: JsonObject[];
+      confirmEmail: JsonObject[];
+      passwordReset: JsonObject[];
+      passwordResetConfirm: JsonObject[];
+      mediaCreate: JsonObject[];
+      questionCreate: JsonObject[];
+      quizTemplateCreate: JsonObject[];
+      quizTemplateQuestionCreate: JsonObject[];
+      quizCreate: JsonObject[];
+      quizTemplateBulkAssign: JsonObject[];
+      quizAnswerCreate: JsonObject[];
+      quizAnswerUpdate: JsonObject[];
+    };
 };
 
 const defaultMe = {
@@ -181,6 +187,45 @@ const defaultQuiz = {
   ],
 };
 
+const defaultTemplate = {
+  id: 950,
+  title: 'Template admin',
+  description: 'Template de demonstration',
+  mode: 'practice',
+  max_questions: 2,
+  questions_count: 2,
+  with_duration: true,
+  duration: 10,
+  active: true,
+  can_answer: true,
+  is_public: false,
+  created_by: 1,
+};
+
+const defaultPublicTemplate = {
+  id: 951,
+  title: 'Template public',
+  description: 'Template partage',
+  mode: 'practice',
+  max_questions: 3,
+  questions_count: 3,
+  with_duration: false,
+  duration: null,
+  active: true,
+  can_answer: true,
+  is_public: true,
+  created_by: 2,
+};
+
+const defaultAssignableUser = {
+  id: 2,
+  username: 'apprenant',
+  email: 'apprenant@example.test',
+  language: 'fr',
+  is_staff: false,
+  is_superuser: false,
+};
+
 function withCorsHeaders(extra?: Record<string, string>): Record<string, string> {
   return {
     'access-control-allow-origin': '*',
@@ -259,6 +304,8 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
   const state: MockApiState = {
     requests: {
       login: [],
+      register: [],
+      confirmEmail: [],
       passwordReset: [],
       passwordResetConfirm: [],
       mediaCreate: [],
@@ -266,14 +313,17 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
       quizTemplateCreate: [],
       quizTemplateQuestionCreate: [],
       quizCreate: [],
+      quizTemplateBulkAssign: [],
       quizAnswerCreate: [],
       quizAnswerUpdate: [],
     },
   };
 
+  const users = options.users ?? [defaultMe, defaultAssignableUser];
   const domains = options.domains ?? [defaultDomain];
   const subjects = options.subjects ?? [defaultSubject];
   const questions = options.questions ?? [defaultQuestion];
+  const templates = options.templates ?? [defaultTemplate, defaultPublicTemplate];
   const quizzes = options.quizzes ?? [defaultQuiz];
 
   const questionDetails: Record<string, JsonObject> = {
@@ -303,6 +353,21 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
   };
 
   const answersByOrder = options.answersByOrder ?? {};
+  const templateSessions = options.templateSessions ?? {
+    '950': [
+      {
+        id: 777,
+        quiz_template_title: 'Template admin',
+        user_summary: {id: 2, username: 'apprenant'},
+        started_at: '2026-03-30T12:01:00Z',
+        ended_at: '2026-03-30T12:10:00Z',
+        max_questions: 2,
+        total_answers: 2,
+        earned_score: 2,
+        max_score: 2,
+      },
+    ],
+  };
   let createdQuizTemplate: JsonObject | null = null;
   let createdQuiz: JsonObject | null = null;
 
@@ -323,6 +388,37 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
       const body = parseBody(request);
       state.requests.login.push(body);
       await fulfillJson(route, {access: 'test-access', refresh: 'test-refresh'}, 200);
+      return;
+    }
+
+    if (path === '/api/user/' && request.method() === 'POST') {
+      const body = parseBody(request);
+      state.requests.register.push(body);
+      await fulfillJson(route, {
+        id: 10,
+        username: body.username ?? 'new-user',
+        email: body.email ?? 'new@example.test',
+        first_name: body.first_name ?? '',
+        last_name: body.last_name ?? '',
+        language: body.language ?? 'fr',
+        is_staff: false,
+        is_superuser: false,
+        must_change_password: false,
+        new_password_asked: false,
+        email_confirmed: false,
+      }, 201);
+      return;
+    }
+
+    if (path === '/api/user/email/confirm/' && request.method() === 'POST') {
+      const body = parseBody(request);
+      state.requests.confirmEmail.push(body);
+      await fulfillJson(route, {detail: 'ok'}, 200);
+      return;
+    }
+
+    if (path === '/api/user/' && request.method() === 'GET') {
+      await fulfillJson(route, users, 200);
       return;
     }
 
@@ -399,6 +495,12 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
       return;
     }
 
+    if (path === '/api/quiz/template/' && request.method() === 'GET') {
+      const payload = createdQuizTemplate ? [createdQuizTemplate, ...templates] : templates;
+      await fulfillJson(route, payload, 200);
+      return;
+    }
+
     if (path === '/api/quiz/' && request.method() === 'POST') {
       const body = parseBody(request);
       state.requests.quizCreate.push(body);
@@ -448,6 +550,34 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
         ...body,
       };
       await fulfillJson(route, createdQuizTemplate, 201);
+      return;
+    }
+
+    if (path === '/api/quiz/bulk-create-from-template/' && request.method() === 'POST') {
+      const body = parseBody(request);
+      state.requests.quizTemplateBulkAssign.push(body);
+      await fulfillJson(route, [
+        {
+          id: 778,
+          quiz_template: Number(body.quiz_template_id ?? 950),
+          quiz_template_title: 'Template admin',
+          user: 2,
+          user_summary: {id: 2, username: 'apprenant'},
+          mode: 'practice',
+          max_questions: 2,
+          created_at: '2026-03-30T12:05:00Z',
+          started_at: null,
+          ended_at: null,
+          active: false,
+          can_answer: true,
+        },
+      ], 201);
+      return;
+    }
+
+    if (path.match(/^\/api\/quiz\/template\/\d+\/sessions\/$/) && request.method() === 'GET') {
+      const templateId = path.split('/').filter(Boolean).at(-2) ?? '';
+      await fulfillJson(route, templateSessions[templateId] ?? [], 200);
       return;
     }
 

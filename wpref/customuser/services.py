@@ -1,8 +1,6 @@
 from django.contrib.auth import get_user_model
-from django.conf import settings
-from django.contrib.auth.forms import PasswordResetForm
 
-from core.emailing import send_registration_confirmation_email
+from core.mailers import send_password_reset_email, send_registration_confirmation_email
 
 from .tokens import resolve_user_from_uid, token_is_valid
 
@@ -17,22 +15,12 @@ def register_user(serializer):
 
 def request_password_reset(email: str, request) -> None:
     user = User.objects.filter(email__iexact=email).first()
-    if user:
-        user.new_password_asked = True
-        user.save(update_fields=["new_password_asked"])
+    if not user:
+        return
 
-    form = PasswordResetForm(data={"email": email})
-    if form.is_valid():
-        form.save(
-            request=request,
-            use_https=request.is_secure(),
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
-            email_template_name="password_reset_email.html",
-            extra_email_context={
-                "frontend_base_url": settings.FRONTEND_BASE_URL,
-                "password_reset_path_prefix": settings.PASSWORD_RESET_FRONTEND_PATH_PREFIX,
-            },
-        )
+    user.new_password_asked = True
+    user.save(update_fields=["new_password_asked"])
+    send_password_reset_email(user)
 
 
 def confirm_password_reset(uid: str, token: str, new_password: str):

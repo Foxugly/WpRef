@@ -8,6 +8,7 @@
 
 wpref/.env
 wpref/db.sqlite3
+wpref/db.fullstack.sqlite3
 wpref/.coverage
 wpref/htmlcov/
 wpref/media/question_media/*
@@ -17,6 +18,8 @@ wpref-frontend/node_modules/
 wpref-frontend/dist/
 wpref-frontend/.angular/
 wpref-frontend/coverage/
+wpref-frontend/test-results/
+wpref-frontend/playwright-report/
 
 .DS_Store
 Thumbs.db

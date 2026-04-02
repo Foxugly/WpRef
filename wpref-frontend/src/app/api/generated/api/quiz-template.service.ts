@@ -23,6 +23,8 @@ import { PatchedQuizQuestionPartialRequestDto } from '../model/patched-quiz-ques
 // @ts-ignore
 import { PatchedQuizTemplatePartialRequestDto } from '../model/patched-quiz-template-partial-request';
 // @ts-ignore
+import { QuizAssignmentListDto } from '../model/quiz-assignment-list';
+// @ts-ignore
 import { QuizQuestionReadDto } from '../model/quiz-question-read';
 // @ts-ignore
 import { QuizQuestionWriteRequestDto } from '../model/quiz-question-write-request';
@@ -86,6 +88,10 @@ export interface QuizTemplateQuestionUpdateRequestParams {
 }
 
 export interface QuizTemplateRetrieveRequestParams {
+    qtId: number;
+}
+
+export interface QuizTemplateSessionsListRequestParams {
     qtId: number;
 }
 
@@ -891,6 +897,65 @@ export class QuizTemplateApi extends BaseService {
         let localVarPath = `/api/quiz/template/${this.configuration.encodeParam({name: "qtId", value: qtId, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}/`;
         const { basePath, withCredentials } = this.configuration;
         return this.httpClient.request<QuizTemplateDto>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Lister les sessions envoyées pour un template
+     * @endpoint get /api/quiz/template/{qt_id}/sessions/
+     * @param requestParameters
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     */
+    public quizTemplateSessionsList(requestParameters: QuizTemplateSessionsListRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<QuizAssignmentListDto>>;
+    public quizTemplateSessionsList(requestParameters: QuizTemplateSessionsListRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<QuizAssignmentListDto>>>;
+    public quizTemplateSessionsList(requestParameters: QuizTemplateSessionsListRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<QuizAssignmentListDto>>>;
+    public quizTemplateSessionsList(requestParameters: QuizTemplateSessionsListRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const qtId = requestParameters?.qtId;
+        if (qtId === null || qtId === undefined) {
+            throw new Error('Required parameter qtId was null or undefined when calling quizTemplateSessionsList.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (jwtAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('jwtAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api/quiz/template/${this.configuration.encodeParam({name: "qtId", value: qtId, in: "path", style: "simple", explode: false, dataType: "number", dataFormat: undefined})}/sessions/`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<Array<QuizAssignmentListDto>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,

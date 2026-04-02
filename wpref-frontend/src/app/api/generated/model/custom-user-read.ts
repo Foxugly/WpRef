@@ -20,6 +20,9 @@ export interface CustomUserReadDto {
     first_name?: string;
     last_name?: string;
     language?: LanguageEnumDto;
+    readonly email_confirmed: boolean;
+    readonly must_change_password: boolean;
+    readonly new_password_asked: boolean;
     /**
      * Designates that this user has all permissions without explicitly assigning them.
      */

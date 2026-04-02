@@ -8,6 +8,27 @@
   margin: 0 0 1rem;
 }
 
-:host ::ng-deep .w-full {
-  width: 100%;
+.recipient-list {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.recipient-row {
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.75rem 0.875rem;
+}
+
+.recipient-row__identity {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.recipient-row__identity small {
+  color: #6b7280;
 }

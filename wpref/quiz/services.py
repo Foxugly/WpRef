@@ -4,7 +4,14 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Quiz, QuizQuestionAnswer
-from .notifications import notify_quiz_assigned, notify_quiz_completed
+from .notifications import (
+    notify_quiz_assigned_on_commit,
+    notify_quiz_completed_on_commit,
+)
+
+# Backward-compatible names still referenced by some tests and patch points.
+notify_quiz_assigned = notify_quiz_assigned_on_commit
+notify_quiz_completed = notify_quiz_completed_on_commit
 
 
 def create_quizzes_from_template(*, quiz_template, users, validate_target_user) -> list[Quiz]:

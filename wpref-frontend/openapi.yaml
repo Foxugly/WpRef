@@ -1762,6 +1762,29 @@ paths:
       responses:
         '204':
           description: No Content
+  /api/quiz/template/{qt_id}/sessions/:
+    get:
+      operationId: quiz_template_sessions_list
+      summary: Lister les sessions envoyées pour un template
+      parameters:
+      - in: path
+        name: qt_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - QuizTemplate
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuizAssignmentList'
+          description: ''
   /api/quiz/template/generate-from-subjects/:
     post:
       operationId: quiz_template_generate_from_subjects_create
@@ -2178,21 +2201,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenObtainPairRequest'
+              $ref: '#/components/schemas/EmailConfirmedTokenObtainPairRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenObtainPairRequest'
+              $ref: '#/components/schemas/EmailConfirmedTokenObtainPairRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenObtainPairRequest'
+              $ref: '#/components/schemas/EmailConfirmedTokenObtainPairRequest'
         required: true
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenObtainPair'
-          description: ''
+          description: No response body
   /api/token/refresh/:
     post:
       operationId: token_refresh_create
@@ -2497,6 +2516,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
           description: Not found
+  /api/user/email/confirm/:
+    post:
+      operationId: user_email_confirm_create
+      summary: Confirmer une adresse email
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailConfirmationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailConfirmationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailConfirmationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetOK'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Lien invalide / token invalide
   /api/user/me/:
     get:
       operationId: user_me_retrieve
@@ -2784,6 +2837,10 @@ components:
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
+        must_change_password:
+          type: boolean
+        new_password_asked:
+          type: boolean
     CustomUserCreateRequest:
       type: object
       properties:
@@ -2838,6 +2895,15 @@ components:
           maxLength: 150
         language:
           $ref: '#/components/schemas/LanguageEnum'
+        email_confirmed:
+          type: boolean
+          readOnly: true
+        must_change_password:
+          type: boolean
+          readOnly: true
+        new_password_asked:
+          type: boolean
+          readOnly: true
         is_superuser:
           type: boolean
           readOnly: true
@@ -2873,11 +2939,14 @@ components:
           readOnly: true
       required:
       - current_domain_title
+      - email_confirmed
       - id
       - is_active
       - is_staff
       - is_superuser
       - managed_domain_ids
+      - must_change_password
+      - new_password_asked
       - owned_domain_ids
       - username
     DomainDetail:
@@ -3006,6 +3075,32 @@ components:
       - allowed_languages
       - staff
       - translations
+    EmailConfirmationRequest:
+      type: object
+      properties:
+        uid:
+          type: string
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+      required:
+      - token
+      - uid
+    EmailConfirmedTokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
     ErrorDetail:
       type: object
       properties:
@@ -3374,6 +3469,10 @@ components:
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
+        must_change_password:
+          type: boolean
+        new_password_asked:
+          type: boolean
     PatchedCustomUserProfileUpdateRequest:
       type: object
       properties:
@@ -4190,6 +4289,93 @@ components:
       - status
       - unread
       - unread_count
+    QuizAssignmentList:
+      type: object
+      description: RÃ©sumÃ© lÃ©ger d'une session de quiz pour la liste.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        domain:
+          type: integer
+          nullable: true
+        quiz_template:
+          type: integer
+        quiz_template_title:
+          type: string
+          readOnly: true
+        quiz_template_description:
+          type: string
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+          nullable: true
+        user_summary:
+          allOf:
+          - $ref: '#/components/schemas/UserSummary'
+          nullable: true
+          readOnly: true
+        mode:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        active:
+          type: boolean
+        can_answer:
+          type: boolean
+          readOnly: true
+        max_questions:
+          type: integer
+          readOnly: true
+        with_duration:
+          type: boolean
+          readOnly: true
+        duration:
+          type: integer
+          readOnly: true
+        earned_score:
+          type: number
+          format: double
+          readOnly: true
+        max_score:
+          type: number
+          format: double
+          readOnly: true
+        total_answers:
+          type: integer
+          readOnly: true
+        correct_answers:
+          type: integer
+          readOnly: true
+      required:
+      - can_answer
+      - correct_answers
+      - created_at
+      - duration
+      - earned_score
+      - id
+      - max_questions
+      - max_score
+      - mode
+      - quiz_template
+      - quiz_template_description
+      - quiz_template_title
+      - total_answers
+      - user
+      - user_summary
+      - with_duration
     QuizList:
       type: object
       description: RÃ©sumÃ© lÃ©ger d'une session de quiz pour la liste.
@@ -4695,32 +4881,6 @@ components:
       required:
       - domain
       - translations
-    TokenObtainPair:
-      type: object
-      properties:
-        access:
-          type: string
-          readOnly: true
-        refresh:
-          type: string
-          readOnly: true
-      required:
-      - access
-      - refresh
-    TokenObtainPairRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          writeOnly: true
-          minLength: 1
-        password:
-          type: string
-          writeOnly: true
-          minLength: 1
-      required:
-      - password
-      - username
     TokenRefresh:
       type: object
       properties:

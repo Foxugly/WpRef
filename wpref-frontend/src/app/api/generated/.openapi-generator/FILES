@@ -30,6 +30,8 @@ model/domain-detail.ts
 model/domain-name-summary.ts
 model/domain-read.ts
 model/domain-write-request.ts
+model/email-confirmation-request.ts
+model/email-confirmed-token-obtain-pair-request.ts
 model/error-detail.ts
 model/format-enum.ts
 model/generate-from-subjects-input-request.ts
@@ -82,6 +84,7 @@ model/quiz-alert-message.ts
 model/quiz-alert-thread-create-request.ts
 model/quiz-alert-thread-detail.ts
 model/quiz-alert-thread-list.ts
+model/quiz-assignment-list.ts
 model/quiz-list.ts
 model/quiz-question-answer-write-request.ts
 model/quiz-question-answer.ts
@@ -98,8 +101,6 @@ model/status-enum.ts
 model/subject-detail.ts
 model/subject-read.ts
 model/subject-write-request.ts
-model/token-obtain-pair-request.ts
-model/token-obtain-pair.ts
 model/token-refresh-request.ts
 model/token-refresh.ts
 model/translate-batch-request-request.ts

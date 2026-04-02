@@ -56,3 +56,23 @@ test('soumet la confirmation de reset password', async ({page}) => {
     },
   ]);
 });
+
+test('cree un compte puis confirme son email', async ({page}) => {
+  const api = await mockApi(page);
+
+  await page.goto('/register');
+  await page.locator('#username').fill('new-user');
+  await page.locator('#email').fill('new-user@example.test');
+  await page.locator('#first_name').fill('New');
+  await page.locator('#last_name').fill('User');
+  await page.locator('input[type="password"]').nth(0).fill('secret123');
+  await page.locator('input[type="password"]').nth(1).fill('secret123');
+  await page.getByRole('button', {name: /compte/i}).click();
+
+  await expect(page.getByText(/verifiez votre boite mail/i)).toBeVisible();
+  expect(api.requests.register).toHaveLength(1);
+
+  await page.goto('/user/confirm-email/uid-1/token-1');
+  await expect(page.getByRole('alert').filter({hasText: /ok|confirmee/i})).toBeVisible();
+  expect(api.requests.confirmEmail).toEqual([{uid: 'uid-1', token: 'token-1'}]);
+});

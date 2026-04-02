@@ -20,6 +20,8 @@ export interface CustomUserAdminUpdateRequestDto {
      * Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
      */
     is_active?: boolean;
+    must_change_password?: boolean;
+    new_password_asked?: boolean;
 }
 
 

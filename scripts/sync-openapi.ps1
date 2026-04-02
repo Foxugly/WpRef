@@ -3,6 +3,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $repoRoot "wpref"
 $frontendDir = Join-Path $repoRoot "wpref-frontend"
+$venvPython = Join-Path $repoRoot ".venv\\Scripts\\python.exe"
+$pythonExe = if (Test-Path $venvPython) { $venvPython } else { "python" }
 $generatorArgs = @(
     "openapi-generator-cli",
     "generate",
@@ -14,7 +16,7 @@ $generatorArgs = @(
 
 Push-Location $backendDir
 try {
-    python manage.py spectacular --file openapi.yaml
+    & $pythonExe manage.py spectacular --file openapi.yaml
     Copy-Item openapi.yaml (Join-Path $frontendDir "openapi.yaml") -Force
 }
 finally {

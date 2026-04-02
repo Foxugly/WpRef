@@ -61,6 +61,9 @@ class MyModelViewSet(viewsets.ModelViewSet):
         """
         Loggue les erreurs inattendues en exception et les erreurs API attendues en debug.
         """
+        if isinstance(exc, Http404):
+            exc = NotFound()
+
         if isinstance(exc, APIException):
             logger.debug(
                 "API exception in %s (action=%s, user=%s): %s",
@@ -76,6 +79,4 @@ class MyModelViewSet(viewsets.ModelViewSet):
                 getattr(self, "action", None),
                 getattr(self.request.user, "id", None),
             )
-        if isinstance(exc, Http404):
-            exc = NotFound()
         return super().handle_exception(exc)

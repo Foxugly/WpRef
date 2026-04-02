@@ -13,17 +13,22 @@
         <strong>{{ selectedTemplate.title }}</strong>.
       </p>
 
-      <p-multiSelect
-        [ngModel]="selectedRecipientIds()"
-        (ngModelChange)="onRecipientsChange($event)"
-        [options]="users()"
-        appendTo="body"
-        display="chip"
-        optionLabel="username"
-        optionValue="id"
-        placeholder="Choisir des utilisateurs"
-        styleClass="w-full"
-      ></p-multiSelect>
+      <div class="recipient-list">
+        @for (user of users(); track user.id) {
+          <label class="recipient-row">
+            <p-checkbox
+              [binary]="true"
+              [inputId]="'assign-user-' + user.id"
+              [ngModel]="selectedRecipientIds().includes(user.id)"
+              (ngModelChange)="toggleRecipient(user.id, !!$event)"
+            ></p-checkbox>
+            <span class="recipient-row__identity">
+              <strong>{{ user.username }}</strong>
+              <small>{{ user.email }}</small>
+            </span>
+          </label>
+        }
+      </div>
     </div>
   }
 

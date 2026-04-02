@@ -8,12 +8,6 @@ import {CustomUserReadDto} from '../../api/generated/model/custom-user-read';
 import {isSupportedLanguage, SupportedLanguage} from '../../../environments/language';
 import {resolveApiBaseUrl} from '../../shared/api/runtime-api-base-url';
 
-type UserSecurityFlags = CustomUserReadDto & {
-  email_confirmed?: boolean;
-  must_change_password?: boolean;
-  new_password_asked?: boolean;
-};
-
 @Injectable({providedIn: 'root'})
 export class UserService {
   currentUser = signal<CustomUserReadDto | null>(null);
@@ -37,15 +31,13 @@ export class UserService {
   }
 
   shouldForcePasswordChange(user: CustomUserReadDto | null | undefined = this.currentUser()): boolean {
-    const securedUser = user as UserSecurityFlags | null | undefined;
-    return !!securedUser && (
-      securedUser.must_change_password === true || securedUser.new_password_asked === true
+    return !!user && (
+      user.must_change_password === true || user.new_password_asked === true
     );
   }
 
   shouldConfirmEmail(user: CustomUserReadDto | null | undefined = this.currentUser()): boolean {
-    const securedUser = user as UserSecurityFlags | null | undefined;
-    return !!securedUser && securedUser.email_confirmed === false;
+    return !!user && user.email_confirmed === false;
   }
 
   list(): Observable<CustomUserReadDto[]> {

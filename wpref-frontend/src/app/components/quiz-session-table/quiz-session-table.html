@@ -1,0 +1,60 @@
+<section class="list-section">
+  <div class="section-header">
+    <div>
+      <h3>Quiz en cours ou termines</h3>
+      <p>Reprends un quiz en cours ou consulte une session deja repondue.</p>
+    </div>
+  </div>
+
+  <p-table [value]="quizzes()" showGridlines size="small" stripedRows>
+    <ng-template #header>
+      <tr>
+        <th>Titre</th>
+        <th>Statut</th>
+        <th>Mode</th>
+        <th>Questions</th>
+        <th>Demarre le</th>
+        <th>Termine le</th>
+        <th>Note</th>
+        <th style="width: 120px;">Actions</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-quiz>
+      <tr>
+        <td>{{ quiz.quiz_template_title }}</td>
+        <td class="center-cell">{{ statusLabel(quiz.status) }}</td>
+        <td class="center-cell">{{ quiz.mode }}</td>
+        <td class="center-cell">{{ quiz.max_questions }}</td>
+        <td class="center-cell">{{ quiz.started_at | date : 'short' }}</td>
+        <td class="center-cell">{{ quiz.ended_at | date : 'short' }}</td>
+        <td class="center-cell">
+          @if (quiz.status === 'answered' && quiz.earned_score !== null && quiz.max_score !== null) {
+            {{ quiz.earned_score }} / {{ quiz.max_score }}
+          } @else {
+            -
+          }
+        </td>
+        <td class="row-actions">
+          <p-button
+            (onClick)="viewQuiz.emit(quiz.id)"
+            [icon]="quiz.status === 'answered' ? 'pi pi-eye' : 'pi pi-play'"
+            [label]="quiz.status === 'answered' ? 'Voir' : 'Continuer'"
+            [severity]="quiz.status === 'answered' ? 'secondary' : 'primary'"
+            size="small"
+          ></p-button>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td class="empty-cell" colspan="8">
+          @if (loading()) {
+            Chargement...
+          } @else {
+            Aucun quiz en cours ou repondu.
+          }
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>

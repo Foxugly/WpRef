@@ -23,7 +23,20 @@ from wpref.tools import ErrorDetailSerializer
 from wpref.tools import MyModelViewSet
 
 from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer, QuizAlertThread
+from .access import (
+    user_can_access_template,
+    user_can_create_quiz_from_template,
+    user_can_manage_template_assignments,
+    validate_target_user_domain,
+)
 from .permissions import IsOwnerOrStaff, IsStaffOrSuperuser, IsQuizAlertParticipant
+from .querysets import (
+    quiz_answer_queryset_for_user,
+    accessible_quiz_template_queryset,
+    quiz_queryset_for_user,
+    quiz_template_queryset,
+    template_sessions_queryset,
+)
 from .alerting import (
     alert_thread_queryset_for_user,
     require_alert_owner,
@@ -58,6 +71,10 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def not_found_response():
+    return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 # ---------- QuizTemplate ----------
@@ -98,7 +115,7 @@ logger = logging.getLogger(__name__)
     ),
 )
 class QuizTemplateViewSet(MyModelViewSet):
-    queryset = QuizTemplate.objects.all().prefetch_related("quiz_questions__question")
+    queryset = quiz_template_queryset()
     serializer_class = QuizTemplateSerializer
     lookup_field = "pk"
     lookup_url_kwarg = "qt_id"
@@ -121,36 +138,6 @@ class QuizTemplateViewSet(MyModelViewSet):
             return QuizTemplatePartialSerializer
         return QuizTemplateWriteSerializer
 
-    def _user_can_access_template(self, user, quiz_template: QuizTemplate) -> bool:
-        if user.is_staff or user.is_superuser:
-            return True
-        if quiz_template.quiz.filter(user=user).exists():
-            return True
-        if not quiz_template.is_public:
-            return False
-        return self._user_matches_template_domain(user, quiz_template)
-
-    def _user_matches_template_domain(self, user, quiz_template: QuizTemplate) -> bool:
-        if quiz_template.domain_id is None:
-            return True
-        if getattr(user, "current_domain_id", None) is None:
-            return True
-        if getattr(user, "current_domain_id", None) == quiz_template.domain_id:
-            return True
-        if hasattr(user, "can_manage_domain"):
-            return user.can_manage_domain(quiz_template.domain)
-        return False
-
-    def _user_can_manage_template_assignments(self, user, quiz_template: QuizTemplate) -> bool:
-        return bool(
-            user
-            and (
-                user.is_staff
-                or user.is_superuser
-                or quiz_template.created_by_id == user.id
-            )
-        )
-
     # ==========================================================
     # CRUD NATIF : SURCHARGES
     # ==========================================================
@@ -165,8 +152,7 @@ class QuizTemplateViewSet(MyModelViewSet):
         if request.user.is_staff or request.user.is_superuser:
             return super().list(request, *args, **kwargs)
 
-        qs = list(self.get_queryset())
-        qs = [qt for qt in qs if self._user_can_access_template(request.user, qt)]
+        qs = accessible_quiz_template_queryset(request.user)
 
         page = self.paginate_queryset(qs)
         if page is not None:
@@ -185,8 +171,8 @@ class QuizTemplateViewSet(MyModelViewSet):
             extra={"pk": kwargs.get("qt_id")},
         )
         instance = self.get_object()
-        if not self._user_can_access_template(request.user, instance):
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not user_can_access_template(request.user, instance):
+            return not_found_response()
         serializer = self.get_serializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -198,15 +184,10 @@ class QuizTemplateViewSet(MyModelViewSet):
     @action(detail=True, methods=["get"], url_path="sessions")
     def sessions(self, request, *args, **kwargs):
         quiz_template = self.get_object()
-        if not self._user_can_manage_template_assignments(request.user, quiz_template):
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not user_can_manage_template_assignments(request.user, quiz_template):
+            return not_found_response()
 
-        sessions = (
-            quiz_template.quiz
-            .select_related("user", "quiz_template")
-            .prefetch_related("answers")
-            .order_by("-created_at", "-id")
-        )
+        sessions = template_sessions_queryset(quiz_template)
         serializer = QuizAssignmentListSerializer(
             sessions,
             many=True,
@@ -689,18 +670,7 @@ class QuizViewSet(MyModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Quiz.objects.none()
-        qs = Quiz.objects.select_related("quiz_template", "user")
-        if self.action != "list":
-            qs = qs.prefetch_related(
-                "answers__selected_options",
-                "quiz_template__quiz_questions__question__answer_options",
-                "quiz_template__quiz_questions__question__media__asset",
-                "quiz_template__quiz_questions__question__subjects",
-            )
-        user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return qs
-        return qs.filter(user=user)
+        return quiz_queryset_for_user(self.request.user, include_details=self.action != "list")
 
     def get_permissions(self):
         """
@@ -716,43 +686,6 @@ class QuizViewSet(MyModelViewSet):
     def _expire_quiz_if_needed(self, quiz: Quiz) -> Quiz:
         quiz.expire_if_needed()
         return quiz
-
-    def _user_matches_template_domain(self, user, quiz_template: QuizTemplate) -> bool:
-        if quiz_template.domain_id is None:
-            return True
-        if getattr(user, "current_domain_id", None) is None:
-            return True
-        if getattr(user, "current_domain_id", None) == quiz_template.domain_id:
-            return True
-        if hasattr(user, "can_manage_domain"):
-            return user.can_manage_domain(quiz_template.domain)
-        return False
-
-    def _user_can_create_quiz_from_template(self, user, quiz_template: QuizTemplate) -> bool:
-        if user.is_staff or user.is_superuser:
-            return True
-        if quiz_template.created_by_id == user.id:
-            return True
-        if not quiz_template.is_public:
-            return False
-        return self._user_matches_template_domain(user, quiz_template) or getattr(user, "current_domain_id", None) is None
-
-    def _user_can_manage_template_assignments(self, user, quiz_template: QuizTemplate) -> bool:
-        return bool(
-            user
-            and (
-                user.is_staff
-                or user.is_superuser
-                or quiz_template.created_by_id == user.id
-            )
-        )
-
-    def _validate_target_user_domain(self, quiz_template: QuizTemplate, target_user):
-        if quiz_template.domain_id is None:
-            return
-        if self._user_matches_template_domain(target_user, quiz_template):
-            return
-        raise PermissionDenied("L'utilisateur ciblé n'appartient pas au même domaine que ce quiz.")
 
     # ==========================================================
     # CRUD NATIF : SURCHARGES
@@ -812,7 +745,7 @@ class QuizViewSet(MyModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if not self._user_can_create_quiz_from_template(request.user, qt):
+        if not user_can_create_quiz_from_template(request.user, qt):
             logger.warning("create: template forbidden user_id=%s qt_id=%s", request.user.id, qt.id)
             return Response(
                 {"detail": "QuizTemplate introuvable."},
@@ -832,7 +765,7 @@ class QuizViewSet(MyModelViewSet):
             if not (request.user.is_staff or request.user.is_superuser):
                 raise PermissionDenied("Seul un admin peut créer un quiz pour un autre utilisateur.")
             target_user = get_object_or_404(get_user_model(), pk=user_id)
-            self._validate_target_user_domain(qt, target_user)
+            validate_target_user_domain(qt, target_user)
 
         quiz = Quiz.objects.create(
             domain=qt.domain,
@@ -898,14 +831,14 @@ class QuizViewSet(MyModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if not self._user_can_manage_template_assignments(request.user, qt):
+        if not user_can_manage_template_assignments(request.user, qt):
             raise PermissionDenied("Vous ne pouvez pas envoyer ce quiz.")
 
         users = get_user_model().objects.filter(id__in=user_ids)
         created = create_quizzes_from_template(
             quiz_template=qt,
             users=users,
-            validate_target_user=self._validate_target_user_domain,
+            validate_target_user=validate_target_user_domain,
         )
         logger.debug(
             "bulk_create_from_template: created=%s quiz_template_id=%s users_count=%s",
@@ -954,13 +887,13 @@ class QuizViewSet(MyModelViewSet):
 
             if quiz.started_at is None:
                 return Response(
-                    {"detail": "Impossible de cl??turer : le quiz n'a jamais ??t?? d??marr??."},
+                    {"detail": "Impossible de cloturer : le quiz n'a jamais ete demarre."},
                     status=status.HTTP_409_CONFLICT,
                 )
 
             if quiz.active is False:
                 return Response(
-                    {"detail": "Impossible de cl??turer : le quiz est d??j?? cl??tur??."},
+                    {"detail": "Impossible de cloturer : le quiz est deja cloture."},
                     status=status.HTTP_409_CONFLICT,
                 )
 
@@ -1211,17 +1144,7 @@ class QuizQuestionAnswerViewSet(MyModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return QuizQuestionAnswer.objects.none()
         quiz = self.get_quiz()
-
-        qs = (
-            QuizQuestionAnswer.objects
-            .select_related("quiz", "quizquestion__question")  # ✅ typo fixed
-            .prefetch_related("selected_options")
-            .filter(quiz_id=quiz.id)
-        )
-        user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return qs
-        return qs.filter(quiz__user=user)
+        return quiz_answer_queryset_for_user(self.request.user, quiz.id)
 
     def get_permissions(self):
         """

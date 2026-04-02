@@ -1,17 +1,10 @@
-<div class="toolbar">
-  <div class="toolbar__title">
-    <h2>Quizz</h2>
-    <p>Accede a tes templates et a tes sessions depuis une seule vue.</p>
-  </div>
-
-  <div class="actions">
-    <input (ngModelChange)="q.set($event)" [ngModel]="q()" pInputText placeholder="Rechercher...">
-    @if (isAdmin()) {
-      <p-button (onClick)="goCompose()" icon="pi pi-plus" id="btn_compose_quiz" label="Nouveau template" severity="primary"></p-button>
-      <p-button (onClick)="goNew()" icon="pi pi-plus" id="btn_add_subject" label="Rapide" severity="secondary"></p-button>
-    }
-  </div>
-</div>
+<app-quiz-list-toolbar
+  [search]="q()"
+  [isAdmin]="isAdmin()"
+  (searchChange)="q.set($event)"
+  (compose)="goCompose()"
+  (quickCreate)="goNew()"
+></app-quiz-list-toolbar>
 
 <p-tabs [value]="activeTab()" (valueChange)="setActiveTab($event)" class="quiz-tabs">
   <p-tablist>
@@ -21,230 +14,37 @@
 
   <p-tabpanels>
     <p-tabpanel value="templates">
-      <section class="list-section">
-        <div class="section-header">
-          <div>
-            <h3>Ceux que j'ai crees</h3>
-            <p>Templates dont tu es le createur.</p>
-          </div>
-        </div>
+      <app-quiz-template-table
+        title="Ceux que j'ai crees"
+        description="Templates dont tu es le createur."
+        [kind]="'created'"
+        [templates]="filteredCreatedTemplates()"
+        [loading]="loading()"
+        [creatingTemplateId]="creatingTemplateId()"
+        (createFromTemplate)="createFromTemplate($event)"
+        (openAssign)="openAssignDialog($event)"
+        (openResults)="openResultsDialog($event)"
+        (edit)="goEditTemplate($event)"
+        (remove)="goDeleteTemplate($event)"
+      ></app-quiz-template-table>
 
-        <p-table
-          [value]="filteredCreatedTemplates()"
-          showGridlines
-          size="small"
-          stripedRows
-        >
-          <ng-template #header>
-            <tr>
-              <th>Titre</th>
-              <th>Mode</th>
-              <th>Questions</th>
-              <th>Public</th>
-              <th>Actif</th>
-              <th>Disponible</th>
-              <th style="width: 280px;">Actions</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-template>
-            <tr>
-              <td>{{ template.title }}</td>
-              <td class="center-cell">{{ template.mode || '-' }}</td>
-              <td class="center-cell">{{ template.questions_count }}</td>
-              <td class="center-cell">{{ template.is_public ? 'Oui' : 'Non' }}</td>
-              <td class="center-cell">{{ template.active ? 'Oui' : 'Non' }}</td>
-              <td class="center-cell">{{ template.can_answer ? 'Oui' : 'Non' }}</td>
-              <td class="row-actions">
-                @if (canStartTemplate(template)) {
-                  <p-button
-                    (onClick)="createFromTemplate(template.id)"
-                    [loading]="creatingTemplateId() === template.id"
-                    icon="pi pi-play"
-                    severity="primary"
-                    size="small"
-                    text
-                  ></p-button>
-                }
-                <p-button
-                  (onClick)="openAssignDialog(template)"
-                  icon="pi pi-send"
-                  severity="help"
-                  size="small"
-                  text
-                ></p-button>
-                <p-button
-                  (onClick)="openResultsDialog(template)"
-                  icon="pi pi-chart-bar"
-                  severity="secondary"
-                  size="small"
-                  text
-                ></p-button>
-                @if (isAdmin()) {
-                  <p-button
-                    (onClick)="goEditTemplate(template.id)"
-                    icon="pi pi-pencil"
-                    severity="info"
-                    size="small"
-                    text
-                  ></p-button>
-                  <p-button
-                    (onClick)="goDeleteTemplate(template.id)"
-                    icon="pi pi-trash"
-                    severity="danger"
-                    size="small"
-                    text
-                  ></p-button>
-                }
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr>
-              <td class="empty-cell" colspan="7">
-                @if (loading()) {
-                  Chargement...
-                } @else {
-                  Aucun template cree.
-                }
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </section>
-
-      <section class="list-section">
-        <div class="section-header">
-          <div>
-            <h3>Ceux qui sont publics</h3>
-            <p>Templates visibles et partageables.</p>
-          </div>
-        </div>
-
-        <p-table
-          [value]="filteredPublicTemplates()"
-          showGridlines
-          size="small"
-          stripedRows
-        >
-          <ng-template #header>
-            <tr>
-              <th>Titre</th>
-              <th>Description</th>
-              <th>Mode</th>
-              <th>Questions</th>
-              <th>Duree</th>
-              <th>Disponible</th>
-              <th style="width: 140px;">Actions</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-template>
-            <tr>
-              <td>{{ template.title }}</td>
-              <td>{{ template.description || '-' }}</td>
-              <td class="center-cell">{{ template.mode || '-' }}</td>
-              <td class="center-cell">{{ template.max_questions ?? '-' }}</td>
-              <td class="center-cell">
-                @if (template.with_duration) {
-                  {{ template.duration }} min
-                } @else {
-                  -
-                }
-              </td>
-              <td class="center-cell">{{ template.can_answer ? 'Oui' : 'Non' }}</td>
-              <td class="row-actions">
-                <p-button
-                  (onClick)="createFromTemplate(template.id)"
-                  [disabled]="!canStartTemplate(template)"
-                  [loading]="creatingTemplateId() === template.id"
-                  icon="pi pi-play"
-                  label="Commencer"
-                  severity="primary"
-                  size="small"
-                ></p-button>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr>
-              <td class="empty-cell" colspan="7">
-                @if (loading()) {
-                  Chargement...
-                } @else {
-                  Aucun template public.
-                }
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </section>
+      <app-quiz-template-table
+        title="Ceux qui sont publics"
+        description="Templates visibles et partageables."
+        [kind]="'public'"
+        [templates]="filteredPublicTemplates()"
+        [loading]="loading()"
+        [creatingTemplateId]="creatingTemplateId()"
+        (createFromTemplate)="createFromTemplate($event)"
+      ></app-quiz-template-table>
     </p-tabpanel>
 
     <p-tabpanel value="sessions">
-      <section class="list-section">
-        <div class="section-header">
-          <div>
-            <h3>Quiz en cours ou termines</h3>
-            <p>Reprends un quiz en cours ou consulte une session deja repondue.</p>
-          </div>
-        </div>
-
-        <p-table
-          [value]="filteredMyQuizzes()"
-          showGridlines
-          size="small"
-          stripedRows
-        >
-          <ng-template #header>
-            <tr>
-              <th>Titre</th>
-              <th>Statut</th>
-              <th>Mode</th>
-              <th>Questions</th>
-              <th>Demarre le</th>
-              <th>Termine le</th>
-              <th>Note</th>
-              <th style="width: 120px;">Actions</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-quiz>
-            <tr>
-              <td>{{ quiz.quiz_template_title }}</td>
-              <td class="center-cell">{{ statusLabel(quiz.status) }}</td>
-              <td class="center-cell">{{ quiz.mode }}</td>
-              <td class="center-cell">{{ quiz.max_questions }}</td>
-              <td class="center-cell">{{ quiz.started_at | date : 'short' }}</td>
-              <td class="center-cell">{{ quiz.ended_at | date : 'short' }}</td>
-              <td class="center-cell">
-                @if (quiz.status === 'answered' && quiz.earned_score !== null && quiz.max_score !== null) {
-                  {{ quiz.earned_score }} / {{ quiz.max_score }}
-                } @else {
-                  -
-                }
-              </td>
-              <td class="row-actions">
-                <p-button
-                  (onClick)="goView(quiz.id)"
-                  [icon]="quiz.status === 'answered' ? 'pi pi-eye' : 'pi pi-play'"
-                  [label]="quiz.status === 'answered' ? 'Voir' : 'Continuer'"
-                  [severity]="quiz.status === 'answered' ? 'secondary' : 'primary'"
-                  size="small"
-                ></p-button>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr>
-              <td class="empty-cell" colspan="8">
-                @if (loading()) {
-                  Chargement...
-                } @else {
-                  Aucun quiz en cours ou repondu.
-                }
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </section>
+      <app-quiz-session-table
+        [quizzes]="filteredMyQuizzes()"
+        [loading]="loading()"
+        (viewQuiz)="goView($event)"
+      ></app-quiz-session-table>
     </p-tabpanel>
   </p-tabpanels>
 </p-tabs>
@@ -258,7 +58,7 @@
   (visibleChange)="assignDialogVisible.set($event)"
   (selectedRecipientIdsChange)="selectedRecipientIds.set($event)"
   (cancel)="closeAssignDialog()"
-  (submit)="submitAssignments()"
+  (submitted)="submitAssignments()"
 ></app-quiz-template-assign-dialog>
 
 <app-quiz-template-results-dialog
