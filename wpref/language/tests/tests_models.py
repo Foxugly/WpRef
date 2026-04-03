@@ -7,12 +7,12 @@ from language.models import Language
 
 class LangModelTests(TestCase):
     def test_defaults(self):
-        l = Language.objects.create(code="fr", name="Français")
-        self.assertEqual(l.active, True)
+        language = Language.objects.create(code="fr", name="Français")
+        self.assertEqual(language.active, True)
 
     def test_str(self):
-        l = Language.objects.create(code="nl", name="Nederlands")
-        self.assertEqual(str(l), "nl — Nederlands")
+        language = Language.objects.create(code="nl", name="Nederlands")
+        self.assertEqual(str(language), "nl — Nederlands")
 
     def test_meta_ordering(self):
         Language.objects.create(code="nl", name="Nederlands")
@@ -32,35 +32,35 @@ class LangModelTests(TestCase):
             Language.objects.create(code="fr", name="French (duplicate)")
 
     def test_code_required(self):
-        l = Language(code="", name="Français")
+        language = Language(code="", name="Français")
         with self.assertRaises(ValidationError) as ctx:
-            l.full_clean()  # valide blank/constraints
+            language.full_clean()  # valide blank/constraints
         self.assertIn("code", ctx.exception.message_dict)
 
     def test_name_required(self):
-        l = Language(code="fr", name="")
+        language = Language(code="fr", name="")
         with self.assertRaises(ValidationError) as ctx:
-            l.full_clean()
+            language.full_clean()
         self.assertIn("name", ctx.exception.message_dict)
 
     def test_code_max_length(self):
         # max_length=10 => 11 doit échouer au full_clean
-        l = Language(code="x" * 11, name="Too long")
+        language = Language(code="x" * 11, name="Too long")
         with self.assertRaises(ValidationError) as ctx:
-            l.full_clean()
+            language.full_clean()
         self.assertIn("code", ctx.exception.message_dict)
 
     def test_name_max_length(self):
         # max_length=100 => 101 doit échouer au full_clean
-        l = Language(code="fr", name="x" * 101)
+        language = Language(code="fr", name="x" * 101)
         with self.assertRaises(ValidationError) as ctx:
-            l.full_clean()
+            language.full_clean()
         self.assertIn("name", ctx.exception.message_dict)
 
     def test_active_can_be_false(self):
-        l = Language.objects.create(code="en", name="English", active=False)
-        l.refresh_from_db()
-        self.assertEqual(l.active, False)
+        language = Language.objects.create(code="en", name="English", active=False)
+        language.refresh_from_db()
+        self.assertEqual(language.active, False)
 
     def test_help_texts_exist(self):
         code_field = Language._meta.get_field("code")

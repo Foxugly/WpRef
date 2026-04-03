@@ -1,3 +1,4 @@
+import {HttpClient} from '@angular/common/http';
 import {Injectable} from '@angular/core';
 import {Router} from '@angular/router';
 import {map, Observable} from 'rxjs';
@@ -9,6 +10,7 @@ import {
   DomainWriteRequestDto,
   PatchedDomainPartialRequestDto
 } from '../../api/generated';
+import {resolveApiBaseUrl} from '../../shared/api/runtime-api-base-url';
 
 export type DomainTranslationDto = { name: string; description: string;};
 export type DomainOption = { name: string; id: number };
@@ -18,7 +20,9 @@ export type DomainTranslations = Record<string, DomainTranslationDto>;
   providedIn: 'root',
 })
 export class DomainService {
-    constructor(private api: DomainApi, private router: Router) {
+  private readonly apiBaseUrl = `${resolveApiBaseUrl().replace(/\/+$/, '')}/api/domain`;
+
+    constructor(private api: DomainApi, private router: Router, private http: HttpClient) {
   }
 
   list(params?: { name?: string; search?: string }): Observable<DomainReadDto[]> {
@@ -48,6 +52,10 @@ export class DomainService {
         });
       }),
     );
+  }
+
+  availableForLinking(): Observable<DomainReadDto[]> {
+    return this.http.get<DomainReadDto[]>(`${this.apiBaseUrl}/available-for-linking/`);
   }
 
   retrieve(domainId: number): Observable<DomainReadDto> {

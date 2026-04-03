@@ -1,12 +1,12 @@
 <form (ngSubmit)="submit()" [formGroup]="form()" class="card form-card">
   <div class="card-head card-head--with-badge">
-    <h2 class="card-title">Traductions</h2>
-    <span class="badge">{{ tabCodes().length }} langue(s)</span>
+    <h2 class="card-title">{{ ui().domainForm.translations }}</h2>
+    <span class="badge">{{ tabCodes().length }} {{ ui().domainForm.languagesCount }}</span>
   </div>
 
   <div class="meta-grid">
     <div class="meta-item meta-item--full meta-item--center">
-      <label class="meta-label">Langues autorisees</label>
+      <label class="meta-label">{{ ui().domainForm.allowedLanguages }}</label>
       <div class="meta-value meta-value--center">
         <p-selectButton
           [multiple]="true"
@@ -20,7 +20,7 @@
 
       @if (form().get('allowed_language_codes')?.touched && form().get('allowed_language_codes')?.invalid) {
         <div class="meta-hint meta-hint--error">
-          Selectionne au moins une langue.
+          {{ ui().domainForm.selectOneLanguage }}
         </div>
       }
     </div>
@@ -44,7 +44,7 @@
                   [disabled]="translating()"
                   [loading]="translating()"
                   icon="pi pi-language"
-                  label="Traduire vers les autres langues"
+                  [label]="ui().common.translateOthers"
                   severity="info"
                   type="button">
                 </p-button>
@@ -52,9 +52,9 @@
 
               <div class="meta-grid">
                 <div class="meta-item meta-item--full">
-                  <label class="meta-label">{{ titleLabel() }} ({{ code.toUpperCase() }})</label>
+                  <label class="meta-label">{{ titleLabel() || ui().domainForm.titleLabel }} ({{ code.toUpperCase() }})</label>
                   <div class="meta-value">
-                    <input formControlName="name" pInputText placeholder="Nom du domaine" />
+                    <input formControlName="name" pInputText [placeholder]="ui().domainForm.titlePlaceholder" />
                   </div>
 
                   @if (langGroup(code).get('name')?.touched && langGroup(code).get('name')?.invalid) {
@@ -65,7 +65,7 @@
                 </div>
 
                 <div class="meta-item meta-item--full">
-                  <label class="meta-label">Description ({{ code.toUpperCase() }})</label>
+                  <label class="meta-label">{{ ui().domainForm.description }} ({{ code.toUpperCase() }})</label>
                   <div class="meta-value">
                     <p-editor class="editor-compact" formControlName="description"></p-editor>
                   </div>
@@ -81,20 +81,20 @@
   <div class="divider"></div>
 
   <div class="card-head">
-    <h2 class="card-title">Parametres</h2>
-    <span class="badge">active + acces</span>
+    <h2 class="card-title">{{ ui().domainForm.parameters }}</h2>
+    <span class="badge">{{ ui().domainForm.statusAccess }}</span>
   </div>
 
   <div class="meta-grid">
     <div class="meta-item meta-item--full">
-      <label class="meta-label" for="active">Actif</label>
+      <label class="meta-label" for="active">{{ ui().domainForm.active }}</label>
       <div class="meta-value widget-center">
         <p-toggleswitch formControlName="active" inputId="active"></p-toggleswitch>
       </div>
     </div>
 
     <div class="meta-item meta-item--full">
-      <label class="meta-label" for="owner">Owner</label>
+      <label class="meta-label" for="owner">{{ ui().domainForm.owner }}</label>
       <div class="meta-value widget-center">
         <p-select
           [filter]="true"
@@ -107,13 +107,13 @@
           [placeholder]="ownerPlaceholder()">
         </p-select>
         @if (ownerReadonly()) {
-          <span class="badge badge--soft">readonly</span>
+          <span class="badge badge--soft">{{ ui().domainForm.readonly }}</span>
         }
       </div>
     </div>
 
     <div class="meta-item meta-item--full">
-      <label class="meta-label" for="staff">Staff</label>
+      <label class="meta-label" for="staff">{{ ui().domainForm.staff }}</label>
       <div class="meta-value widget-center">
         <p-picklist
           (onMoveAllToSource)="onStaffChange()"
@@ -128,8 +128,8 @@
           [source]="availableStaff()"
           [targetStyle]="{ height: '240px' }"
           [target]="selectedStaff()"
-          sourceHeader="Disponibles"
-          targetHeader="Selectionnes">
+          [sourceHeader]="ui().domainForm.available"
+          [targetHeader]="ui().domainForm.selected">
           <ng-template let-item pTemplate="item">
             <div class="pick-item">
               <span class="pick-label">{{ item.label }}</span>
@@ -145,13 +145,14 @@
   }
 
   <div class="footer-actions">
-    <p-button icon="pi pi-save" [label]="submitLabel()" type="submit"></p-button>
     <p-button
       (onClick)="onCancel()"
       icon="pi pi-times"
-      label="Annuler"
+      [label]="ui().common.cancel"
       severity="secondary"
+      variant="outlined"
       type="button">
     </p-button>
+    <p-button icon="pi pi-save" [label]="submitLabel()" type="submit"></p-button>
   </div>
 </form>

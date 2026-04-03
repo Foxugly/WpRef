@@ -11,7 +11,8 @@ import {ButtonModule} from 'primeng/button';
 })
 export class QuizListToolbarComponent {
   readonly search = input('');
-  readonly isAdmin = input(false);
+  readonly canCompose = input(false);
+  readonly canQuickCreate = input(false);
 
   readonly searchChange = output<string>();
   readonly compose = output<void>();

@@ -1,0 +1,24 @@
+<div class="container">
+  <div class="container__card">
+    <div class="card__brand">
+      <span class="brand__mark">
+        <img [alt]="app.name" [src]="app.logoSvg" class="brand__logo">
+      </span>
+      <h1 class="brand__title">{{ ui.registerPending.title }}</h1>
+      <p class="brand__subtitle">{{ ui.registerPending.subtitle }}</p>
+    </div>
+
+    <div class="notice">
+      <p class="notice__lead">{{ ui.registerPending.lead }}</p>
+      <p class="notice__body">{{ ui.registerPending.body }}</p>
+    </div>
+
+    <div class="actions">
+      <p-button
+        (onClick)="goLogin()"
+        [label]="ui.registerPending.login"
+        icon="pi pi-sign-in"
+      ></p-button>
+    </div>
+  </div>
+</div>

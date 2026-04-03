@@ -65,7 +65,7 @@ class Command(BaseCommand):
             raise CommandError("No Language found. Run init_languages first (or this command should have created them).")
 
         waterpolo_langs = list(Language.objects.filter(code__in=["fr", "nl", "en"]))
-        missing = sorted({"fr", "nl", "en"} - {l.code for l in waterpolo_langs})
+        missing = sorted({"fr", "nl", "en"} - {language.code for language in waterpolo_langs})
         if missing:
             raise CommandError(f"Missing languages for Water-polo: {', '.join(missing)}")
 
@@ -213,7 +213,7 @@ class Command(BaseCommand):
         if not domain_langs:
             domain_langs = list(Language.objects.all())  # fallback if domain has none
 
-        lang_codes = [l.code for l in domain_langs]
+        lang_codes = [language.code for language in domain_langs]
 
         # 2) Find existing subject (by any translated name)
         lookup_names: list[str] = []

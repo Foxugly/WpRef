@@ -1,12 +1,12 @@
 import {CommonModule} from '@angular/common';
-import {Component, input, output} from '@angular/core';
+import {Component, computed, inject, input, output} from '@angular/core';
 import {FormArray, FormControl, FormGroup, ReactiveFormsModule} from '@angular/forms';
 
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
 import {CheckboxModule} from 'primeng/checkbox';
-import {Divider} from 'primeng/divider';
-import {Editor} from 'primeng/editor';
+import {DividerModule} from 'primeng/divider';
+import {EditorModule} from 'primeng/editor';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {MultiSelectModule} from 'primeng/multiselect';
@@ -25,6 +25,8 @@ import {
   QuestionEditorForm,
 } from '../../services/question/question-editor-form';
 import {LangCode} from '../../services/translation/translation';
+import {UserService} from '../../services/user/user';
+import {getEditorUiText} from '../../shared/i18n/editor-ui-text';
 
 type DomainOption = { id: number; name: string };
 type SubjectOption = { code: number; name: string };
@@ -37,7 +39,7 @@ type SubjectOption = { code: number; name: string };
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    Editor,
+    EditorModule,
     TabsModule,
     SelectModule,
     MultiSelectModule,
@@ -49,10 +51,11 @@ type SubjectOption = { code: number; name: string };
     CardModule,
     TooltipModule,
     MediaSelectorComponent,
-    Divider,
+    DividerModule,
   ],
 })
 export class QuestionEditorFormComponent {
+  private readonly userService = inject(UserService);
   readonly form = input.required<QuestionEditorForm>();
   readonly tabCodes = input<LangCode[]>([]);
   readonly activeLang = input<LangCode | null | undefined>(undefined);
@@ -61,6 +64,7 @@ export class QuestionEditorFormComponent {
   readonly domainReadonlyLabel = input<string | null>(null);
   readonly showDomainSelect = input(true);
   readonly showTranslateAction = input(true);
+  readonly showCleanAction = input(true);
   readonly translating = input(false);
   readonly saving = input(false);
   readonly deleting = input(false);
@@ -69,14 +73,19 @@ export class QuestionEditorFormComponent {
   readonly submitError = input<string | null>(null);
   readonly practiceTooltip = input<string | null>(null);
   readonly showDeleteAction = input(false);
+  readonly showDuplicateAction = input(false);
   readonly deleteLabel = input('Supprimer la question');
+  readonly duplicateLabel = input('Dupliquer');
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
 
   readonly tabChanged = output<string | number | undefined>();
   readonly translateActive = output<void>();
   readonly addOptionClicked = output<void>();
   readonly removeOptionClicked = output<number>();
   readonly cancelClicked = output<void>();
+  readonly cleanActiveClicked = output<void>();
   readonly deleteClicked = output<void>();
+  readonly duplicateClicked = output<void>();
   readonly submitted = output<void>();
 
   get answerOptions(): FormArray<FormGroup> {
@@ -133,5 +142,13 @@ export class QuestionEditorFormComponent {
 
   onDelete(): void {
     this.deleteClicked.emit();
+  }
+
+  onDuplicate(): void {
+    this.duplicateClicked.emit();
+  }
+
+  onCleanActive(): void {
+    this.cleanActiveClicked.emit();
   }
 }

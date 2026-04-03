@@ -26,6 +26,7 @@ import {
 } from '../../../shared/forms/localized-text-form';
 import {isEmptyRichText} from '../../../shared/html/is-empty-rich-text';
 import {SubjectEditorFormComponent} from '../../../components/subject-editor-form/subject-editor-form';
+import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 
 @Component({
@@ -42,6 +43,7 @@ import {SubjectEditorFormComponent} from '../../../components/subject-editor-for
   ],
 })
 export class SubjectCreate implements OnInit {
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
   readonly emptyLanguagesMessage = "Ce domaine n'a pas de langues configurees.";
 
   // UI state

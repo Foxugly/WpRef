@@ -3,6 +3,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 from wpref.permissions import is_authenticated_user, is_staff_user
 
 from .models import Quiz, QuizAlertThread, QuizQuestionAnswer
+from .access import user_can_edit_template
 
 
 class IsStaffOrReadOnly(BasePermission):
@@ -51,3 +52,11 @@ class IsQuizAlertParticipant(BasePermission):
         if isinstance(thread, QuizAlertThread):
             return thread.is_participant(user)
         return False
+
+
+class CanManageQuizTemplate(BasePermission):
+    def has_permission(self, request, view):
+        return is_authenticated_user(request.user)
+
+    def has_object_permission(self, request, view, obj):
+        return user_can_edit_template(request.user, obj)

@@ -1,124 +1,93 @@
 <section class="list-section">
-  <div class="section-header">
-    <div>
-      <h3>{{ title() }}</h3>
-      <p>{{ description() }}</p>
-    </div>
-  </div>
-
   <p-table [value]="templates()" showGridlines size="small" stripedRows>
     <ng-template #header>
-      @if (isCreatedTable()) {
-        <tr>
-          <th>Titre</th>
-          <th>Mode</th>
-          <th>Questions</th>
-          <th>Public</th>
-          <th>Actif</th>
-          <th>Disponible</th>
-          <th style="width: 280px;">Actions</th>
-        </tr>
-      } @else {
-        <tr>
-          <th>Titre</th>
-          <th>Description</th>
-          <th>Mode</th>
-          <th>Questions</th>
-          <th>Duree</th>
-          <th>Disponible</th>
-          <th style="width: 140px;">Actions</th>
-        </tr>
-      }
+      <tr>
+        <th>{{ uiText().templates.headers.title }}</th>
+        <th>{{ uiText().templates.headers.mode }}</th>
+        <th>{{ uiText().templates.headers.questions }}</th>
+        <th>{{ uiText().templates.headers.owner }}</th>
+        <th>{{ uiText().templates.headers.public }}</th>
+        <th>{{ uiText().templates.headers.active }}</th>
+        <th>{{ uiText().templates.headers.available }}</th>
+        <th>{{ uiText().templates.headers.availabilityWindow }}</th>
+        <th style="width: 280px;">{{ uiText().templates.headers.actions }}</th>
+      </tr>
     </ng-template>
 
     <ng-template #body let-template>
-      @if (isCreatedTable()) {
-        <tr>
-          <td>{{ template.title }}</td>
-          <td class="center-cell">{{ template.mode || '-' }}</td>
-          <td class="center-cell">{{ template.questions_count }}</td>
-          <td class="center-cell">{{ template.is_public ? 'Oui' : 'Non' }}</td>
-          <td class="center-cell">{{ template.active ? 'Oui' : 'Non' }}</td>
-          <td class="center-cell">{{ template.can_answer ? 'Oui' : 'Non' }}</td>
-          <td class="row-actions">
-            @if (canStartTemplate(template)) {
-              <p-button
-                (onClick)="createFromTemplate.emit(template.id)"
-                [loading]="creatingTemplateId() === template.id"
-                [attr.aria-label]="'Commencer ' + template.title"
-                icon="pi pi-play"
-                severity="primary"
-                size="small"
-                text
-              ></p-button>
-            }
-              <p-button
-                (onClick)="openAssign.emit(template)"
-                [attr.aria-label]="'Envoyer ' + template.title"
-                icon="pi pi-send"
-                severity="help"
-                size="small"
-                text
-              ></p-button>
-              <p-button
-                (onClick)="openResults.emit(template)"
-                [attr.aria-label]="'Voir les resultats de ' + template.title"
-                icon="pi pi-chart-bar"
-                severity="secondary"
-                size="small"
-                text
-              ></p-button>
+      <tr>
+        <td>{{ template.title }}</td>
+        <td class="center-cell">{{ modeLabel(template.mode) }}</td>
+        <td class="center-cell">{{ template.questions_count }}</td>
+        <td>{{ template.ownerLabel || template.created_by_username || ('User #' + template.created_by) }}</td>
+        <td class="center-cell">{{ boolLabel(template.is_public) }}</td>
+        <td class="center-cell">{{ boolLabel(template.active) }}</td>
+        <td class="center-cell">{{ boolLabel(template.can_answer) }}</td>
+        <td>{{ availabilityLabel(template) }}</td>
+        <td class="row-actions">
+          @if (canStartTemplate(template)) {
+            <p-button
+              (onClick)="createFromTemplate.emit(template.id)"
+              [loading]="creatingTemplateId() === template.id"
+              [attr.aria-label]="uiText().templates.actions.start + ' ' + template.title"
+              [pTooltip]="uiText().templates.actions.start"
+              icon="pi pi-play"
+              severity="primary"
+              size="small"
+              text
+            ></p-button>
+          }
+          @if (template.canAssign) {
+            <p-button
+              (onClick)="openAssign.emit(template)"
+              [attr.aria-label]="uiText().templates.actions.assign + ' ' + template.title"
+              [pTooltip]="uiText().templates.actions.assign"
+              icon="pi pi-send"
+              severity="help"
+              size="small"
+              text
+            ></p-button>
+          }
+          @if (template.canViewResults) {
+            <p-button
+              (onClick)="openResults.emit(template)"
+              [attr.aria-label]="uiText().templates.actions.results + ' ' + template.title"
+              [pTooltip]="uiText().templates.actions.results"
+              icon="pi pi-chart-bar"
+              severity="secondary"
+              size="small"
+              text
+            ></p-button>
+          }
+          @if (template.canEdit) {
             <p-button
               (onClick)="edit.emit(template.id)"
-              [attr.aria-label]="'Modifier ' + template.title"
+              [attr.aria-label]="uiText().templates.actions.edit + ' ' + template.title"
+              [pTooltip]="uiText().templates.actions.edit"
               icon="pi pi-pencil"
               severity="info"
               size="small"
               text
             ></p-button>
+          }
+          @if (template.canDelete) {
             <p-button
               (onClick)="remove.emit(template.id)"
-              [attr.aria-label]="'Supprimer ' + template.title"
+              [attr.aria-label]="uiText().templates.actions.delete + ' ' + template.title"
+              [pTooltip]="uiText().templates.actions.delete"
               icon="pi pi-trash"
               severity="danger"
               size="small"
               text
             ></p-button>
-          </td>
-        </tr>
-      } @else {
-        <tr>
-          <td>{{ template.title }}</td>
-          <td>{{ template.description || '-' }}</td>
-          <td class="center-cell">{{ template.mode || '-' }}</td>
-          <td class="center-cell">{{ template.max_questions ?? '-' }}</td>
-          <td class="center-cell">
-            @if (template.with_duration) {
-              {{ template.duration }} min
-            } @else {
-              -
-            }
-          </td>
-          <td class="center-cell">{{ template.can_answer ? 'Oui' : 'Non' }}</td>
-          <td class="row-actions">
-            <p-button
-              (onClick)="createFromTemplate.emit(template.id)"
-              [disabled]="!canStartTemplate(template)"
-              [loading]="creatingTemplateId() === template.id"
-              [attr.aria-label]="'Commencer ' + template.title"
-              icon="pi pi-play"
-              label="Commencer"
-              severity="primary"
-              size="small"
-            ></p-button>
-          </td>
-        </tr>
-      }
+          }
+        </td>
+      </tr>
     </ng-template>
 
     <ng-template #emptymessage>
       <tr>
-        <td class="empty-cell" [attr.colspan]="isCreatedTable() ? 7 : 7">
+        <td class="empty-cell" colspan="9">
           @if (loading()) {
             Chargement...
           } @else {

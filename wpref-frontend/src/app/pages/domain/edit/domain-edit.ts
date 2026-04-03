@@ -21,6 +21,7 @@ import {
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
 import {isEmptyRichText} from '../../../shared/html/is-empty-rich-text';
 import {DomainEditorFormComponent} from '../../../components/domain-editor-form/domain-editor-form';
+import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 import {
   CustomUserReadDto,
@@ -59,6 +60,7 @@ function getUserId(userRef: DomainUserRef | null | undefined): number | null {
   styleUrl: './domain-edit.scss',
 })
 export class DomainEdit implements OnInit {
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
   id!: number;
 
   loading = signal(true);

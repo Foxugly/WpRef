@@ -89,6 +89,7 @@ test('compose un quiz depuis un domaine avec ponderation personnalisee', async (
 
   await expect(page.getByRole('heading', {name: /template de quiz/i})).toBeVisible();
   await page.locator('input[formControlName="title"]').fill('Quiz compose E2E');
+  await page.getByRole('tab', {name: 'Questions'}).click();
 
   const questionCards = page.locator('.question-card');
   await questionCards.filter({hasText: 'Question A'}).getByRole('button', {name: 'Ajouter'}).click();
@@ -98,11 +99,12 @@ test('compose un quiz depuis un domaine avec ponderation personnalisee', async (
   await selectedCards.filter({hasText: 'Question B'}).getByRole('button').nth(1).click();
   await selectedCards
     .filter({hasText: 'Question A'})
-    .locator('label', {hasText: 'Poids'})
-    .locator('input')
+    .locator('input[id^="weight-"]')
     .fill('3');
 
-  await page.getByRole('button', {name: /template/i}).click();
+  await page.getByRole('tab', {name: 'Parametres'}).click();
+
+  await page.getByRole('button', {name: /creer le template/i}).click();
 
   await expect(page).toHaveURL(/\/quiz\/list$/);
   expect(api.requests.quizTemplateCreate).toHaveLength(1);

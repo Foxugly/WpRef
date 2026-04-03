@@ -1,11 +1,13 @@
 import {CommonModule} from '@angular/common';
 import {Component, computed, DestroyRef, inject, OnInit, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
 import {catchError, finalize, forkJoin, map, of, switchMap} from 'rxjs';
 import {TabsModule} from 'primeng/tabs';
-import {CustomUserReadDto, QuizListDto, QuizTemplateDto} from '../../../api/generated';
-import {QuizListToolbarComponent} from '../../../components/quiz-list-toolbar/quiz-list-toolbar';
+import {ButtonModule} from 'primeng/button';
+import {InputTextModule} from 'primeng/inputtext';
+import {LanguageEnumDto, QuizListDto} from '../../../api/generated';
 import {QuizSessionTableComponent} from '../../../components/quiz-session-table/quiz-session-table';
 import {QuizTemplateTableComponent} from '../../../components/quiz-template-table/quiz-template-table';
 import {QuizTemplateAssignDialogComponent} from '../../../components/quiz-template-assign-dialog/quiz-template-assign-dialog';
@@ -13,14 +15,23 @@ import {QuizTemplateResultsDialogComponent} from '../../../components/quiz-templ
 import {QuizService, QuizTemplateAssignmentSessionDto} from '../../../services/quiz/quiz';
 import {UserService} from '../../../services/user/user';
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
-import {QuizTemplateListItem, UserQuizListItem} from './quiz-list.models';
+import {AssignableRecipient, QuizTemplateListItem, UserQuizListItem} from './quiz-list.models';
+import {DomainService} from '../../../services/domain/domain';
+import {DomainReadDto, UserSummaryDto} from '../../../api/generated';
+import {getQuizListUiText} from './quiz-list.i18n';
+
+type DomainReadWithMembers = DomainReadDto & {
+  members?: UserSummaryDto[];
+};
 
 @Component({
   selector: 'app-quiz-list',
   imports: [
     CommonModule,
+    FormsModule,
+    ButtonModule,
+    InputTextModule,
     TabsModule,
-    QuizListToolbarComponent,
     QuizTemplateTableComponent,
     QuizSessionTableComponent,
     QuizTemplateAssignDialogComponent,
@@ -31,8 +42,9 @@ import {QuizTemplateListItem, UserQuizListItem} from './quiz-list.models';
 })
 export class QuizListPage implements OnInit {
   templates = signal<QuizTemplateListItem[]>([]);
+  domains = signal<DomainReadDto[]>([]);
   myQuizzes = signal<UserQuizListItem[]>([]);
-  assignableUsers = signal<CustomUserReadDto[]>([]);
+  assignableUsers = signal<AssignableRecipient[]>([]);
   templateSessions = signal<QuizTemplateAssignmentSessionDto[]>([]);
   activeTab = signal<'templates' | 'sessions'>('templates');
   currentUserId = signal<number | null>(null);
@@ -51,19 +63,16 @@ export class QuizListPage implements OnInit {
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly domainService = inject(DomainService);
 
-  readonly isAdmin = this.userService.isAdmin;
+  readonly canComposeTemplate = computed(() => this.domains().some((domain) => this.canManageDomain(domain)));
+  readonly canCreateQuickTemplate = computed(() => this.domains().length > 0);
+  readonly currentLang = computed(() => this.userService.currentLang ?? LanguageEnumDto.Fr);
+  readonly uiText = computed(() => getQuizListUiText(this.currentLang()));
 
-  readonly filteredCreatedTemplates = computed(() => {
+  readonly filteredTemplates = computed(() => {
     const term = this.normalize(this.q());
-    return this.createdTemplates().filter((template) =>
-      !term || this.matchesSearch(term, template.title, template.description ?? '', template.mode ?? ''),
-    );
-  });
-
-  readonly filteredPublicTemplates = computed(() => {
-    const term = this.normalize(this.q());
-    return this.publicTemplates().filter((template) =>
+    return this.templates().filter((template) =>
       !term || this.matchesSearch(term, template.title, template.description ?? '', template.mode ?? ''),
     );
   });
@@ -78,23 +87,6 @@ export class QuizListPage implements OnInit {
       this.matchesSearch(term, quiz.quiz_template_title, quiz.quiz_template_description, quiz.mode),
     );
   });
-
-  readonly createdTemplates = computed(() => {
-    const userId = this.currentUserId();
-    if (!userId) {
-      return [];
-    }
-
-    return this.templates()
-      .filter((template) => template.created_by === userId)
-      .sort((left, right) => left.title.localeCompare(right.title));
-  });
-
-  readonly publicTemplates = computed(() =>
-    this.templates()
-      .filter((template) => template.is_public)
-      .sort((left, right) => left.title.localeCompare(right.title)),
-  );
 
   ngOnInit(): void {
     this.load();
@@ -112,16 +104,17 @@ export class QuizListPage implements OnInit {
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: ({currentUserId, templates, myQuizzes}) => {
+        next: ({currentUserId, templates, myQuizzes, domains}) => {
           this.currentUserId.set(currentUserId);
+          this.domains.set(domains);
           this.templates.set(templates);
           this.myQuizzes.set(myQuizzes);
-          this.loadAssignableUsers();
         },
         error: (err: unknown) => {
           logApiError('quiz.list.load', err);
-          this.success.set(userFacingApiMessage(err, 'Impossible de charger les quiz.'));
+          this.success.set(userFacingApiMessage(err, this.uiText().messages.loadError));
           this.currentUserId.set(null);
+          this.domains.set([]);
           this.templates.set([]);
           this.myQuizzes.set([]);
         },
@@ -147,6 +140,7 @@ export class QuizListPage implements OnInit {
   openAssignDialog(template: QuizTemplateListItem): void {
     this.selectedTemplate.set(template);
     this.selectedRecipientIds.set([]);
+    this.assignableUsers.set(this.buildAssignableUsers(template));
     this.assignDialogVisible.set(true);
     this.success.set(null);
   }
@@ -172,13 +166,13 @@ export class QuizListPage implements OnInit {
       )
       .subscribe({
         next: (created) => {
-          this.success.set(`${created.length} quiz envoye(s).`);
+          this.success.set(this.uiText().messages.assignSuccess(created.length));
           this.closeAssignDialog();
           this.openResultsDialog(template);
         },
         error: (err: unknown) => {
           logApiError('quiz.list.assign-template', err);
-          this.success.set(userFacingApiMessage(err, 'Impossible d envoyer ce quiz.'));
+          this.success.set(userFacingApiMessage(err, this.uiText().messages.assignError));
         },
       });
   }
@@ -197,7 +191,7 @@ export class QuizListPage implements OnInit {
         next: (sessions) => this.templateSessions.set(sessions),
         error: (err: unknown) => {
           logApiError('quiz.list.template-results', err);
-          this.success.set(userFacingApiMessage(err, 'Impossible de charger les resultats.'));
+          this.success.set(userFacingApiMessage(err, this.uiText().messages.resultsError));
         },
       });
   }
@@ -219,7 +213,7 @@ export class QuizListPage implements OnInit {
         next: (quiz) => this.quizService.goView(quiz.id),
         error: (err: unknown) => {
           logApiError('quiz.list.create-session', err);
-          this.success.set(userFacingApiMessage(err, 'Impossible de creer ce quiz.'));
+          this.success.set(userFacingApiMessage(err, this.uiText().messages.createError));
         },
       });
   }
@@ -241,17 +235,21 @@ export class QuizListPage implements OnInit {
     return forkJoin({
       templates: this.quizService.listTemplates(),
       quizzes: this.quizService.listQuiz(),
+      domains: this.domainService.list(),
       me: this.getCurrentUser(),
     }).pipe(
-      switchMap(({templates, quizzes, me}) => {
+      switchMap(({templates, quizzes, domains, me}) => {
         const currentUserId = me?.id ?? null;
-        const normalizedTemplates = templates as QuizTemplateListItem[];
+        const normalizedTemplates = (templates as QuizTemplateListItem[])
+          .map((template) => this.decorateTemplate(template, domains, me))
+          .sort((left, right) => left.title.localeCompare(right.title));
         const myQuizSessions = me ? quizzes.filter((quiz) => quiz.user === me.id) : [];
         const visibleMyQuizzes = myQuizSessions.filter((quiz) => quiz.started_at || quiz.ended_at);
 
         return this.loadQuizScores(visibleMyQuizzes).pipe(
           map((scoreByQuizId) => ({
             currentUserId,
+            domains,
             templates: normalizedTemplates,
             myQuizzes: visibleMyQuizzes.map((quiz) =>
               this.toUserQuizListItem(quiz, scoreByQuizId.get(quiz.id)),
@@ -287,27 +285,6 @@ export class QuizListPage implements OnInit {
     );
   }
 
-  private loadAssignableUsers(): void {
-    if (!this.isAdmin()) {
-      this.assignableUsers.set([]);
-      return;
-    }
-
-    this.userService.list()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        catchError(() => of([])),
-      )
-      .subscribe((users) => {
-        const currentUserId = this.currentUserId();
-        this.assignableUsers.set(
-          users
-            .filter((user) => user.id !== currentUserId)
-            .sort((left, right) => left.username.localeCompare(right.username)),
-        );
-      });
-  }
-
   private toUserQuizListItem(
     quiz: QuizListDto,
     score?: {earned_score: number | null; max_score: number | null},
@@ -322,6 +299,73 @@ export class QuizListPage implements OnInit {
 
   private matchesSearch(term: string, ...values: string[]): boolean {
     return values.some((value) => this.normalize(value).includes(term));
+  }
+
+  private decorateTemplate(
+    template: QuizTemplateListItem,
+    domains: DomainReadDto[],
+    me: { id: number; is_staff?: boolean; is_superuser?: boolean } | null,
+  ): QuizTemplateListItem {
+    const domain = domains.find((item) => item.id === template.domain);
+    const managesDomain = !!me && !!domain && this.canManageDomain(domain);
+    const canManage = !!me && (
+      template.created_by === me.id
+      || managesDomain
+    );
+
+    return {
+      ...template,
+      ownerLabel: template.created_by_username || (template.created_by ? `User #${template.created_by}` : '-'),
+      canManage,
+      canAssign: canManage,
+      canEdit: canManage,
+      canDelete: canManage,
+      canViewResults: canManage,
+    };
+  }
+
+  private buildAssignableUsers(template: QuizTemplateListItem): AssignableRecipient[] {
+    const domain = this.domains().find((item) => item.id === template.domain) as DomainReadWithMembers | undefined;
+    if (!domain) {
+      return [];
+    }
+
+    const currentUserId = this.currentUserId();
+    const recipients = new Map<number, AssignableRecipient>();
+    const addRecipient = (user: UserSummaryDto | null | undefined, role: AssignableRecipient['role']) => {
+      if (!user || user.id === currentUserId) {
+        return;
+      }
+      const existing = recipients.get(user.id);
+      if (existing) {
+        if (existing.role === 'member' && role !== 'member') {
+          recipients.set(user.id, {...existing, role});
+        }
+        return;
+      }
+      recipients.set(user.id, {id: user.id, username: user.username, role});
+    };
+
+    addRecipient(domain.owner, 'owner');
+    for (const staffUser of domain.staff ?? []) {
+      addRecipient(staffUser, 'staff');
+    }
+    for (const member of domain.members ?? []) {
+      addRecipient(member, 'member');
+    }
+
+    return [...recipients.values()].sort((left, right) => left.username.localeCompare(right.username));
+  }
+
+  private canManageDomain(domain: DomainReadDto): boolean {
+    const me = this.userService.currentUser();
+    if (!me) {
+      return false;
+    }
+    if (me.is_superuser) {
+      return true;
+    }
+    return domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id);
   }
 
   private normalize(value: string | null | undefined): string {

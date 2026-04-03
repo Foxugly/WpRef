@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils import translation
 from domain.models import Domain
 from question.models import Question, AnswerOption, QuestionSubject
-from quiz.constants import VISIBILITY_IMMEDIATE, VISIBILITY_NEVER
+from quiz.constants import VISIBILITY_IMMEDIATE
 from quiz.models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
 from quiz.views import QuizTemplateQuizQuestionViewSet, QuizQuestionAnswerViewSet, QuizViewSet
 from rest_framework import status
@@ -219,7 +219,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         data = res.data.get("results") if isinstance(res.data, dict) else res.data
         ids = [x["id"] for x in data]
         self.assertIn(self.qt_ok.id, ids)
-        self.assertNotIn(self.qt_no.id, ids)
+        self.assertIn(self.qt_no.id, ids)
 
     def test_quiztemplate_list_as_user_includes_assigned_private_template(self):
         private_qt = QuizTemplate.objects.create(
@@ -258,7 +258,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertIn(self.qt_ok.id, ids)
         self.assertIn(self.qt_no.id, ids)
 
-    def test_quiztemplate_create_requires_admin(self):
+    def test_quiztemplate_create_rejects_unlinked_user(self):
         payload = {
             "domain": self.domain.id,
             "title": "NEW_T",
@@ -279,7 +279,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
 
         self._auth(self.u1)
         res = self.client.post(self.qt_list_url, payload, format="json")
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
         self._auth(self.admin)
         res2 = self.client.post(self.qt_list_url, payload, format="json")
@@ -317,6 +317,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         res = self.client.get(detail_url)
         self.assertIn(res.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
+        self.domain.members.add(self.u1)
         self._auth(self.u1)
         res2 = self.client.get(detail_url)
         self.assertEqual(res2.status_code, status.HTTP_200_OK)
@@ -501,7 +502,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
 
         self._auth(self.u1)
         res = self.client.get(list_url)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
         self._auth(self.admin)
         res2 = self.client.get(list_url)
@@ -676,9 +677,10 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
             {"quiz_template_id": self.qt_ok.id, "user_id": self.u2.id},
             format="json",
         )
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_quiz_create_for_other_user_allowed_for_admin(self):
+        self.domain.members.add(self.u2)
         self._auth(self.admin)
         res = self.client.post(
             self.quiz_list_url,
@@ -755,6 +757,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         res = self.client.post(url, payload, format="json")
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
+        self.domain.members.add(self.u1, self.u2)
         self._auth(self.admin)
         res2 = self.client.post(url, payload, format="json")
         self.assertEqual(res2.status_code, status.HTTP_201_CREATED)
@@ -763,6 +766,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
     @patch("quiz.services.notify_quiz_assigned")
     def test_bulk_create_from_template_template_creator_allowed(self, notify_quiz_assigned):
         creator = User.objects.create_user(username="creator", password="pass", is_staff=False)
+        self.domain.members.add(creator, self.u1)
         template = QuizTemplate.objects.create(
             domain=self.domain,
             title="T_CREATOR",

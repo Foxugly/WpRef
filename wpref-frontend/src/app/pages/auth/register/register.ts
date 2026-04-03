@@ -14,19 +14,21 @@ import {InputTextModule} from 'primeng/inputtext';
 import {PasswordModule} from 'primeng/password';
 import {ButtonModule} from 'primeng/button';
 import {SelectModule} from 'primeng/select';
+import {MultiSelectModule} from 'primeng/multiselect';
 
 import {AuthService} from '../../../services/auth/auth';
 import {LanguageService} from '../../../services/language/language';
-import {LanguageReadDto} from '../../../api/generated';
+import {DomainReadDto, LanguageReadDto} from '../../../api/generated';
 import {ROUTES} from '../../../app.routes-paths';
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
 import {UserService} from '../../../services/user/user';
 import {getUiText} from '../../../shared/i18n/ui-text';
+import {DomainService, DomainTranslations} from '../../../services/domain/domain';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [ReactiveFormsModule, InputTextModule, PasswordModule, ButtonModule, SelectModule],
+  imports: [ReactiveFormsModule, InputTextModule, PasswordModule, ButtonModule, SelectModule, MultiSelectModule],
   templateUrl: './register.html',
   styleUrls: ['./register.scss'],
 })
@@ -39,12 +41,15 @@ export class Register implements OnInit {
   successMessage = '';
   errorMessage = '';
   languages: LanguageReadDto[] = [];
+  domains: DomainReadDto[] = [];
   loadingLanguages = false;
+  loadingDomains = false;
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private languageService: LanguageService,
+    private domainService: DomainService,
     private router: Router,
     private userService: UserService,
   ) {
@@ -55,6 +60,7 @@ export class Register implements OnInit {
         first_name: ['', [Validators.required]],
         last_name: ['', [Validators.required]],
         language: ['', [Validators.required]],
+        managed_domain_ids: [[] as number[]],
         password: ['', [Validators.required, Validators.minLength(8)]],
         confirm_password: ['', [Validators.required]],
       },
@@ -68,6 +74,13 @@ export class Register implements OnInit {
 
   get ui() {
     return getUiText(this.userService.currentLang);
+  }
+
+  get domainOptions() {
+    return this.domains.map((domain) => ({
+      label: this.getDomainLabel(domain),
+      value: domain.id,
+    }));
   }
 
   private static passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -97,6 +110,7 @@ export class Register implements OnInit {
 
   ngOnInit(): void {
     this.loadLanguages();
+    this.loadDomains();
   }
 
   onSubmit(): void {
@@ -111,18 +125,14 @@ export class Register implements OnInit {
     }
 
     this.isSubmitting = true;
-    const {username, email, first_name, last_name, language, password} = this.form.getRawValue();
+    const {username, email, first_name, last_name, language, managed_domain_ids, password} = this.form.getRawValue();
 
     this.authService
-      .register({username, email, first_name, last_name, language, password})
+      .register({username, email, first_name, last_name, language, managed_domain_ids, password})
       .pipe(finalize(() => (this.isSubmitting = false)))
       .subscribe({
         next: () => {
-          this.successMessage = this.ui.register.success;
-          this.submitted = false;
-          this.form.reset();
-          const defaultLang = this.languages[0]?.code ?? 'en';
-          this.form.get('language')?.setValue(String(defaultLang));
+          void this.router.navigate(ROUTES.auth.registerPending());
         },
         error: (err) => {
           logApiError('auth.register.submit', err);
@@ -158,6 +168,26 @@ export class Register implements OnInit {
       });
   }
 
+  private loadDomains(): void {
+    this.loadingDomains = true;
+
+    this.domainService
+      .availableForLinking()
+      .pipe(finalize(() => (this.loadingDomains = false)))
+      .subscribe({
+        next: (domains) => {
+          this.domains = domains ?? [];
+        },
+        error: (err) => {
+          logApiError('auth.register.load-domains', err);
+          this.domains = [];
+          if (!this.errorMessage) {
+            this.errorMessage = userFacingApiMessage(err, this.ui.register.loadDomainsError);
+          }
+        },
+      });
+  }
+
   private formatRegisterError(err: any): string {
     const data = err?.error;
 
@@ -187,5 +217,23 @@ export class Register implements OnInit {
 
   goLogin(): void {
     this.router.navigate(ROUTES.auth.login());
+  }
+
+  private getDomainLabel(domain: DomainReadDto): string {
+    const translations = domain.translations as DomainTranslations | undefined;
+    const lang = this.userService.currentLang;
+    const current = translations?.[lang]?.name?.trim();
+    if (current) {
+      return current;
+    }
+
+    for (const fallback of ['fr', 'en', 'nl']) {
+      const value = translations?.[fallback]?.name?.trim();
+      if (value) {
+        return value;
+      }
+    }
+
+    return `Domain #${domain.id}`;
   }
 }

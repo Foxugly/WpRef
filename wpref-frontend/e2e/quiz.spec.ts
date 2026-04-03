@@ -11,10 +11,10 @@ test.describe('quiz flows', () => {
     await mockApi(page);
 
     await page.goto('/quiz/list');
-    await expect(page.getByRole('heading', {name: 'Quizz'})).toBeVisible();
+    await expect(page.getByRole('heading', {name: 'Quiz'})).toBeVisible();
     await expect(page.getByText('Template public')).toBeVisible();
 
-    await page.locator('app-quiz-template-table').nth(1).getByRole('button', {name: 'Commencer'}).click();
+    await page.getByRole('row', {name: /template public/i}).locator('button').first().click();
 
     await expect(page).toHaveURL(/\/quiz\/701$/);
     await expect(page.getByRole('button', {name: /demarrer|continuer|voir la correction/i})).toBeVisible();
@@ -24,10 +24,10 @@ test.describe('quiz flows', () => {
     const api = await mockApi(page);
 
     await page.goto('/quiz/list');
-    await page.locator('app-quiz-template-table').first().locator('.row-actions button').nth(1).click();
+    await page.getByRole('row', {name: /template admin/i}).locator('button').nth(1).click();
 
     await expect(page.getByText('Envoyer le quiz')).toBeVisible();
-    await page.getByRole('checkbox').first().check({force: true});
+    await page.getByRole('button', {name: /tout selectionner/i}).click();
     await page.locator('p-dialog').getByRole('button', {name: 'Envoyer'}).click({force: true});
 
     await expect.poll(() => api.requests.quizTemplateBulkAssign).toEqual([
@@ -35,7 +35,9 @@ test.describe('quiz flows', () => {
     ]);
 
     await expect(page.getByText('Resultats des quiz envoyes')).toBeVisible();
-    await expect(page.getByRole('cell', {name: 'apprenant'})).toBeVisible();
+    await expect(
+      page.getByRole('dialog', {name: 'Resultats des quiz envoyes'}).getByRole('cell', {name: 'apprenant'}),
+    ).toBeVisible();
   });
 
   test('sauvegarde une reponse puis passe a la question suivante', async ({page}) => {

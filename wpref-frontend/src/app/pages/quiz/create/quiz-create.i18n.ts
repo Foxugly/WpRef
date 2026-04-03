@@ -1,7 +1,22 @@
 import {LanguageEnumDto} from '../../../api/generated';
 
 export type QuizCreateUiText = {
+  settingsTab: string;
+  questionsTab: string;
   settingsTitle: string;
+  questionPoolTitle: string;
+  questionSearchPlaceholder: string;
+  questionSubjectFilter: string;
+  questionSubjectFilterPlaceholder: string;
+  createQuestion: string;
+  selectDomainToLoadQuestions: string;
+  loadingQuestions: string;
+  noAvailableQuestions: string;
+  compositionTitle: string;
+  compositionHelp: string;
+  compositionEmpty: string;
+  weight: string;
+  weightHelp: string;
   createTitle: string;
   editTitle: string;
   createSubtitle: string;
@@ -38,7 +53,22 @@ export type QuizCreateUiText = {
 
 const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
   [LanguageEnumDto.En]: {
+    settingsTab: 'Settings',
+    questionsTab: 'Questions',
     settingsTitle: 'Quiz settings',
+    questionPoolTitle: 'Available questions',
+    questionSearchPlaceholder: 'Search a question',
+    questionSubjectFilter: 'Subjects',
+    questionSubjectFilterPlaceholder: 'Filter by subjects',
+    createQuestion: 'Create question',
+    selectDomainToLoadQuestions: 'Choose a domain to load available questions.',
+    loadingQuestions: 'Loading questions...',
+    noAvailableQuestions: 'No active question is available for this domain.',
+    compositionTitle: 'Quiz composition',
+    compositionHelp: 'Adjust question order and weight before saving.',
+    compositionEmpty: 'Add at least one question to compose the quiz.',
+    weight: 'Weight',
+    weightHelp: 'The weight changes how much this question counts in scoring.',
     createTitle: 'Create a quiz template',
     editTitle: 'Edit quiz template',
     createSubtitle: 'One domain, a curated question pool, and controlled publication settings',
@@ -73,7 +103,22 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   },
   [LanguageEnumDto.Nl]: {
+    settingsTab: 'Instellingen',
+    questionsTab: 'Vragen',
     settingsTitle: 'Quizinstellingen',
+    questionPoolTitle: 'Beschikbare vragen',
+    questionSearchPlaceholder: 'Zoek een vraag',
+    questionSubjectFilter: 'Onderwerpen',
+    questionSubjectFilterPlaceholder: 'Filter op onderwerpen',
+    createQuestion: 'Vraag maken',
+    selectDomainToLoadQuestions: 'Kies een domein om beschikbare vragen te laden.',
+    loadingQuestions: 'Vragen laden...',
+    noAvailableQuestions: 'Geen actieve vragen beschikbaar voor dit domein.',
+    compositionTitle: 'Quizopbouw',
+    compositionHelp: 'Pas volgorde en gewicht van vragen aan voor het opslaan.',
+    compositionEmpty: 'Voeg minstens een vraag toe om de quiz samen te stellen.',
+    weight: 'Gewicht',
+    weightHelp: 'Het gewicht bepaalt hoe zwaar deze vraag meetelt in de score.',
     createTitle: 'Een quiztemplate maken',
     editTitle: 'Quiztemplate bewerken',
     createSubtitle: 'Een domein, een vragenpool en duidelijke publicatie-instellingen',
@@ -108,7 +153,22 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     monthNamesShort: ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'],
   },
   [LanguageEnumDto.It]: {
+    settingsTab: 'Parametri',
+    questionsTab: 'Domande',
     settingsTitle: 'Parametri del quiz',
+    questionPoolTitle: 'Domande disponibili',
+    questionSearchPlaceholder: 'Cerca una domanda',
+    questionSubjectFilter: 'Soggetti',
+    questionSubjectFilterPlaceholder: 'Filtra per soggetti',
+    createQuestion: 'Crea domanda',
+    selectDomainToLoadQuestions: 'Scegli un dominio per caricare le domande disponibili.',
+    loadingQuestions: 'Caricamento domande...',
+    noAvailableQuestions: 'Nessuna domanda attiva disponibile per questo dominio.',
+    compositionTitle: 'Composizione del quiz',
+    compositionHelp: 'Regola ordine e peso delle domande prima del salvataggio.',
+    compositionEmpty: 'Aggiungi almeno una domanda per comporre il quiz.',
+    weight: 'Peso',
+    weightHelp: 'Il peso cambia quanto questa domanda conta nel punteggio.',
     createTitle: 'Crea un template quiz',
     editTitle: 'Modifica il template quiz',
     createSubtitle: 'Un dominio, un set di domande e regole di pubblicazione chiare',
@@ -143,7 +203,22 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     monthNamesShort: ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'],
   },
   [LanguageEnumDto.Es]: {
+    settingsTab: 'Parametros',
+    questionsTab: 'Preguntas',
     settingsTitle: 'Parametros del quiz',
+    questionPoolTitle: 'Preguntas disponibles',
+    questionSearchPlaceholder: 'Buscar una pregunta',
+    questionSubjectFilter: 'Temas',
+    questionSubjectFilterPlaceholder: 'Filtrar por temas',
+    createQuestion: 'Crear pregunta',
+    selectDomainToLoadQuestions: 'Elige un dominio para cargar las preguntas disponibles.',
+    loadingQuestions: 'Cargando preguntas...',
+    noAvailableQuestions: 'No hay preguntas activas disponibles para este dominio.',
+    compositionTitle: 'Composicion del cuestionario',
+    compositionHelp: 'Ajusta el orden y el peso de cada pregunta antes de guardar.',
+    compositionEmpty: 'Agrega al menos una pregunta para componer el cuestionario.',
+    weight: 'Peso',
+    weightHelp: 'El peso cambia cuanto cuenta esta pregunta en la puntuacion.',
     createTitle: 'Crear una plantilla de quiz',
     editTitle: 'Editar plantilla de quiz',
     createSubtitle: 'Un dominio, un conjunto de preguntas y reglas claras de publicacion',
@@ -178,29 +253,44 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     monthNamesShort: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
   },
   [LanguageEnumDto.Fr]: {
-    settingsTitle: 'Parametres du quiz',
-    createTitle: 'Creer un template de quiz',
+    settingsTab: 'Paramètres',
+    questionsTab: 'Questions',
+    settingsTitle: 'Paramètres du quiz',
+    questionPoolTitle: 'Questions disponibles',
+    questionSearchPlaceholder: 'Rechercher une question',
+    questionSubjectFilter: 'Sujets',
+    questionSubjectFilterPlaceholder: 'Filtrer par sujets',
+    createQuestion: 'Créer une question',
+    selectDomainToLoadQuestions: 'Choisis un domaine pour charger les questions disponibles.',
+    loadingQuestions: 'Chargement des questions...',
+    noAvailableQuestions: 'Aucune question active disponible pour ce domaine.',
+    compositionTitle: 'Composition du quiz',
+    compositionHelp: 'Ajuste l ordre et le poids de chaque question avant enregistrement.',
+    compositionEmpty: 'Ajoute au moins une question pour composer le quiz.',
+    weight: 'Poids',
+    weightHelp: 'Le poids change l importance de cette question dans le score.',
+    createTitle: 'Créer un template de quiz',
     editTitle: 'Modifier le template de quiz',
-    createSubtitle: 'Un domaine, un pool de questions et des regles de publication maitrisees',
-    editSubtitle: 'Ajuste les parametres, la visibilite et l ordre des questions',
-    createTemplate: 'Creer le template',
+    createSubtitle: 'Un domaine, un pool de questions et des règles de publication maîtrisées',
+    editSubtitle: 'Ajuste les paramètres, la visibilité et l ordre des questions',
+    createTemplate: 'Créer le template',
     saveTemplate: 'Enregistrer le template',
     domain: 'Domaine',
     mode: 'Mode',
     timer: 'Timer',
-    duration: 'Duree',
+    duration: 'Durée',
     active: 'Active',
     permanent: 'Permanent',
-    startedAt: 'Date de debut',
+    startedAt: 'Date de début',
     endedAt: 'Date de fin',
-    detailVisibility: 'Visibilite du detail',
-    detailAvailableAt: 'Detail disponible a partir de',
+    detailVisibility: 'Visibilité du détail',
+    detailAvailableAt: 'Détail disponible à partir de',
     quizTitle: 'Titre',
     quizDescription: 'Description',
     practiceMode: 'Pratique',
     examMode: 'Examen',
-    visibilityImmediate: 'Immediat',
-    visibilityScheduled: 'Planifie',
+    visibilityImmediate: 'Immédiat',
+    visibilityScheduled: 'Planifié',
     visibilityNever: 'Jamais',
     dateFormat: 'dd/mm/yy',
     today: 'Aujourd hui',
@@ -209,8 +299,8 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     dayNames: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'],
     dayNamesShort: ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'],
     dayNamesMin: ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'],
-    monthNames: ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'],
-    monthNamesShort: ['jan', 'fev', 'mar', 'avr', 'mai', 'jun', 'jul', 'aou', 'sep', 'oct', 'nov', 'dec'],
+    monthNames: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
+    monthNamesShort: ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'],
   },
 };
 

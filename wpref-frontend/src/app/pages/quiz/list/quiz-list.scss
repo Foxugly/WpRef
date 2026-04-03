@@ -1,3 +1,19 @@
 .quiz-tabs {
   display: block;
 }
+
+:host ::ng-deep .quiz-tabs .p-tablist {
+  margin-bottom: 0.9rem;
+}
+
+:host ::ng-deep .quiz-tabpanels {
+  padding: 0;
+}
+
+:host ::ng-deep .quiz-tabs .p-tabpanels,
+:host ::ng-deep .quiz-tabs .p-tabpanel {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}

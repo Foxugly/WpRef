@@ -2,13 +2,15 @@
 from django.contrib import admin
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
+from import_export.admin import ImportExportMixin
 from parler.admin import TranslatableAdmin
 
 from .models import Domain
+from .resources import DomainResource
 
 
 @admin.register(Domain)
-class DomainAdmin(TranslatableAdmin):
+class DomainAdmin(ImportExportMixin, TranslatableAdmin):
     """
     Admin pour Domain (django-parler).
     - Edition des champs traduits (name/description)
@@ -25,6 +27,7 @@ class DomainAdmin(TranslatableAdmin):
         "owner",
         "allowed_languages_count",
         "staff_count",
+        "members_count",
         "updated_at",
     )
     list_display_links = ("id", "name_i18n")
@@ -41,12 +44,12 @@ class DomainAdmin(TranslatableAdmin):
     )
 
     # Widgets M2M plus confortables
-    filter_horizontal = ("allowed_languages", "staff")
+    filter_horizontal = ("allowed_languages", "staff", "members")
 
     # Form (TranslatableAdmin utilise fieldsets par langue automatiquement)
     fieldsets = (
         (None, {"fields": ("active", "owner")}),
-        (_("Languages & staff"), {"fields": ("allowed_languages", "staff")}),
+        (_("Languages & access"), {"fields": ("allowed_languages", "staff", "members")}),
         (_("Dates"), {"fields": ("created_at", "updated_at")}),
     )
     readonly_fields = ("created_at", "updated_at")
@@ -56,9 +59,10 @@ class DomainAdmin(TranslatableAdmin):
         # Parler: prefetch translations + éviter N+1 owner + counts M2M
         return (
             qs.select_related("owner")
-            .prefetch_related("translations", "allowed_languages", "staff")
+            .prefetch_related("translations", "allowed_languages", "staff", "members")
             .annotate(_allowed_lang_count=Count("allowed_languages", distinct=True))
             .annotate(_staff_count=Count("staff", distinct=True))
+            .annotate(_members_count=Count("members", distinct=True))
         )
 
     @admin.display(description=_("Name"))
@@ -73,3 +77,8 @@ class DomainAdmin(TranslatableAdmin):
     @admin.display(description=_("Staff"), ordering="_staff_count")
     def staff_count(self, obj: Domain) -> int:
         return getattr(obj, "_staff_count", 0)
+
+    @admin.display(description=_("Members"), ordering="_members_count")
+    def members_count(self, obj: Domain) -> int:
+        return getattr(obj, "_members_count", 0)
+    resource_classes = [DomainResource]

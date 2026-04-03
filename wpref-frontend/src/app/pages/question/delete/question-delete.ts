@@ -3,7 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs/operators';
 
-import { Button } from 'primeng/button';
+import {ButtonModule} from 'primeng/button';
 import { QuestionReadDto } from '../../../api/generated';
 import { QuestionService, QuestionTranslationForm } from '../../../services/question/question';
 import { selectTranslation } from '../../../shared/i18n/select-translation';
@@ -13,7 +13,7 @@ import {LangCode} from '../../../services/translation/translation';
 @Component({
   standalone: true,
   selector: 'question-delete',
-  imports: [Button],
+  imports: [ButtonModule],
   templateUrl: './question-delete.html',
   styleUrl: './question-delete.scss',
 })

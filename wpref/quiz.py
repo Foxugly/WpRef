@@ -124,8 +124,6 @@ def answer_quiz_randomly(api: ApiClient, quiz_id: str) -> None:
 
 def main():
     BASE_URL = "http://localhost:8000"
-    SU_USERNAME = "admin"
-    SU_PASSWORD = "SuperPassword123"
     U2_USERNAME = "user2"
     U2_PASSWORD = "SuperPassword123"
 
@@ -159,7 +157,7 @@ def main():
 
     # details
     details = api.quiz_details(quiz_id)
-    print(f"📊 details:")
+    print("📊 details:")
     for k, v in details.items():
         if k == "questions":
             print("questions :")

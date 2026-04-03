@@ -1,0 +1,78 @@
+.container {
+  display: flex;
+  justify-content: center;
+  padding: 3rem 1rem;
+}
+
+.container__card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 1.25rem;
+  padding: 2rem;
+  width: min(38rem, 100%);
+}
+
+.card__brand {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.brand__mark {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  display: inline-flex;
+  justify-content: center;
+  padding: 0.8rem;
+}
+
+.brand__logo {
+  display: block;
+  height: 3rem;
+  width: 3rem;
+}
+
+.brand__title {
+  color: #0f172a;
+  margin: 0;
+}
+
+.brand__subtitle {
+  color: #475569;
+  margin: 0;
+}
+
+.notice {
+  background: rgba(224, 242, 254, 0.7);
+  border: 1px solid rgba(125, 211, 252, 0.5);
+  border-radius: 18px;
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem 1.1rem;
+}
+
+.notice__lead {
+  color: #0c4a6e;
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.notice__body {
+  color: #164e63;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}

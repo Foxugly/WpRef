@@ -21,6 +21,7 @@ import {LangCode} from '../translation/translation';
 import {
   AnswerOptionForm,
   AnswerTrGroup,
+  QuestionDuplicateDraft,
   QuestionTrGroup,
   QuestionTranslationForm,
 } from './question';
@@ -184,6 +185,7 @@ export function addQuestionAnswerOption(
   const nextIndex = getAnswerOptions(form).length;
   getAnswerOptions(form).push(
     fb.group({
+      id: fb.control<number | null>(null),
       is_correct: fb.control(false),
       sort_order: fb.control(nextIndex + 1),
     }),
@@ -279,6 +281,7 @@ export function populateQuestionEditorForm(
   for (const [index, answer] of answers.entries()) {
     getAnswerOptions(form).push(
       fb.group({
+        id: fb.control<number | null>(answer.id ?? null),
         is_correct: fb.control(!!answer.is_correct),
         sort_order: fb.control(answer.sort_order ?? index + 1),
       }),
@@ -298,6 +301,75 @@ export function populateQuestionEditorForm(
   }
 
   return langs;
+}
+
+export function populateQuestionEditorFormFromDraft(
+  fb: NonNullableFormBuilder,
+  form: QuestionEditorForm,
+  draft: QuestionDuplicateDraft,
+  langs: LangCode[],
+): void {
+  ensureQuestionTranslationControls(fb, form, langs);
+  getAnswerOptions(form).clear();
+  clearQuestionLangAnswerArrays(form, langs);
+
+  form.patchValue({
+    domain: draft.domainId,
+    subject_ids: draft.subjectIds,
+    active: draft.active,
+    is_mode_practice: draft.isModePractice,
+    is_mode_exam: draft.isModeExam,
+    media: draft.media,
+  });
+
+  for (const lang of langs) {
+    getQuestionTrGroup(form, lang).patchValue({
+      title: draft.translations[lang]?.title ?? '',
+      description: draft.translations[lang]?.description ?? '',
+      explanation: draft.translations[lang]?.explanation ?? '',
+    });
+  }
+
+  for (const [index, answer] of draft.answerOptions.entries()) {
+    getAnswerOptions(form).push(
+      fb.group({
+        id: fb.control<number | null>(null),
+        is_correct: fb.control(!!answer.is_correct),
+        sort_order: fb.control(answer.sort_order ?? index + 1),
+      }),
+    );
+
+    for (const lang of langs) {
+      getLangAnswerOptions(form, lang).push(
+        fb.group({
+          content: fb.control(
+            answer.translations[lang]?.content ?? '',
+            {validators: [Validators.required]},
+          ),
+        }) as AnswerTrGroup,
+      );
+    }
+  }
+}
+
+export function clearQuestionTranslationTab(
+  form: QuestionEditorForm,
+  lang: LangCode,
+): void {
+  const group = getQuestionTrGroup(form, lang);
+  group.controls.title.setValue('');
+  group.controls.description.setValue('');
+  group.controls.explanation.setValue('');
+  group.controls.title.markAsDirty();
+  group.controls.description.markAsDirty();
+  group.controls.explanation.markAsDirty();
+
+  const answers = getLangAnswerOptions(form, lang);
+  for (let i = 0; i < answers.length; i += 1) {
+    const control = getAnswerContentControl(form, i, lang);
+    control.setValue('');
+    control.markAsDirty();
+  }
 }
 
 export function isQuestionEditorFormValid(
@@ -374,6 +446,7 @@ function buildAnswerOptionsPayload(form: QuestionEditorForm, langs: LangCode[]):
     }
 
     answerOptions.push({
+      id: Number(meta.get('id')?.value) || undefined,
       is_correct: !!meta.get('is_correct')?.value,
       sort_order: Number(meta.get('sort_order')?.value ?? i + 1),
       translations: perLang,

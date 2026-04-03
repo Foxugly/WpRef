@@ -1,5 +1,12 @@
 .card-head--split {
-  align-items: flex-start;
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-head__topline {
+  align-items: center;
   display: flex;
   gap: 1rem;
   justify-content: space-between;
@@ -8,6 +15,7 @@
 .card-head__actions {
   align-items: center;
   display: flex;
+  flex-wrap: nowrap;
   gap: 0.75rem;
 }
 
@@ -22,7 +30,26 @@
 }
 
 .field__control--search {
-  min-width: 240px;
+  flex: 1 1 16rem;
+  min-width: 16rem;
+}
+
+:host ::ng-deep .field__control--subjects {
+  flex: 0 1 18rem;
+  min-width: 18rem;
+}
+
+:host ::ng-deep .field__control--subjects .p-multiselect {
+  min-height: 2rem;
+}
+
+:host ::ng-deep .field__control--subjects .p-multiselect-label {
+  font-size: 0.85rem;
+  padding-block: 0.2rem;
+}
+
+:host ::ng-deep .field__control--subjects .p-multiselect-trigger {
+  width: 2rem;
 }
 
 .question-list {
@@ -66,10 +93,13 @@
   }
 
   .card-head__actions {
+    flex-wrap: wrap;
     width: 100%;
   }
 
+  :host ::ng-deep .field__control--subjects,
   .field__control--search {
     min-width: 0;
+    width: 100%;
   }
 }

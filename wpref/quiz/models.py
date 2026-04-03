@@ -391,6 +391,12 @@ class QuizQuestionAnswer(models.Model):
 
 
 class QuizAlertThread(models.Model):
+    KIND_QUESTION = "question"
+    KIND_ASSIGNMENT = "assignment"
+    KIND_CHOICES = [
+        (KIND_QUESTION, "Question"),
+        (KIND_ASSIGNMENT, "Assignment"),
+    ]
     STATUS_OPEN = "open"
     STATUS_CLOSED = "closed"
     STATUS_CHOICES = [
@@ -403,10 +409,13 @@ class QuizAlertThread(models.Model):
         on_delete=models.CASCADE,
         related_name="alert_threads",
     )
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=KIND_QUESTION)
     quizquestion = models.ForeignKey(
         QuizQuestion,
         on_delete=models.CASCADE,
         related_name="alert_threads",
+        null=True,
+        blank=True,
     )
     reporter = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -438,18 +447,26 @@ class QuizAlertThread(models.Model):
         ordering = ["-last_message_at"]
 
     def __str__(self):
-        return f"Alert #{self.pk} quiz={self.quiz_id} question={self.quizquestion_id}"
+        return f"Alert #{self.pk} quiz={self.quiz_id} kind={self.kind} question={self.quizquestion_id}"
 
     @property
     def question_id(self):
+        if not self.quizquestion_id:
+            return None
         return self.quizquestion.question_id
 
     @property
     def question_order(self):
+        if not self.quizquestion_id:
+            return None
         return self.quizquestion.sort_order
 
     @property
     def question_title(self):
+        if self.kind == self.KIND_ASSIGNMENT:
+            from .alerting import assignment_alert_copy
+
+            return assignment_alert_copy(self.reported_language).get("title", "New assigned quiz")
         question = self.quizquestion.question
         return question.safe_translation_getter("title", any_language=True) or f"Question #{question.pk}"
 

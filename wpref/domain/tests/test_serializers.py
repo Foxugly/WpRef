@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from django.test import TestCase
-from django.utils import translation
-from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIRequestFactory
 
@@ -29,6 +27,7 @@ class DomainSerializersTestCase(TestCase):
         cls.owner = User.objects.create_user(username="owner", password="x")
         cls.staff1 = User.objects.create_user(username="staff1", password="x")
         cls.staff2 = User.objects.create_user(username="staff2", password="x")
+        cls.member1 = User.objects.create_user(username="member1", password="x")
 
         cls.lang_fr = Language.objects.create(code="fr", name="Français", active=True)
         cls.lang_nl = Language.objects.create(code="nl", name="Nederlands", active=True)
@@ -37,6 +36,7 @@ class DomainSerializersTestCase(TestCase):
         cls.domain = Domain.objects.create(owner=cls.owner, active=True)
         cls.domain.allowed_languages.set([cls.lang_fr, cls.lang_nl, cls.lang_en_inactive])
         cls.domain.staff.set([cls.staff1, cls.staff2])
+        cls.domain.members.set([cls.staff1, cls.staff2, cls.member1])
 
         # Parler translations
         translation_model = cls.domain._parler_meta.root_model
@@ -65,6 +65,7 @@ class DomainSerializersTestCase(TestCase):
             "active",
             "owner",
             "staff",
+            "members",
             "created_at",
             "updated_at",
         }
@@ -82,6 +83,9 @@ class DomainSerializersTestCase(TestCase):
 
         staff_usernames = {u["username"] for u in data["staff"]}
         self.assertSetEqual(staff_usernames, {self.staff1.username, self.staff2.username})
+
+        member_usernames = {u["username"] for u in data["members"]}
+        self.assertSetEqual(member_usernames, {self.staff1.username, self.staff2.username, self.member1.username})
 
     def test_domain_read_serializer_allowed_languages_filters_active(self):
         s = DomainReadSerializer(instance=self.domain, context={"request": self.factory.get("/")})
@@ -198,6 +202,7 @@ class DomainSerializersTestCase(TestCase):
         self.assertEqual(obj.owner_id, self.owner.id)
         self.assertTrue(obj.active)
         self.assertEqual(obj.staff.count(), 2)
+        self.assertEqual(obj.members.count(), 2)
         self.assertEqual(obj.allowed_languages.count(), 2)
 
         obj.set_current_language("fr")
@@ -225,6 +230,7 @@ class DomainSerializersTestCase(TestCase):
         self.assertFalse(obj.active)
         self.assertEqual(list(obj.allowed_languages.values_list("code", flat=True)), ["fr"])
         self.assertEqual(list(obj.staff.values_list("username", flat=True)), ["staff1"])
+        self.assertEqual(set(obj.members.values_list("username", flat=True)), {"staff1", "staff2", "member1"})
 
         obj.set_current_language("fr")
         self.assertEqual(obj.name, "Updated FR")

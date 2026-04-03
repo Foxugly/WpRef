@@ -11,7 +11,7 @@
       pInputText
       placeholder="Rechercher..."
     >
-    @if (isAdmin()) {
+    @if (canCompose()) {
       <p-button
         (onClick)="compose.emit()"
         icon="pi pi-plus"
@@ -19,6 +19,8 @@
         label="Nouveau template"
         severity="primary"
       ></p-button>
+    }
+    @if (canQuickCreate()) {
       <p-button
         (onClick)="quickCreate.emit()"
         icon="pi pi-plus"

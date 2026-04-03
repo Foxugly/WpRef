@@ -17,6 +17,7 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {SelectModule} from 'primeng/select';
 import {ToggleSwitchModule} from 'primeng/toggleswitch';
+import {TabsModule} from 'primeng/tabs';
 
 import {
   DomainReadDto,
@@ -74,6 +75,7 @@ import {getQuizCreateUiText} from './quiz-create.i18n';
     QuestionPreviewDialogComponent,
     QuestionEditorFormComponent,
     SelectModule,
+    TabsModule,
     ToggleSwitchModule,
   ],
   templateUrl: './quiz-create.html',
@@ -101,6 +103,8 @@ export class QuizCreate implements OnInit {
   questions = signal<QuestionReadDto[]>([]);
   selectedQuestions = signal<SelectedQuizQuestion[]>([]);
   search = signal('');
+  selectedQuestionSubjectIds = signal<number[]>([]);
+  activeEditorTab = signal<'settings' | 'questions'>('settings');
   currentLang = signal<LanguageEnumDto>(LanguageEnumDto.Fr);
   selectedDomainId = signal(0);
   quizFormValid = signal(false);
@@ -108,7 +112,6 @@ export class QuizCreate implements OnInit {
   originalQuizQuestionIds = signal<number[]>([]);
   previewQuestionId = signal<number | null>(null);
 
-  readonly isAdmin = inject(UserService).isAdmin;
   readonly isEditMode = computed(() => this.editingTemplateId() !== null);
 
   readonly quizForm = inject(NonNullableFormBuilder).group({
@@ -189,9 +192,16 @@ export class QuizCreate implements OnInit {
   readonly availableQuestions = computed(() => {
     const selectedIds = new Set(this.selectedQuestions().map((entry) => entry.question.id));
     const term = this.search().trim().toLowerCase();
+    const selectedSubjectIds = new Set(this.selectedQuestionSubjectIds());
 
     return this.questions()
       .filter((question) => !selectedIds.has(question.id))
+      .filter((question) => {
+        if (selectedSubjectIds.size === 0) {
+          return true;
+        }
+        return question.subjects.some((subject) => selectedSubjectIds.has(subject.id));
+      })
       .filter((question) => {
         if (!term) {
           return true;
@@ -224,11 +234,36 @@ export class QuizCreate implements OnInit {
   );
 
   readonly canSave = computed(() => {
-    return this.isAdmin() &&
+    return this.canManageSelectedDomain() &&
       !this.saving() &&
       !!this.selectedDomainId() &&
       this.quizFormValid() &&
       this.selectedQuestions().length > 0;
+  });
+
+  readonly canManageSelectedDomain = computed(() => {
+    const me = this.userService.currentUser();
+    const domain = this.selectedDomain();
+    if (!me || !domain) {
+      return false;
+    }
+    if (me.is_superuser) {
+      return true;
+    }
+    return domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id);
+  });
+
+  readonly canManageAnyDomain = computed(() => {
+    const me = this.userService.currentUser();
+    if (!me) {
+      return false;
+    }
+    if (me.is_superuser) {
+      return true;
+    }
+    return this.domains().some((domain) =>
+      domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id),
+    );
   });
 
   ngOnInit(): void {
@@ -296,6 +331,15 @@ export class QuizCreate implements OnInit {
         this.onDomainSelected(domainId);
       });
 
+    this.quizForm.controls.mode.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const domainId = this.selectedDomainId();
+        if (domainId) {
+          this.onDomainSelected(domainId);
+        }
+      });
+
     this.quizForm.statusChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.quizFormValid.set(this.quizForm.valid));
@@ -348,6 +392,14 @@ export class QuizCreate implements OnInit {
     this.search.set(target?.value ?? '');
   }
 
+  onQuestionSubjectFilterChange(subjectIds: number[]): void {
+    this.selectedQuestionSubjectIds.set(subjectIds);
+  }
+
+  setActiveEditorTab(value: string | number | undefined): void {
+    this.activeEditorTab.set(value === 'questions' ? 'questions' : 'settings');
+  }
+
   addExistingQuestion(question: QuestionReadDto): void {
     this.selectedQuestions.update((items) => [
       ...items,
@@ -397,6 +449,27 @@ export class QuizCreate implements OnInit {
     const parsed = Number(target?.value ?? 1);
     const nextWeight = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
 
+    this.selectedQuestions.update((items) => items.map((item, itemIndex) => (
+      itemIndex === index
+        ? {...item, weight: nextWeight}
+        : item
+    )));
+  }
+
+  adjustWeight(index: number, delta: -1 | 1): void {
+    this.selectedQuestions.update((items) => items.map((item, itemIndex) => {
+      if (itemIndex !== index) {
+        return item;
+      }
+      return {
+        ...item,
+        weight: Math.max(1, item.weight + delta),
+      };
+    }));
+  }
+
+  setWeight(index: number, value: number): void {
+    const nextWeight = Number.isFinite(value) && value > 0 ? Math.floor(value) : 1;
     this.selectedQuestions.update((items) => items.map((item, itemIndex) => (
       itemIndex === index
         ? {...item, weight: nextWeight}
@@ -565,8 +638,8 @@ export class QuizCreate implements OnInit {
     this.submitError.set(null);
     this.error.set(null);
 
-    if (!this.isAdmin()) {
-      this.submitError.set('La composition de quiz est réservée aux administrateurs.');
+    if (!this.canManageSelectedDomain()) {
+      this.submitError.set('La composition de quiz est reservee au owner ou au staff du domaine.');
       return;
     }
 
@@ -650,6 +723,7 @@ export class QuizCreate implements OnInit {
     this.submitError.set(null);
     this.error.set(null);
     this.questions.set([]);
+    this.selectedQuestionSubjectIds.set([]);
 
     const hadSelection = this.selectedQuestions().length > 0;
     if (hadSelection && !this.preserveSelectionOnNextDomainChange) {
@@ -666,7 +740,11 @@ export class QuizCreate implements OnInit {
 
     this.resetQuestionDialog();
     this.questionsLoading.set(true);
-    this.questionService.list({domainId, active: true})
+    this.questionService.list({
+      domainId,
+      active: true,
+      isModeExam: this.quizForm.controls.mode.value === ModeEnumDto.Exam ? true : undefined,
+    })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.questionsLoading.set(false)),
@@ -743,31 +821,59 @@ export class QuizCreate implements OnInit {
   }
 
   private patchTemplate(template: QuizTemplateDto): void {
-    this.selectedQuestions.set(
-      (template.quiz_questions ?? []).map((quizQuestion) => ({
-        quiz_question_id: quizQuestion.id,
-        question: quizQuestion.question,
-        sort_order: quizQuestion.sort_order ?? 1,
-        weight: quizQuestion.weight ?? 1,
-      })),
-    );
+    const selectedQuestions = (template.quiz_questions ?? []).map((quizQuestion) => ({
+      quiz_question_id: quizQuestion.id,
+      question: quizQuestion.question,
+      sort_order: quizQuestion.sort_order ?? 1,
+      weight: quizQuestion.weight ?? 1,
+    }));
+    const domainId = Number(template.domain ?? 0);
+    const isPermanent = template.permanent ?? true;
+    const withDuration = template.with_duration ?? false;
+    const detailVisibility = template.detail_visibility ?? VisibilityEnumDto.Immediate;
+
+    this.selectedQuestions.set(selectedQuestions);
     this.originalQuizQuestionIds.set((template.quiz_questions ?? []).map((quizQuestion) => quizQuestion.id));
 
-    this.preserveSelectionOnNextDomainChange = true;
     this.quizForm.patchValue({
-      domain: Number(template.domain ?? 0),
+      domain: domainId,
       title: template.title ?? '',
       description: template.description ?? '',
       mode: template.mode ?? ModeEnumDto.Practice,
       active: template.active ?? true,
-      permanent: template.permanent ?? true,
+      permanent: isPermanent,
       started_at: this.fromIsoDateTime(template.started_at),
       ended_at: this.fromIsoDateTime(template.ended_at),
-      with_duration: template.with_duration ?? false,
+      with_duration: withDuration,
       duration: template.duration ?? 10,
-      detail_visibility: template.detail_visibility ?? VisibilityEnumDto.Immediate,
+      detail_visibility: detailVisibility,
       detail_available_at: this.fromIsoDateTime(template.detail_available_at),
-    });
+    }, {emitEvent: false});
+
+    if (isPermanent) {
+      this.quizForm.controls.started_at.disable({emitEvent: false});
+      this.quizForm.controls.ended_at.disable({emitEvent: false});
+    } else {
+      this.quizForm.controls.started_at.enable({emitEvent: false});
+      this.quizForm.controls.ended_at.enable({emitEvent: false});
+    }
+
+    if (withDuration) {
+      this.quizForm.controls.duration.enable({emitEvent: false});
+    } else {
+      this.quizForm.controls.duration.disable({emitEvent: false});
+    }
+
+    if (detailVisibility === VisibilityEnumDto.Scheduled) {
+      this.quizForm.controls.detail_available_at.enable({emitEvent: false});
+    } else {
+      this.quizForm.controls.detail_available_at.disable({emitEvent: false});
+    }
+
+    this.selectedDomainId.set(domainId);
+    this.quizFormValid.set(this.quizForm.valid);
+    this.preserveSelectionOnNextDomainChange = true;
+    this.onDomainSelected(domainId);
   }
 
   private resetQuestionDialog(): void {

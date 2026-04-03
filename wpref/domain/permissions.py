@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from wpref.permissions import is_authenticated_user, is_staff_user
+from wpref.permissions import is_authenticated_user
 
 
 class IsDomainOwnerOrStaff(BasePermission):
@@ -8,7 +8,7 @@ class IsDomainOwnerOrStaff(BasePermission):
         user = request.user
         if not is_authenticated_user(user):
             return False
-        if is_staff_user(user):
+        if getattr(user, "is_superuser", False):
             return True
         if obj.owner_id == user.id:
             return True

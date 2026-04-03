@@ -996,7 +996,6 @@ def create_quizzes_and_attach_questions(
             domain,
             max_questions=len(question_indexes),
         )
-        quiz_slug = quiz["slug"]
         quiz_id = quiz["id"]
 
         for i, q_idx in enumerate(question_indexes, start=1):
@@ -1043,9 +1042,7 @@ def main():
     subject_path = paths["subject"]
     domain_path = paths["domain"]
     question_path = paths["question"]
-    quiz_path = paths["quiz"]
     quiz_template_path = "/api/quiz/template/"
-    quiz_user = paths["user"]
 
     # 1) Créer Superuser et users
     print("\n=== Création user2 ===")

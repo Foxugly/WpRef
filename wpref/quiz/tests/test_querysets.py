@@ -16,6 +16,7 @@ class QuizQuerysetsTests(TestCase):
         self.user = User.objects.create_user(username="user", password="pass")
         self.other_user = User.objects.create_user(username="other", password="pass")
         self.staff_user = User.objects.create_user(username="staff", password="pass", is_staff=True)
+        self.domain_staff = User.objects.create_user(username="domainstaff", password="pass")
 
         self.domain = Domain.objects.create(owner=self.owner, name="Domain A", description="", active=True)
         self.other_domain = Domain.objects.create(owner=self.owner, name="Domain B", description="", active=True)
@@ -53,7 +54,8 @@ class QuizQuerysetsTests(TestCase):
             created_by=self.other_user,
         )
         Quiz.objects.create(quiz_template=self.private_assigned, user=self.user, active=False)
-        self.domain.staff.add(self.user)
+        self.domain.members.add(self.user)
+        self.domain.staff.add(self.domain_staff)
 
     def tearDown(self):
         translation.deactivate_all()
@@ -68,17 +70,26 @@ class QuizQuerysetsTests(TestCase):
             [self.public_same_domain.id, self.private_assigned.id],
         )
 
-    def test_staff_user_sees_all_templates_even_without_assigned_domain(self):
+    def test_staff_user_without_linked_domain_sees_none_of_public_domain_templates(self):
         queryset = accessible_quiz_template_queryset(self.staff_user)
+
+        self.assertEqual(list(queryset.values_list("id", flat=True)), [])
+
+    def test_domain_staff_sees_all_templates_of_managed_domain(self):
+        private_same_domain = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="Private same domain",
+            is_public=False,
+            active=True,
+            permanent=True,
+            created_by=self.other_user,
+        )
+
+        queryset = accessible_quiz_template_queryset(self.domain_staff)
 
         self.assertCountEqual(
             list(queryset.values_list("id", flat=True)),
-            [
-                self.public_same_domain.id,
-                self.public_other_domain.id,
-                self.private_assigned.id,
-                self.private_hidden.id,
-            ],
+            [self.public_same_domain.id, private_same_domain.id],
         )
 
     def test_stale_current_domain_does_not_grant_template_access(self):

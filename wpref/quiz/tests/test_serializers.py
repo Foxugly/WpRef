@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.utils import translation
 from domain.models import Domain
 from question.models import Question, AnswerOption
-from quiz.constants import VISIBILITY_IMMEDIATE, VISIBILITY_NEVER, VISIBILITY_SCHEDULED
+from quiz.constants import VISIBILITY_IMMEDIATE, VISIBILITY_NEVER
 from quiz.models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
 from quiz.serializers import (
     GenerateFromSubjectsInputSerializer,
@@ -300,6 +300,36 @@ class QuizQuestionWriteSerializerTests(LocalizedTestCase):
         self.assertFalse(s.is_valid())
         self.assertIn("question_id", s.errors)
 
+    def test_validate_allows_exam_only_question_in_practice_template(self):
+        exam_only = make_question(self.domain, "Q EXAM ONLY", active=True)
+        exam_only.is_mode_practice = False
+        exam_only.is_mode_exam = True
+        exam_only.save(update_fields=["is_mode_practice", "is_mode_exam"])
+        make_option(exam_only, "A", True, 1)
+        make_option(exam_only, "B", False, 2)
+
+        s = QuizQuestionWriteSerializer(
+            data={"question_id": exam_only.id, "sort_order": 2, "weight": 1},
+            context={"quiz_template": self.qt},
+        )
+        self.assertTrue(s.is_valid(), s.errors)
+
+    def test_validate_rejects_non_exam_question_in_exam_template(self):
+        exam_template = make_template(self.domain, title="T Exam", mode=QuizTemplate.MODE_EXAM)
+        practice_only = make_question(self.domain, "Q PRACTICE ONLY", active=True)
+        practice_only.is_mode_practice = True
+        practice_only.is_mode_exam = False
+        practice_only.save(update_fields=["is_mode_practice", "is_mode_exam"])
+        make_option(practice_only, "A", True, 1)
+        make_option(practice_only, "B", False, 2)
+
+        s = QuizQuestionWriteSerializer(
+            data={"question_id": practice_only.id, "sort_order": 1, "weight": 1},
+            context={"quiz_template": exam_template},
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("question_id", s.errors)
+
     def test_create_sets_quiz_from_context(self):
         s = QuizQuestionWriteSerializer(
             data={"question_id": self.q_active.id, "sort_order": 7, "weight": 3},
@@ -324,6 +354,21 @@ class QuizQuestionWriteSerializerTests(LocalizedTestCase):
         obj = s.save()
         self.assertEqual(obj.id, qq.id)
         self.assertEqual(obj.sort_order, 10)
+
+    def test_partial_update_without_question_id_keeps_instance_question(self):
+        qq = QuizQuestion.objects.create(quiz=self.qt, question=self.q_active, sort_order=1, weight=1)
+
+        s = QuizQuestionWriteSerializer(
+            instance=qq,
+            data={"sort_order": 4, "weight": 2},
+            partial=True,
+            context={"quiz_template": self.qt},
+        )
+        self.assertTrue(s.is_valid(), s.errors)
+        obj = s.save()
+        self.assertEqual(obj.question_id, self.q_active.id)
+        self.assertEqual(obj.sort_order, 4)
+        self.assertEqual(obj.weight, 2)
 
 
 # ==========================================================

@@ -25,6 +25,7 @@ class StrictFieldsModelSerializer(serializers.ModelSerializer):
 
 
 class CustomUserReadSerializer(serializers.ModelSerializer):
+    password_change_required = serializers.BooleanField(source="requires_password_change", read_only=True)
     current_domain_title = serializers.SerializerMethodField()
     owned_domain_ids = serializers.SerializerMethodField()
     managed_domain_ids = serializers.SerializerMethodField()
@@ -39,8 +40,7 @@ class CustomUserReadSerializer(serializers.ModelSerializer):
             "last_name",
             "language",
             "email_confirmed",
-            "must_change_password",
-            "new_password_asked",
+            "password_change_required",
             "is_superuser",
             "is_staff",
             "is_active",
@@ -53,8 +53,7 @@ class CustomUserReadSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "email_confirmed",
-            "must_change_password",
-            "new_password_asked",
+            "password_change_required",
             "is_staff",
             "is_superuser",
             "is_active",
@@ -77,37 +76,87 @@ class CustomUserReadSerializer(serializers.ModelSerializer):
         return self._related_ids(obj, "owned_domains")
 
     def get_managed_domain_ids(self, obj) -> List[int]:
-        return self._related_ids(obj, "managed_domains")
+        return self._related_ids(obj, "linked_domains")
 
 
 class CustomUserCreateSerializer(StrictFieldsModelSerializer):
     password = serializers.CharField(write_only=True)
+    managed_domain_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+    )
 
     class Meta:
         model = User
-        fields = ["username", "email", "first_name", "last_name", "password", "language"]
+        fields = ["username", "email", "first_name", "last_name", "password", "language", "managed_domain_ids"]
 
     def validate_password(self, value: str) -> str:
         validate_password(value)
         return value
 
+    def validate_managed_domain_ids(self, value: List[int]) -> List[int]:
+        domain_ids = sorted(set(value))
+        domains = Domain.objects.filter(id__in=domain_ids, active=True)
+        found_ids = set(domains.values_list("id", flat=True))
+        missing_ids = [domain_id for domain_id in domain_ids if domain_id not in found_ids]
+        if missing_ids:
+            raise serializers.ValidationError(
+                f"Unknown or inactive domain id(s): {', '.join(map(str, missing_ids))}."
+            )
+        return domain_ids
+
     def create(self, validated_data):
+        managed_domain_ids = validated_data.pop("managed_domain_ids", [])
         password = validated_data.pop("password")
         user = User(**validated_data)
         user.email_confirmed = False
         user.set_password(password)
         user.save()
+        if managed_domain_ids:
+            user.linked_domains.set(Domain.objects.filter(id__in=managed_domain_ids, active=True))
+            user.ensure_current_domain_is_valid(auto_fix=True)
         return user
 
 
 class CustomUserProfileUpdateSerializer(StrictFieldsModelSerializer):
+    managed_domain_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+    )
+
     class Meta:
         model = User
-        fields = ["email", "first_name", "last_name", "language"]
+        fields = ["email", "first_name", "last_name", "language", "managed_domain_ids"]
+
+    def validate_managed_domain_ids(self, value: List[int]) -> List[int]:
+        domain_ids = sorted(set(value))
+        domains = Domain.objects.filter(id__in=domain_ids, active=True)
+        found_ids = set(domains.values_list("id", flat=True))
+        missing_ids = [domain_id for domain_id in domain_ids if domain_id not in found_ids]
+        if missing_ids:
+            raise serializers.ValidationError(
+                f"Unknown or inactive domain id(s): {', '.join(map(str, missing_ids))}."
+            )
+        return domain_ids
+
+    def update(self, instance, validated_data):
+        managed_domain_ids = validated_data.pop("managed_domain_ids", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if managed_domain_ids is not None:
+            instance.linked_domains.set(Domain.objects.filter(id__in=managed_domain_ids, active=True))
+            instance.ensure_current_domain_is_valid(auto_fix=True)
+        return instance
 
 
 class CustomUserAdminUpdateSerializer(StrictFieldsModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    password_change_required = serializers.BooleanField(required=False, source="must_change_password")
 
     class Meta:
         model = User
@@ -118,8 +167,7 @@ class CustomUserAdminUpdateSerializer(StrictFieldsModelSerializer):
             "language",
             "password",
             "is_active",
-            "must_change_password",
-            "new_password_asked",
+            "password_change_required",
         ]
 
     def validate_password(self, value: str) -> str:
@@ -133,7 +181,6 @@ class CustomUserAdminUpdateSerializer(StrictFieldsModelSerializer):
         if password:
             instance.set_password(password)
             instance.must_change_password = True
-            instance.new_password_asked = False
         instance.save()
         return instance
 
@@ -202,7 +249,7 @@ class SetCurrentDomainSerializer(serializers.Serializer):
         if not domain:
             raise serializers.ValidationError({"domain_id": "Domain not found."})
 
-        if not user.can_manage_domain(domain):
+        if not user.get_visible_domains(active_only=False).filter(id=domain.id).exists():
             raise serializers.ValidationError({"domain_id": "Forbidden for this domain."})
 
         attrs["domain"] = domain

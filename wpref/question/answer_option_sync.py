@@ -15,6 +15,11 @@ def sync_question_answer_options(
     upsert_translations,
 ) -> None:
     existing_options = {option.id: option for option in question.answer_options.all()}
+    referenced_existing_ids = set(
+        AnswerOption.objects.filter(question=question, quiz_answers__isnull=False)
+        .distinct()
+        .values_list("id", flat=True)
+    )
     retained_ids: set[int] = set()
 
     for i, raw_option in enumerate(answer_options_data):
@@ -41,6 +46,16 @@ def sync_question_answer_options(
                 raise serializers.ValidationError(
                     {f"answer_options[{i}].id": "Duplicate answer option id in payload."}
                 )
+            new_is_correct = option_payload.get("is_correct", option.is_correct)
+            if option_id in referenced_existing_ids and bool(new_is_correct) != bool(option.is_correct):
+                raise serializers.ValidationError(
+                    {
+                        "answer_options": (
+                            "Impossible de modifier le statut correcte/incorrecte "
+                            f"de reponses deja utilisees dans des quiz: [{option_id}]"
+                        )
+                    }
+                )
             for attr, value in option_payload.items():
                 setattr(option, attr, value)
             option.save()
@@ -57,11 +72,7 @@ def sync_question_answer_options(
 
     removable_ids = set(existing_options) - retained_ids
     if removable_ids:
-        referenced_ids = sorted(
-            AnswerOption.objects.filter(id__in=removable_ids, quiz_answers__isnull=False)
-            .distinct()
-            .values_list("id", flat=True)
-        )
+        referenced_ids = sorted(referenced_existing_ids.intersection(removable_ids))
         if referenced_ids:
             raise serializers.ValidationError(
                 {

@@ -17,7 +17,11 @@
     <p-card styleClass="panel">
       <div class="thread-banner">
         <div class="thread-banner__main">
-          <span class="thread-banner__topic">#{{ currentThread.question_order }}</span>
+          @if (currentThread.kind === 'question' && currentThread.question_order !== null) {
+            <span class="thread-banner__topic">#{{ currentThread.question_order }}</span>
+          } @else {
+            <span class="thread-banner__topic">Quiz</span>
+          }
           <strong class="thread-banner__title">{{ currentThread.question_title }}</strong>
           <span class="thread-banner__template">{{ currentThread.quiz_template_title }}</span>
         </div>
@@ -29,7 +33,7 @@
           <p-tag [severity]="statusSeverity(currentThread)" [value]="currentThread.status === 'open' ? 'Ouverte' : 'Clôturée'"></p-tag>
           <span class="thread-banner__pill">Langue {{ currentThread.reported_language || '-' }}</span>
           <a [routerLink]="routes.quiz.view(currentThread.quiz)" class="thread-banner__pill">Quiz #{{ currentThread.quiz }}</a>
-          @if (currentThread.can_manage) {
+          @if (currentThread.kind === 'question' && currentThread.can_manage && currentThread.question_id !== null) {
             <a [routerLink]="routes.question.view(currentThread.question_id)" class="thread-banner__pill">Question #{{ currentThread.question_id }}</a>
           }
         </div>

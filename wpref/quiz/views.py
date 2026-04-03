@@ -2,7 +2,7 @@ import logging
 import random
 
 from django.contrib.auth import get_user_model
-from django.db import models, transaction
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import (
     extend_schema,
@@ -18,7 +18,6 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from subject.models import Subject
 from wpref.tools import ErrorDetailSerializer
 from wpref.tools import MyModelViewSet
 
@@ -26,10 +25,11 @@ from .models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer, QuizAl
 from .access import (
     user_can_access_template,
     user_can_create_quiz_from_template,
+    user_can_edit_template,
     user_can_manage_template_assignments,
     validate_target_user_domain,
 )
-from .permissions import IsOwnerOrStaff, IsStaffOrSuperuser, IsQuizAlertParticipant
+from .permissions import IsOwnerOrStaff, IsQuizAlertParticipant, CanManageQuizTemplate
 from .querysets import (
     quiz_answer_queryset_for_user,
     accessible_quiz_template_queryset,
@@ -44,6 +44,7 @@ from .alerting import (
 )
 from .session_integrity import synchronize_closed_quiz_answers
 from .services import close_quiz_session, create_quizzes_from_template
+from .notifications import notify_quiz_assigned_on_commit
 from .serializers import (
     QuizTemplateSerializer,
     QuizTemplateWriteSerializer,
@@ -126,10 +127,10 @@ class QuizTemplateViewSet(MyModelViewSet):
           - generate_from_subjects, available : user authentifié
           - tout le reste (CRUD, questions)   : staff uniquement
         """
-        if self.action in ["list", "retrieve", "sessions"]:
+        if self.action in ["list", "retrieve", "sessions", "create", "generate_from_subjects"]:
             return [IsAuthenticated()]
 
-        return [IsStaffOrSuperuser()]
+        return [CanManageQuizTemplate()]
 
     def get_serializer_class(self):
         if self.action in {"list", "retrieve", "generate_from_subjects"}:
@@ -217,6 +218,7 @@ class QuizTemplateViewSet(MyModelViewSet):
             extra={"pk": kwargs.get("qt_id")},
         )
         instance = self.get_object()
+        self.check_object_permissions(request, instance)
         write = self.get_serializer(instance, data=request.data, partial=False)
         write.is_valid(raise_exception=True)
         instance = write.save()
@@ -232,6 +234,7 @@ class QuizTemplateViewSet(MyModelViewSet):
             extra={"pk": kwargs.get("qt_id")},
         )
         instance = self.get_object()
+        self.check_object_permissions(request, instance)
         write = self.get_serializer(instance, data=request.data, partial=True)
         write.is_valid(raise_exception=True)
         instance = write.save()
@@ -246,7 +249,10 @@ class QuizTemplateViewSet(MyModelViewSet):
             output="204 | 404",
             extra={"pk": kwargs.get("pk")},
         )
-        return super().destroy(request, *args, **kwargs)
+        instance = self.get_object()
+        self.check_object_permissions(request, instance)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # ==========================================================
     # ACTIONS CUSTOM (je garde les tiennes, avec logging amélioré)
@@ -379,7 +385,12 @@ class QuizTemplateViewSet(MyModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        serializer = QuizQuestionWriteSerializer(quizquestion, data=request.data, partial=True)
+        serializer = QuizQuestionWriteSerializer(
+            quizquestion,
+            data=request.data,
+            partial=True,
+            context={"quiz_template": quiz_template},
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         logger.debug("update_question: updated quizquestion_id=%s", quizquestion.id)
@@ -483,7 +494,7 @@ class QuizTemplateViewSet(MyModelViewSet):
     ),
 )
 class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
-    permission_classes = [IsStaffOrSuperuser]
+    permission_classes = [CanManageQuizTemplate]
     lookup_field = "pk"
     lookup_url_kwarg = "qq_id"
 
@@ -501,6 +512,11 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
             .select_related("question", "quiz")
         )
 
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [IsAuthenticated()]
+        return [CanManageQuizTemplate()]
+
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
             return QuizQuestionReadSerializer
@@ -513,10 +529,17 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
         ctx["quiz_template"] = get_object_or_404(QuizTemplate, pk=self.kwargs["qt_id"])
         return ctx
 
+    def _quiz_template(self):
+        return self.get_serializer_context()["quiz_template"]
+
     def list(self, request, *args, **kwargs):
+        if not user_can_access_template(request.user, self._quiz_template()):
+            return not_found_response()
         return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
+        if not user_can_edit_template(request.user, self._quiz_template()):
+            return not_found_response()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
@@ -524,11 +547,15 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
         return Response(out.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs):
+        if not user_can_access_template(request.user, self._quiz_template()):
+            return not_found_response()
         instance = self.get_object()
         out = QuizQuestionReadSerializer(instance, context=self.get_serializer_context())
         return Response(out.data, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
+        if not user_can_edit_template(request.user, self._quiz_template()):
+            return not_found_response()
         instance = self.get_object()
 
         write = self.get_serializer(
@@ -542,6 +569,8 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
         return Response(out.data, status=status.HTTP_200_OK)
 
     def partial_update(self, request, *args, **kwargs):
+        if not user_can_edit_template(request.user, self._quiz_template()):
+            return not_found_response()
         instance = self.get_object()
 
         write = self.get_serializer(
@@ -556,6 +585,8 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
         return Response(out.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
+        if not user_can_edit_template(request.user, self._quiz_template()):
+            return not_found_response()
         instance = self.get_object()
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -773,6 +804,8 @@ class QuizViewSet(MyModelViewSet):
             user=target_user,
             active=False,
         )
+        if target_user.id != request.user.id:
+            notify_quiz_assigned_on_commit(quiz, assigned_by=request.user)
         logger.debug("create: created quiz_id=%s user_id=%s qt_id=%s", quiz.id, request.user.id,
                     qt.id)
         serializer = self.get_serializer(quiz)
@@ -839,6 +872,7 @@ class QuizViewSet(MyModelViewSet):
             quiz_template=qt,
             users=users,
             validate_target_user=validate_target_user_domain,
+            assigned_by=request.user,
         )
         logger.debug(
             "bulk_create_from_template: created=%s quiz_template_id=%s users_count=%s",

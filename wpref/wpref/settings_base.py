@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "django_filters",
     "django_extensions",
+    "import_export",
     "parler",
     "customuser.apps.CustomuserConfig",
     "subject.apps.SubjectConfig",

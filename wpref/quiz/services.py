@@ -14,7 +14,7 @@ notify_quiz_assigned = notify_quiz_assigned_on_commit
 notify_quiz_completed = notify_quiz_completed_on_commit
 
 
-def create_quizzes_from_template(*, quiz_template, users, validate_target_user) -> list[Quiz]:
+def create_quizzes_from_template(*, quiz_template, users, validate_target_user, assigned_by=None) -> list[Quiz]:
     created: list[Quiz] = []
     with transaction.atomic():
         for user in users:
@@ -26,7 +26,7 @@ def create_quizzes_from_template(*, quiz_template, users, validate_target_user) 
                 active=False,
             )
             created.append(quiz)
-            notify_quiz_assigned(quiz)
+            notify_quiz_assigned(quiz, assigned_by=assigned_by)
     return created
 
 

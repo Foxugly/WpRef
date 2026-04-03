@@ -33,6 +33,7 @@ class DomainViewSetTests(TestCase):
         cls.owner = User.objects.create_user(username="owner", password="pwd")
         cls.other = User.objects.create_user(username="other", password="pwd")
         cls.global_staff = User.objects.create_user(username="staff", password="pwd", is_staff=True)
+        cls.member = User.objects.create_user(username="member", password="pwd")
 
         # Languages
         cls.lang_fr = Language.objects.create(code="fr", name="Français", active=True)
@@ -58,6 +59,7 @@ class DomainViewSetTests(TestCase):
         cls.domain_other_active.set_current_language("fr")
         cls.domain_other_active.name = "Autre Domaine"
         cls.domain_other_active.save()
+        cls.domain_active.members.add(cls.member)
 
         # Subjects for details()
         cls.subject_active = Subject.objects.create(domain=cls.domain_active, active=True)
@@ -103,7 +105,19 @@ class DomainViewSetTests(TestCase):
         self.assertIn(self.domain_inactive.id, ids)
         self.assertNotIn(self.domain_other_active.id, ids)
 
-    def test_list_global_staff_sees_all(self):
+    def test_list_authenticated_member_sees_linked_domain(self):
+        view = DomainViewSet.as_view({"get": "list"})
+        request = self.factory.get("/api/domain/")
+        force_authenticate(request, user=self.member)
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = _get_results(response.data)
+        ids = {item["id"] for item in results}
+        self.assertIn(self.domain_active.id, ids)
+        self.assertNotIn(self.domain_other_active.id, ids)
+
+    def test_list_global_staff_without_linked_domain_sees_none(self):
         view = DomainViewSet.as_view({"get": "list"})
         request = self.factory.get("/api/domain/")
         force_authenticate(request, user=self.global_staff)
@@ -113,9 +127,7 @@ class DomainViewSetTests(TestCase):
         results = _get_results(response.data)
         ids = {item["id"] for item in results}
 
-        self.assertIn(self.domain_active.id, ids)
-        self.assertIn(self.domain_inactive.id, ids)
-        self.assertIn(self.domain_other_active.id, ids)
+        self.assertEqual(ids, set())
 
     def test_list_is_paginated_when_global_pagination_is_enabled(self):
         page_size = settings.REST_FRAMEWORK["PAGE_SIZE"]
@@ -136,6 +148,17 @@ class DomainViewSetTests(TestCase):
         self.assertIn("results", response.data)
         self.assertEqual(len(response.data["results"]), page_size)
         self.assertGreater(response.data["count"], len(response.data["results"]))
+
+    def test_available_for_linking_returns_active_domains_for_anyone(self):
+        view = DomainViewSet.as_view({"get": "available_for_linking"})
+        request = self.factory.get("/api/domain/available-for-linking/")
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {item["id"] for item in response.data}
+        self.assertIn(self.domain_active.id, ids)
+        self.assertIn(self.domain_other_active.id, ids)
+        self.assertNotIn(self.domain_inactive.id, ids)
 
     # ----------------------------
     # RETRIEVE
@@ -216,6 +239,9 @@ class DomainViewSetTests(TestCase):
         staff_ids = set(domain.staff.values_list("id", flat=True))
         self.assertIn(self.owner.id, staff_ids)  # ajouté par perform_create()
         self.assertIn(self.other.id, staff_ids)
+        member_ids = set(domain.members.values_list("id", flat=True))
+        self.assertIn(self.owner.id, member_ids)
+        self.assertIn(self.other.id, member_ids)
 
         allowed_ids = set(domain.allowed_languages.values_list("id", flat=True))
         self.assertEqual(allowed_ids, {self.lang_fr.id})
@@ -276,3 +302,34 @@ class DomainViewSetTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Domain.objects.filter(pk=domain.id).exists())
+
+    def test_member_role_can_promote_linked_user_to_domain_staff(self):
+        view = DomainViewSet.as_view({"post": "member_role"})
+        request = self.factory.post(
+            f"/api/domain/{self.domain_active.id}/member-role/",
+            {"user_id": self.member.id, "domain_staff": True},
+            format="json",
+        )
+        force_authenticate(request, user=self.owner)
+        response = view(request, domain_id=self.domain_active.id)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.member.refresh_from_db()
+        self.assertTrue(self.member.is_staff)
+        self.assertTrue(self.domain_active.staff.filter(pk=self.member.pk).exists())
+        self.assertTrue(self.domain_active.members.filter(pk=self.member.pk).exists())
+
+    def test_member_role_demote_staff_keeps_member_link(self):
+        self.domain_active.staff.add(self.member)
+        view = DomainViewSet.as_view({"post": "member_role"})
+        request = self.factory.post(
+            f"/api/domain/{self.domain_active.id}/member-role/",
+            {"user_id": self.member.id, "domain_staff": False},
+            format="json",
+        )
+        force_authenticate(request, user=self.owner)
+        response = view(request, domain_id=self.domain_active.id)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.domain_active.staff.filter(pk=self.member.pk).exists())
+        self.assertTrue(self.domain_active.members.filter(pk=self.member.pk).exists())

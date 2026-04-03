@@ -23,12 +23,27 @@
     </nav>
 
     <div class="topbar__actions">
-      <button pButton (click)="goAlerts()" [attr.aria-label]="ui.topmenu.alertsAria" class="alert-link" type="button">
-        <i class="pi pi-envelope"></i>
-        @if (unreadAlertCount > 0) {
-          <span class="alert-link__badge">{{ unreadAlertCount }}</span>
-        }
-      </button>
+      @if (currentUser) {
+        <button pButton (click)="goAlerts()" [attr.aria-label]="ui.topmenu.alertsAria" class="alert-link" type="button">
+          <i class="pi pi-envelope"></i>
+          @if (unreadAlertCount > 0) {
+            <span class="alert-link__badge">{{ unreadAlertCount }}</span>
+          }
+        </button>
+        <p-button
+          [label]="currentDomainLabel"
+          icon="pi pi-building"
+          severity="secondary"
+          styleClass="domain-trigger"
+          (click)="toggleDomainMenu($event)"
+        ></p-button>
+        <p-menu
+          #domainMenu
+          [model]="domainMenuItems"
+          [popup]="true"
+          styleClass="domain-menu"
+        ></p-menu>
+      }
       <app-lang-select
         (langChange)="onLangChange($event)"
         [lang]="currentLang"

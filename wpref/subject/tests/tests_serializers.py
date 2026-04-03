@@ -5,7 +5,6 @@ from django.test import TestCase, override_settings
 from django.utils import translation
 
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
 
 from domain.models import Domain
 from subject.models import Subject
@@ -223,9 +222,9 @@ class SubjectSerializersTestCase(TestCase):
 
     def test_subject_detail_serializer_orders_questions_by_id(self):
         # On force un ordre via création ; serializer trie par id
-        q1 = self._make_question_linked_to_subject(subject=self.subject, active=True, titles={"fr": "A"}, sort_order=10)
-        q2 = self._make_question_linked_to_subject(subject=self.subject, active=True, titles={"fr": "B"}, sort_order=5)
-        q3 = self._make_question_linked_to_subject(subject=self.subject, active=True, titles={"fr": "C"}, sort_order=0)
+        self._make_question_linked_to_subject(subject=self.subject, active=True, titles={"fr": "A"}, sort_order=10)
+        self._make_question_linked_to_subject(subject=self.subject, active=True, titles={"fr": "B"}, sort_order=5)
+        self._make_question_linked_to_subject(subject=self.subject, active=True, titles={"fr": "C"}, sort_order=0)
 
         data = SubjectDetailSerializer(self.subject).data
         ids = [q["id"] for q in data["questions"]]

@@ -129,7 +129,7 @@ class CustomUserViewSet(
         return (
             User.objects
             .select_related("current_domain")
-            .prefetch_related("owned_domains", "managed_domains")
+            .prefetch_related("owned_domains", "linked_domains", "managed_domains")
             .order_by("id")
         )
 

@@ -1,21 +1,23 @@
 <div class="page">
-  <div class="header-line header-line--grid">
-    <div class="header-spacer"></div>
-
-    <div class="header-center">
-      <h1 class="title">Cr&#233;er un sujet</h1>
-      <p class="subtitle muted">Choix du domaine + traductions</p>
-    </div>
-
-    <div class="header-actions">
+  <div class="header-line">
+    <div class="header-line__left">
       <p-button
         (onClick)="goList()"
         icon="pi pi-arrow-left"
-        label="Retour"
+        [label]="ui().common.back"
+        class="page-back-button"
         severity="secondary"
-        type="button">
+        type="button"
+        variant="outlined">
       </p-button>
     </div>
+
+    <div class="header-center">
+      <h1 class="title">{{ ui().pages.subjectCreate.title }}</h1>
+      <p class="subtitle muted">{{ ui().pages.subjectCreate.subtitle }}</p>
+    </div>
+
+    <div class="header-line__right"></div>
   </div>
 
   @if (loading()) {
@@ -32,7 +34,7 @@
       [selectedDomainId]="selectedDomainId()"
       [showDomainSelect]="true"
       [submitError]="submitError()"
-      submitLabel="Cr&#233;er"
+      [submitLabel]="ui().common.create"
       [tabCodes]="tabCodes()"
       [translating]="translating()"
       (cancel)="goList()"

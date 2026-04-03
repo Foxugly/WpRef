@@ -1,10 +1,10 @@
 import {CommonModule} from '@angular/common';
-import {Component, input, output} from '@angular/core';
+import {Component, computed, inject, input, output} from '@angular/core';
 import {FormGroup, ReactiveFormsModule} from '@angular/forms';
 
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
-import {Editor} from 'primeng/editor';
+import {EditorModule} from 'primeng/editor';
 import {InputTextModule} from 'primeng/inputtext';
 import {MessageModule} from 'primeng/message';
 import {PickListModule} from 'primeng/picklist';
@@ -12,6 +12,9 @@ import {SelectModule} from 'primeng/select';
 import {SelectButtonModule} from 'primeng/selectbutton';
 import {TabsModule} from 'primeng/tabs';
 import {ToggleSwitchModule} from 'primeng/toggleswitch';
+
+import {UserService} from '../../services/user/user';
+import {getEditorUiText} from '../../shared/i18n/editor-ui-text';
 
 type UserOption = { label: string; value: number };
 type LangOption = { label: string; value: string };
@@ -25,7 +28,7 @@ type LangOption = { label: string; value: string };
     CommonModule,
     ReactiveFormsModule,
     TabsModule,
-    Editor,
+    EditorModule,
     InputTextModule,
     ButtonModule,
     ToggleSwitchModule,
@@ -37,6 +40,7 @@ type LangOption = { label: string; value: string };
   ],
 })
 export class DomainEditorFormComponent {
+  private readonly userService = inject(UserService);
   readonly form = input.required<FormGroup>();
   readonly tabCodes = input<string[]>([]);
   readonly activeTab = input<string | undefined>(undefined);
@@ -50,6 +54,7 @@ export class DomainEditorFormComponent {
   readonly ownerPlaceholder = input('Choisir un owner');
   readonly submitLabel = input('Enregistrer');
   readonly titleLabel = input('Nom');
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
 
   readonly tabValueChange = output<string | number | undefined>();
   readonly translateClick = output<string>();

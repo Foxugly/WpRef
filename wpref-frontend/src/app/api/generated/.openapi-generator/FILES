@@ -30,6 +30,7 @@ model/domain-detail.ts
 model/domain-name-summary.ts
 model/domain-read.ts
 model/domain-write-request.ts
+model/domain-write.ts
 model/email-confirmation-request.ts
 model/email-confirmed-token-obtain-pair-request.ts
 model/error-detail.ts

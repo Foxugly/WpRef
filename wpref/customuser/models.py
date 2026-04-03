@@ -12,7 +12,6 @@ class CustomUser(AbstractUser):
                                 default=getattr(settings, "LANGUAGE_CODE", "en"))
     email_confirmed = models.BooleanField(default=False)
     must_change_password = models.BooleanField(default=False)
-    new_password_asked = models.BooleanField(default=False)
 
     current_domain = models.ForeignKey(
         "domain.Domain",
@@ -41,6 +40,16 @@ class CustomUser(AbstractUser):
             return f"{self.first_name} {self.last_name} ({self.username})"
         return self.username
 
+    def to_field_value_dict(self) -> dict[str, object]:
+        """
+        Retourne les champs concrets du modèle et leur valeur courante.
+        Les relations FK sont renvoyées via leur `<field>_id`, comme sur l'instance Django.
+        """
+        return {
+            field.attname: getattr(self, field.attname)
+            for field in self._meta.concrete_fields
+        }
+
     # -------------------------
     # Domain / permissions métier
     # -------------------------
@@ -55,7 +64,7 @@ class CustomUser(AbstractUser):
         if domain is None:
             return False
 
-        if self.is_superuser or self.is_staff:
+        if self.is_superuser:
             return True
 
         # domain.owner_id est standard sur un ForeignKey
@@ -79,7 +88,7 @@ class CustomUser(AbstractUser):
         if active_only:
             qs = qs.filter(active=True)
 
-        if self.is_superuser or self.is_staff:
+        if self.is_superuser:
             return qs.distinct()
         return qs.filter(Q(owner=self) | Q(staff=self)).distinct()
 
@@ -88,7 +97,15 @@ class CustomUser(AbstractUser):
         Alias "pratique": en général l’UI liste les domaines visibles/choisissables.
         Par défaut on ne montre que les domaines actifs.
         """
-        return self.get_manageable_domains(active_only=active_only)
+        Domain = self._domain_model()
+        qs = Domain.objects.all()
+
+        if active_only:
+            qs = qs.filter(active=True)
+
+        if self.is_superuser:
+            return qs.distinct()
+        return qs.filter(Q(owner=self) | Q(staff=self) | Q(members=self)).distinct()
 
     def set_current_domain(self, domain, *, allow_none: bool = True, save: bool = True) -> None:
         """
@@ -105,7 +122,7 @@ class CustomUser(AbstractUser):
                 self.save(update_fields=["current_domain"])
             return
 
-        if not self.can_manage_domain(domain):
+        if not self.get_visible_domains(active_only=False).filter(id=domain.id).exists():
             raise PermissionError("User cannot set this domain as current.")
 
         self.current_domain = domain
@@ -132,7 +149,7 @@ class CustomUser(AbstractUser):
                 self.pick_default_current_domain(save=True, active_only=active_only)
             return False
 
-        if not self.can_manage_domain(cd):
+        if not self.get_visible_domains(active_only=False).filter(id=cd.id).exists():
             if auto_fix:
                 self.pick_default_current_domain(save=True, active_only=active_only)
             return False
@@ -165,8 +182,8 @@ class CustomUser(AbstractUser):
         if self.current_domain is None:
             return
 
-        if not self.can_manage_domain(self.current_domain):
-            raise ValidationError({"current_domain": "This domain is not manageable by the user."})
+        if not self.get_visible_domains(active_only=False).filter(id=self.current_domain_id).exists():
+            raise ValidationError({"current_domain": "This domain is not visible to the user."})
 
     # -------------------------
     # Qualité de vie (facultatif)
@@ -181,4 +198,4 @@ class CustomUser(AbstractUser):
 
     @property
     def requires_password_change(self) -> bool:
-        return self.must_change_password or self.new_password_asked
+        return self.must_change_password

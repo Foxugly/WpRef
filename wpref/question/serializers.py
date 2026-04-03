@@ -7,16 +7,14 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.utils import translation
 from domain.models import Domain
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import inline_serializer, extend_schema_field
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from subject.models import Subject
-from subject.serializers import SubjectReadSerializer, SubjectWriteSerializer
+from subject.serializers import SubjectReadSerializer
 
 from .answer_option_sync import sync_question_answer_options
 from .models import Question, QuestionMedia, AnswerOption, MediaAsset
 from wpref.serializers import (
-    JSONDictOrStringField,
     LocalizedAnswerOptionTranslationSerializer,
     LocalizedTranslationsJSONField,
     LocalizedQuestionTranslationSerializer,

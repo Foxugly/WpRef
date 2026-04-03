@@ -3,13 +3,16 @@ from __future__ import annotations
 
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
+from import_export.admin import ImportExportMixin
 from parler.admin import TranslatableAdmin
 
 from .models import Subject
+from .resources import SubjectResource
 
 
 @admin.register(Subject)
-class SubjectAdmin(TranslatableAdmin):
+class SubjectAdmin(ImportExportMixin, TranslatableAdmin):
+    resource_classes = [SubjectResource]
     # --- List page ---
     list_display = ("id", "name_any", "domain", "active")
     list_filter = ("domain", "active")

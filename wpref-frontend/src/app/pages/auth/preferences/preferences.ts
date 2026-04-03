@@ -1,11 +1,13 @@
 import {CommonModule} from '@angular/common';
 import {Component, DestroyRef, inject, OnInit, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormBuilder, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router} from '@angular/router';
 import {finalize, forkJoin, of} from 'rxjs';
+import {switchMap} from 'rxjs/operators';
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
+import {DialogModule} from 'primeng/dialog';
 import {InputTextModule} from 'primeng/inputtext';
 import {SelectModule} from 'primeng/select';
 import {CustomUserReadDto, DomainReadDto, LanguageEnumDto} from '../../../api/generated';
@@ -15,16 +17,19 @@ import {getUiText} from '../../../shared/i18n/ui-text';
 
 @Component({
   selector: 'app-preferences',
+  standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     ButtonModule,
     CardModule,
+    DialogModule,
     InputTextModule,
     SelectModule,
   ],
   templateUrl: './preferences.html',
-  styleUrl: './preferences.scss',
+  styleUrls: ['./preferences.scss'],
 })
 export class Preferences implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -37,8 +42,11 @@ export class Preferences implements OnInit {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
-  readonly domains = signal<DomainReadDto[]>([]);
+  readonly availableDomains = signal<DomainReadDto[]>([]);
+  readonly visibleDomains = signal<DomainReadDto[]>([]);
   readonly currentUser = signal<CustomUserReadDto | null>(null);
+  readonly linkDialogVisible = signal(false);
+  readonly selectedDomainIdsToLink = signal<number[]>([]);
 
   readonly form = this.fb.nonNullable.group({
     username: [{value: '', disabled: true}],
@@ -46,7 +54,6 @@ export class Preferences implements OnInit {
     first_name: [''],
     last_name: [''],
     language: [LanguageEnumDto.En, [Validators.required]],
-    current_domain: [null as number | null],
   });
 
   get ui() {
@@ -63,13 +70,6 @@ export class Preferences implements OnInit {
     ];
   }
 
-  get domainOptions() {
-    return this.domains().map((domain) => ({
-      label: this.getDomainLabel(domain),
-      value: domain.id,
-    }));
-  }
-
   get roleLabel(): string {
     const me = this.currentUser();
     if (!me) {
@@ -84,30 +84,66 @@ export class Preferences implements OnInit {
     return this.ui.preferences.roleUser;
   }
 
+  get visibleDomainEntries() {
+    const me = this.currentUser();
+    if (!me) {
+      return [];
+    }
+
+    return this.visibleDomains().map((domain) => {
+      const isOwner = domain.owner?.id === me.id;
+      const isStaff = !isOwner && (domain.staff ?? []).some((user) => user.id === me.id);
+      const isLinkedOnly = !isOwner && !isStaff;
+      return {
+        id: domain.id,
+        name: this.getDomainLabel(domain),
+        role: isOwner
+          ? this.ui.preferences.roleOwner
+          : (isStaff ? this.ui.preferences.roleStaff : this.ui.preferences.roleMember),
+        ownerName: domain.owner?.username || '-',
+        isCurrent: me.current_domain === domain.id,
+        canSetCurrent: me.current_domain !== domain.id,
+        canUnlink: isLinkedOnly,
+        canDelete: isOwner,
+      };
+    });
+  }
+
+  get linkableDomainEntries() {
+    const linkedIds = new Set(this.visibleDomains().map((domain) => domain.id));
+    return this.availableDomains()
+      .filter((domain) => !linkedIds.has(domain.id))
+      .map((domain) => ({
+        id: domain.id,
+        name: this.getDomainLabel(domain),
+      }));
+  }
+
   ngOnInit(): void {
     this.loading.set(true);
     forkJoin({
       me: this.userService.currentUser()
         ? of(this.userService.currentUser() as CustomUserReadDto)
         : this.userService.getMe(),
-      domains: this.domainService.list(),
+      availableDomains: this.domainService.availableForLinking(),
+      visibleDomains: this.domainService.list(),
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: ({me, domains}) => {
+        next: ({me, availableDomains, visibleDomains}) => {
           const currentUser = Array.isArray(me) ? me[0] : me;
           this.currentUser.set(currentUser);
-          this.domains.set(domains ?? []);
+          this.availableDomains.set(availableDomains ?? []);
+          this.visibleDomains.set(visibleDomains ?? []);
           this.form.patchValue({
             username: currentUser.username ?? '',
             email: currentUser.email ?? '',
             first_name: currentUser.first_name ?? '',
             last_name: currentUser.last_name ?? '',
             language: currentUser.language ?? LanguageEnumDto.En,
-            current_domain: currentUser.current_domain ?? null,
           });
         },
         error: () => {
@@ -134,34 +170,31 @@ export class Preferences implements OnInit {
     const raw = this.form.getRawValue();
     this.saving.set(true);
 
-    forkJoin({
-      profile: this.userService.updateMeProfile({
+    this.userService.updateMeProfile({
         email: raw.email || '',
         first_name: raw.first_name || '',
         last_name: raw.last_name || '',
         language: raw.language,
-      }),
-      domain: me.current_domain !== raw.current_domain
-        ? this.userService.setCurrentDomain(raw.current_domain)
-        : this.userService.currentUser()
-          ? of(this.userService.currentUser() as CustomUserReadDto)
-          : this.userService.getMe(),
-    })
+      })
+      .pipe(switchMap((updatedUser) => forkJoin({
+        profile: of(updatedUser),
+        visibleDomains: this.domainService.list(),
+      })))
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.saving.set(false)),
       )
       .subscribe({
-        next: ({domain}) => {
-          const updatedUser = Array.isArray(domain) ? domain[0] : domain;
+        next: ({profile, visibleDomains}) => {
+          const updatedUser = Array.isArray(profile) ? profile[0] : profile;
           this.currentUser.set(updatedUser);
+          this.visibleDomains.set(visibleDomains ?? []);
           this.form.patchValue({
             username: updatedUser.username ?? '',
             email: updatedUser.email ?? '',
             first_name: updatedUser.first_name ?? '',
             last_name: updatedUser.last_name ?? '',
             language: updatedUser.language ?? LanguageEnumDto.En,
-            current_domain: updatedUser.current_domain ?? null,
           });
           this.success.set(this.ui.preferences.saveSuccess);
         },
@@ -173,6 +206,127 @@ export class Preferences implements OnInit {
 
   goChangePassword(): void {
     void this.router.navigate(['/change-password']);
+  }
+
+  openLinkDomainsDialog(): void {
+    this.selectedDomainIdsToLink.set([]);
+    this.linkDialogVisible.set(true);
+  }
+
+  closeLinkDomainsDialog(): void {
+    this.linkDialogVisible.set(false);
+    this.selectedDomainIdsToLink.set([]);
+  }
+
+  toggleDomainToLink(domainId: number): void {
+    const current = this.selectedDomainIdsToLink();
+    this.selectedDomainIdsToLink.set(
+      current.includes(domainId)
+        ? current.filter((id) => id !== domainId)
+        : [...current, domainId],
+    );
+  }
+
+  linkSelectedDomains(): void {
+    const me = this.currentUser();
+    const selected = this.selectedDomainIdsToLink();
+    if (!me || selected.length === 0) {
+      this.closeLinkDomainsDialog();
+      return;
+    }
+    const managed_domain_ids = Array.from(new Set([...(me.managed_domain_ids ?? []), ...selected]));
+    this.persistLinkedDomains(managed_domain_ids, true);
+  }
+
+  setCurrentDomain(domainId: number): void {
+    this.error.set(null);
+    this.success.set(null);
+    this.saving.set(true);
+    this.userService.setCurrentDomain(domainId)
+      .pipe(
+        switchMap((profile) => forkJoin({
+          profile: of(profile),
+          visibleDomains: this.domainService.list(),
+        })),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: ({profile, visibleDomains}) => {
+          this.currentUser.set(profile);
+          this.visibleDomains.set(visibleDomains ?? []);
+          this.success.set(this.ui.preferences.saveSuccess);
+        },
+        error: () => {
+          this.error.set(this.ui.preferences.saveError);
+        },
+      });
+  }
+
+  unlinkDomain(domainId: number): void {
+    const me = this.currentUser();
+    if (!me) {
+      return;
+    }
+    const managed_domain_ids = (me.managed_domain_ids ?? []).filter((id) => id !== domainId);
+    this.persistLinkedDomains(managed_domain_ids, false);
+  }
+
+  deleteOwnedDomain(domainId: number): void {
+    this.error.set(null);
+    this.success.set(null);
+    this.saving.set(true);
+    this.domainService.delete(domainId)
+      .pipe(
+        switchMap(() => forkJoin({
+          profile: this.userService.getMe(),
+          visibleDomains: this.domainService.list(),
+          availableDomains: this.domainService.availableForLinking(),
+        })),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: ({profile, visibleDomains, availableDomains}) => {
+          this.currentUser.set(profile);
+          this.visibleDomains.set(visibleDomains ?? []);
+          this.availableDomains.set(availableDomains ?? []);
+          this.success.set(this.ui.preferences.deleteDomainSuccess);
+        },
+        error: () => {
+          this.error.set(this.ui.preferences.deleteDomainError);
+        },
+      });
+  }
+
+  private persistLinkedDomains(managed_domain_ids: number[], closeDialog: boolean): void {
+    this.error.set(null);
+    this.success.set(null);
+    this.saving.set(true);
+    this.userService.updateMeProfile({managed_domain_ids})
+      .pipe(
+        switchMap((profile) => forkJoin({
+          profile: of(profile),
+          visibleDomains: this.domainService.list(),
+          availableDomains: this.domainService.availableForLinking(),
+        })),
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: ({profile, visibleDomains, availableDomains}) => {
+          this.currentUser.set(profile);
+          this.visibleDomains.set(visibleDomains ?? []);
+          this.availableDomains.set(availableDomains ?? []);
+          if (closeDialog) {
+            this.closeLinkDomainsDialog();
+          }
+          this.success.set(this.ui.preferences.saveSuccess);
+        },
+        error: () => {
+          this.error.set(this.ui.preferences.saveError);
+        },
+      });
   }
 
   private getDomainLabel(domain: DomainReadDto): string {

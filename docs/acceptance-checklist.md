@@ -38,6 +38,7 @@
 - inscription + confirmation email
 - mot de passe oublie
 - assignation d un quiz
+- reception de l alerte d assignation dans la langue du destinataire avec lien quiz
 - passage d un quiz
 - correction
 - alertes quiz

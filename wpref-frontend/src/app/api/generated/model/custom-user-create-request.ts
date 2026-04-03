@@ -20,6 +20,7 @@ export interface CustomUserCreateRequestDto {
     last_name?: string;
     password: string;
     language?: LanguageEnumDto;
+    managed_domain_ids?: Array<number>;
 }
 
 

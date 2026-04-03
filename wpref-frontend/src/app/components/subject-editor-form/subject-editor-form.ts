@@ -1,13 +1,16 @@
 import {CommonModule} from '@angular/common';
-import {Component, input, output} from '@angular/core';
+import {Component, computed, inject, input, output} from '@angular/core';
 import {FormGroup, FormsModule, ReactiveFormsModule} from '@angular/forms';
 
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
-import {Editor} from 'primeng/editor';
+import {EditorModule} from 'primeng/editor';
 import {InputTextModule} from 'primeng/inputtext';
 import {SelectModule} from 'primeng/select';
 import {TabsModule} from 'primeng/tabs';
+
+import {UserService} from '../../services/user/user';
+import {getEditorUiText} from '../../shared/i18n/editor-ui-text';
 
 type DomainOption = { id: number; name: string };
 
@@ -20,7 +23,7 @@ type DomainOption = { id: number; name: string };
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    Editor,
+    EditorModule,
     TabsModule,
     SelectModule,
     ButtonModule,
@@ -29,6 +32,7 @@ type DomainOption = { id: number; name: string };
   ],
 })
 export class SubjectEditorFormComponent {
+  private readonly userService = inject(UserService);
   readonly form = input.required<FormGroup>();
   readonly tabCodes = input<string[]>([]);
   readonly activeLang = input<string | undefined>(undefined);
@@ -40,6 +44,7 @@ export class SubjectEditorFormComponent {
   readonly domainOptions = input<DomainOption[]>([]);
   readonly emptyLanguagesMessage = input('Ce domaine n a pas de langues configurees.');
   readonly submitLabel = input('Enregistrer');
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
 
   readonly tabChange = output<string | number | undefined>();
   readonly translateActive = output<void>();

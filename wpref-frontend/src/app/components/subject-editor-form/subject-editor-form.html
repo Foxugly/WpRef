@@ -1,13 +1,13 @@
 @if (showDomainSelect()) {
   <div class="card form-card">
     <div class="card-head">
-      <h2 class="card-title">Domaine</h2>
-      <span class="badge">{{ domainOptions().length }} disponible(s)</span>
+      <h2 class="card-title">{{ ui().subjectForm.domain }}</h2>
+      <span class="badge">{{ domainOptions().length }} {{ ui().subjectForm.availableCount }}</span>
     </div>
 
     <div class="meta-grid">
       <div class="meta-item meta-item--full">
-        <label class="meta-label">Domaine</label>
+        <label class="meta-label">{{ ui().subjectForm.domain }}</label>
         <div class="meta-value">
           <p-select
             (onChange)="onDomainChange($event.value)"
@@ -18,7 +18,7 @@
             [options]="domainOptions()"
             optionLabel="name"
             optionValue="id"
-            placeholder="Choisir un domaine">
+            [placeholder]="ui().subjectForm.chooseDomain">
           </p-select>
         </div>
       </div>
@@ -29,8 +29,8 @@
 @if (showTranslations() && tabCodes().length > 0) {
   <form (ngSubmit)="submit()" [formGroup]="form()" class="card form-card">
     <div class="card-head card-head--with-badge">
-      <h2 class="card-title">Traductions</h2>
-      <span class="badge">{{ tabCodes().length }} langue(s)</span>
+      <h2 class="card-title">{{ ui().subjectForm.translations }}</h2>
+      <span class="badge">{{ tabCodes().length }} {{ ui().subjectForm.languagesCount }}</span>
     </div>
 
     <p-tabs
@@ -54,7 +54,7 @@
                   [disabled]="translating()"
                   [loading]="translating()"
                   icon="pi pi-language"
-                  label="Traduire vers les autres langues"
+                  [label]="ui().common.translateOthers"
                   severity="info"
                   type="button">
                 </p-button>
@@ -62,18 +62,18 @@
 
               <div [formGroupName]="lang" class="meta-grid">
                 <div class="meta-item meta-item--full">
-                  <label class="meta-label">Nom ({{ lang.toUpperCase() }})</label>
+                  <label class="meta-label">{{ ui().subjectForm.name }} ({{ lang.toUpperCase() }})</label>
                   <div class="meta-value">
-                    <input formControlName="name" pInputText placeholder="Nom du sujet" />
+                    <input formControlName="name" pInputText [placeholder]="ui().subjectForm.namePlaceholder" />
                   </div>
 
                   @if (langGroup(lang).get('name')?.invalid && langGroup(lang).get('name')?.touched) {
-                    <div class="meta-hint meta-hint--error">Champ requis.</div>
+                    <div class="meta-hint meta-hint--error">{{ ui().subjectForm.required }}</div>
                   }
                 </div>
 
                 <div class="meta-item meta-item--full">
-                  <label class="meta-label">Description ({{ lang.toUpperCase() }})</label>
+                  <label class="meta-label">{{ ui().subjectForm.description }} ({{ lang.toUpperCase() }})</label>
                   <div class="meta-value">
                     <p-editor class="editor-compact" formControlName="description"></p-editor>
                   </div>
@@ -83,7 +83,7 @@
               @if (translating()) {
                 <div class="inline-status">
                   <i class="pi pi-spin pi-spinner"></i>
-                  <span>Traduction en cours...</span>
+                  <span>{{ ui().common.translating }}</span>
                 </div>
               }
             </div>
@@ -94,7 +94,7 @@
   </form>
 } @else if (showTranslations()) {
   <div class="card">
-    <div class="alert alert--info">{{ emptyLanguagesMessage() }}</div>
+    <div class="alert alert--info">{{ emptyLanguagesMessage() || ui().subjectForm.emptyLanguages }}</div>
   </div>
 }
 
@@ -106,17 +106,18 @@
 
 <div class="footer-actions">
   <p-button
-    (onClick)="submit()"
-    icon="pi pi-save"
-    [label]="submitLabel()"
+    (onClick)="onCancel()"
+    icon="pi pi-times"
+    [label]="ui().common.cancel"
+    severity="secondary"
+    variant="outlined"
     type="button">
   </p-button>
 
   <p-button
-    (onClick)="onCancel()"
-    icon="pi pi-times"
-    label="Annuler"
-    severity="secondary"
+    (onClick)="submit()"
+    icon="pi pi-save"
+    [label]="submitLabel()"
     type="button">
   </p-button>
 </div>

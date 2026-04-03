@@ -58,11 +58,17 @@
               @if (thread.unread_count > 0) {
                 <span class="alert-card__dot" aria-hidden="true"></span>
               }
-              <span class="alert-card__topic">#{{ thread.question_order }}</span>
+              @if (thread.kind === 'question' && thread.question_order !== null) {
+                <span class="alert-card__topic">#{{ thread.question_order }}</span>
+              } @else {
+                <span class="alert-card__topic">Quiz</span>
+              }
               <strong class="alert-card__title">{{ thread.question_title }}</strong>
               <span class="alert-card__pill">{{ thread.quiz_template_title }}</span>
               <span class="alert-card__pill">Langue {{ thread.reported_language || '-' }}</span>
-              <span class="alert-card__pill">Question #{{ thread.question_id }}</span>
+              @if (thread.kind === 'question' && thread.question_id !== null) {
+                <span class="alert-card__pill">Question #{{ thread.question_id }}</span>
+              }
               <span class="alert-card__time">{{ thread.last_message_at | date : 'short' }}</span>
             </div>
 

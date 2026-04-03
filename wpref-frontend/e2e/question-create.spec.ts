@@ -29,7 +29,7 @@ test('cree une question avec un media YouTube normalise', async ({page}) => {
 
   await page.goto('/question/add?domainId=1');
 
-  await expect(page.getByRole('heading', {name: /question/i})).toBeVisible();
+  await expect(page.getByPlaceholder('Titre...')).toBeVisible();
   await page.getByPlaceholder('Titre...').fill('Question E2E');
 
   const answers = page.locator('.answer__content .ql-editor');

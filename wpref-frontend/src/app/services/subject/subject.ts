@@ -29,8 +29,11 @@ export class SubjectService {
   constructor(private api: SubjectApi, private router: Router) {
   }
 
-  list(params?: { search?: string }): Observable<SubjectReadDto[]> {
-    return this.api.subjectList({search: params?.search}).pipe(map((response) => response.results ?? []));
+  list(params?: { search?: string; domainId?: number }): Observable<SubjectReadDto[]> {
+    return this.api.subjectList({
+      search: params?.search,
+      domain: params?.domainId,
+    }).pipe(map((response) => response.results ?? []));
   }
 
   retrieve(subjectId: number): Observable<SubjectReadDto> {

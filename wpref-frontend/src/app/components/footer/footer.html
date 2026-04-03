@@ -1,14 +1,19 @@
 <footer class="app-footer">
   <div class="app-footer__inner">
     <div class="app-footer__brand">
-      <span class="app-footer__name">{{ app.name }}</span>
-      <span class="app-footer__baseline">{{ ui.footer.baseline }}</span>
+      <span class="app-footer__mark">
+        <img [alt]="app.name" [src]="app.logoSvg" class="app-footer__logo">
+      </span>
+      <div class="app-footer__copy">
+        <span class="app-footer__name">{{ app.name }}</span>
+        <span class="app-footer__baseline">{{ ui.footer.baseline }}</span>
+      </div>
     </div>
 
     <div class="app-footer__meta">
-      <span>{{ ui.footer.version }} {{ app.version }}</span>
-      <span>{{ app.author }}</span>
-      <span>© {{ app.year }}</span>
+      <span class="app-footer__pill">{{ ui.footer.version }} {{ app.version }}</span>
+      <span class="app-footer__pill">{{ app.author }}</span>
+      <span class="app-footer__pill">© {{ app.year }}</span>
     </div>
   </div>
 </footer>

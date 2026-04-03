@@ -1,6 +1,6 @@
 import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Button} from 'primeng/button';
+import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {PaginatorModule} from 'primeng/paginator';
 import {TableModule} from 'primeng/table';
@@ -16,7 +16,7 @@ type LangCode = `${LanguageEnumDto}`;
 
 @Component({
   selector: 'app-domain-list',
-  imports: [FormsModule, Button, InputTextModule, PaginatorModule, TableModule, StripPPipe],
+  imports: [FormsModule, ButtonModule, InputTextModule, PaginatorModule, TableModule, StripPPipe],
   templateUrl: './domain-list.html',
   styleUrl: './domain-list.scss',
 })

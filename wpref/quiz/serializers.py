@@ -118,6 +118,7 @@ class QuizTemplateSerializer(serializers.ModelSerializer):
     can_answer = serializers.BooleanField(read_only=True)
     quiz_questions = QuizQuestionSerializer(many=True, read_only=True)
     created_by = serializers.IntegerField(source="created_by_id", read_only=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True, default="")
 
     class Meta:
         model = QuizTemplate
@@ -144,12 +145,42 @@ class QuizTemplateSerializer(serializers.ModelSerializer):
             "detail_available_at",
             "is_public",
             "created_by",
+            "created_by_username",
             "quiz_questions",
         ]
         read_only_fields = ["slug", "created_at", "questions_count", "can_answer"]
 
 
 class QuizTemplateWriteSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not getattr(user, "is_authenticated", False):
+            raise serializers.ValidationError("Authentication required.")
+
+        domain = attrs.get("domain") or getattr(self.instance, "domain", None)
+        mode = attrs.get("mode") or getattr(self.instance, "mode", QuizTemplate.MODE_PRACTICE)
+
+        if domain is None:
+            raise serializers.ValidationError({"domain": "Domain is required."})
+
+        if getattr(user, "is_superuser", False):
+            return attrs
+
+        if mode == QuizTemplate.MODE_EXAM:
+            if not user.can_manage_domain(domain):
+                raise serializers.ValidationError(
+                    {"mode": "Only a domain owner or domain staff can create or edit exam templates."}
+                )
+            return attrs
+
+        if not user.get_visible_domains(active_only=False).filter(id=domain.id).exists():
+            raise serializers.ValidationError(
+                {"domain": "You are not linked to this domain."}
+            )
+        return attrs
+
     class Meta:
         model = QuizTemplate
         fields = [
@@ -208,6 +239,8 @@ class QuizQuestionWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("quiz_template manquant dans le context.")
 
         question = attrs.get("question")
+        if question is None and self.instance is not None:
+            question = self.instance.question
 
         if question and not question.active:
             raise serializers.ValidationError({"question_id": "Cette question n'est pas active."})
@@ -215,6 +248,11 @@ class QuizQuestionWriteSerializer(serializers.ModelSerializer):
         if question and quiz_template.domain_id and question.domain_id != quiz_template.domain_id:
             raise serializers.ValidationError(
                 {"question_id": "Cette question n'appartient pas au domaine de ce quiz."}
+            )
+
+        if question and quiz_template.mode == QuizTemplate.MODE_EXAM and not question.is_mode_exam:
+            raise serializers.ValidationError(
+                {"question_id": "Cette question n'est pas disponible pour le mode examen."}
             )
 
         if question:
@@ -648,12 +686,13 @@ class QuizAlertMessageSerializer(RequestUserMixin, serializers.ModelSerializer):
 
 
 class QuizAlertThreadListSerializer(RequestUserMixin, serializers.ModelSerializer):
+    kind = serializers.CharField(read_only=True)
     unread = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     last_message_preview = serializers.SerializerMethodField()
-    question_id = serializers.IntegerField(read_only=True)
-    question_order = serializers.IntegerField(read_only=True)
-    question_title = serializers.CharField(read_only=True)
+    question_id = serializers.IntegerField(read_only=True, allow_null=True)
+    question_order = serializers.IntegerField(read_only=True, allow_null=True)
+    question_title = serializers.CharField(read_only=True, allow_blank=True)
     quiz_template_title = serializers.CharField(read_only=True)
 
     class Meta:
@@ -661,6 +700,7 @@ class QuizAlertThreadListSerializer(RequestUserMixin, serializers.ModelSerialize
         fields = [
             "id",
             "quiz",
+            "kind",
             "question_id",
             "question_order",
             "question_title",

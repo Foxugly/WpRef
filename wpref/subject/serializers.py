@@ -98,16 +98,23 @@ class SubjectWriteSerializer(serializers.ModelSerializer):
     # ---------------------------
 
     def validate(self, attrs):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        domain = attrs.get("domain") or getattr(self.instance, "domain", None)
+        if domain is not None and user is not None and not user.can_manage_domain(domain):
+            raise serializers.ValidationError({"domain": "Vous ne pouvez pas gerer ce domaine."})
+
         translations = attrs.get("translations")
-        if not translations:
+        if not translations and self.instance is None:
             raise serializers.ValidationError({"translations": "Au moins une traduction est requise."})
 
-        invalid_codes = sorted(set(translations.keys()) - LANG_CODES)
-        if invalid_codes:
-            raise serializers.ValidationError({"translations": f"Langues inconnues: {invalid_codes}"})
+        if translations:
+            invalid_codes = sorted(set(translations.keys()) - LANG_CODES)
+            if invalid_codes:
+                raise serializers.ValidationError({"translations": f"Langues inconnues: {invalid_codes}"})
 
-        if not any((v or {}).get("name") for v in translations.values()):
-            raise serializers.ValidationError({"translations": "Au moins un 'name' est requis."})
+            if not any((v or {}).get("name") for v in translations.values()):
+                raise serializers.ValidationError({"translations": "Au moins un 'name' est requis."})
 
         return attrs
 

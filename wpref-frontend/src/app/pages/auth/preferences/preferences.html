@@ -13,14 +13,16 @@
     </section>
 
     <div class="preferences-grid">
-      <p-card class="panel panel--form">
-        <ng-template pTemplate="title">{{ ui.preferences.profileTitle }}</ng-template>
-        <ng-template pTemplate="subtitle">{{ ui.preferences.profileSubtitle }}</ng-template>
-
-        @if (loading()) {
+      @if (loading()) {
+        <p-card class="panel panel--form">
           <p class="state">{{ ui.preferences.loading }}</p>
-        } @else {
-          <form [formGroup]="form" class="form" (ngSubmit)="save()">
+        </p-card>
+      } @else {
+        <form [formGroup]="form" class="preferences-form" (ngSubmit)="save()">
+          <p-card class="panel panel--form">
+            <ng-template pTemplate="title">{{ ui.preferences.profileTitle }}</ng-template>
+            <ng-template pTemplate="subtitle">{{ ui.preferences.profileSubtitle }}</ng-template>
+
             <div class="field-grid">
               <div class="field">
                 <label for="username">{{ ui.preferences.username }}</label>
@@ -53,19 +55,6 @@
                   [placeholder]="ui.preferences.chooseLanguage"
                 ></p-select>
               </div>
-
-              <div class="field">
-                <label for="current_domain">{{ ui.preferences.currentDomain }}</label>
-                <p-select
-                  inputId="current_domain"
-                  [options]="domainOptions"
-                  formControlName="current_domain"
-                  optionLabel="label"
-                  optionValue="value"
-                  [showClear]="true"
-                  [placeholder]="ui.preferences.noDomain"
-                ></p-select>
-              </div>
             </div>
 
             @if (error()) {
@@ -91,41 +80,131 @@
                 (onClick)="goChangePassword()"
               ></p-button>
             </div>
-          </form>
-        }
-      </p-card>
+          </p-card>
 
-      <p-card class="panel panel--summary">
-        <ng-template pTemplate="title">{{ ui.preferences.summaryTitle }}</ng-template>
-        <ng-template pTemplate="subtitle">{{ ui.preferences.summarySubtitle }}</ng-template>
+          <p-card class="panel panel--summary">
+            <ng-template pTemplate="title">{{ ui.preferences.domainsTitle }}</ng-template>
+            <ng-template pTemplate="subtitle">{{ ui.preferences.domainsSubtitle }}</ng-template>
 
-        <dl class="summary">
-          <div class="summary__row">
-            <dt>{{ ui.preferences.role }}</dt>
-            <dd>{{ roleLabel }}</dd>
-          </div>
-          <div class="summary__row">
-            <dt>{{ ui.preferences.user }}</dt>
-            <dd>{{ currentUser()?.username || '-' }}</dd>
-          </div>
-          <div class="summary__row">
-            <dt>{{ ui.preferences.currentDomainLabel }}</dt>
-            <dd>{{ currentUser()?.current_domain_title || ui.preferences.noDomain }}</dd>
-          </div>
-          <div class="summary__row">
-            <dt>{{ ui.preferences.managedDomains }}</dt>
-            <dd>{{ currentUser()?.managed_domain_ids?.length || 0 }}</dd>
-          </div>
-          <div class="summary__row">
-            <dt>{{ ui.preferences.ownedDomains }}</dt>
-            <dd>{{ currentUser()?.owned_domain_ids?.length || 0 }}</dd>
-          </div>
-          <div class="summary__row">
-            <dt>{{ ui.preferences.activeAccount }}</dt>
-            <dd>{{ currentUser()?.is_active ? ui.preferences.yes : ui.preferences.no }}</dd>
-          </div>
-        </dl>
-      </p-card>
+            <div class="form form--stacked">
+              <div class="domain-toolbar">
+                <p-button
+                  type="button"
+                  [label]="ui.preferences.addDomain"
+                  icon="pi pi-plus"
+                  severity="secondary"
+                  [disabled]="saving()"
+                  (onClick)="openLinkDomainsDialog()"
+                ></p-button>
+              </div>
+
+              <div class="domain-list">
+                <p class="domain-list__title">{{ ui.preferences.linkedDomainsList }}</p>
+                @if (visibleDomainEntries.length) {
+                  @for (entry of visibleDomainEntries; track entry.id) {
+                    <div class="domain-list__item">
+                      <div class="domain-list__content">
+                        <span class="domain-list__name">{{ entry.name }}</span>
+                        <span class="domain-list__role">{{ entry.role }}</span>
+                        <span class="domain-list__owner">{{ ui.preferences.ownerLabel }} {{ entry.ownerName }}</span>
+                      </div>
+                      <div class="domain-list__actions">
+                        @if (entry.isCurrent) {
+                          <span class="domain-list__badge">{{ ui.preferences.currentBadge }}</span>
+                        } @else if (entry.canSetCurrent) {
+                          <p-button
+                            type="button"
+                            [label]="ui.preferences.setCurrent"
+                            size="small"
+                            [text]="true"
+                            [disabled]="saving()"
+                            (onClick)="setCurrentDomain(entry.id)"
+                          ></p-button>
+                        }
+                        @if (entry.canUnlink) {
+                          <p-button
+                            type="button"
+                            [label]="ui.preferences.unlinkDomain"
+                            size="small"
+                            severity="danger"
+                            [text]="true"
+                            [disabled]="saving()"
+                            (onClick)="unlinkDomain(entry.id)"
+                          ></p-button>
+                        }
+                        @if (entry.canDelete) {
+                          <p-button
+                            type="button"
+                            [label]="ui.preferences.deleteDomain"
+                            size="small"
+                            severity="danger"
+                            [outlined]="true"
+                            [disabled]="saving()"
+                            (onClick)="deleteOwnedDomain(entry.id)"
+                          ></p-button>
+                        }
+                      </div>
+                    </div>
+                  }
+                } @else {
+                  <p class="state">{{ ui.preferences.noDomain }}</p>
+                }
+              </div>
+            </div>
+          </p-card>
+        </form>
+      }
     </div>
   </div>
 </div>
+
+<p-dialog
+  [header]="ui.preferences.addDomain"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [visible]="linkDialogVisible()"
+  [style]="{ width: 'min(32rem, 92vw)' }"
+  (visibleChange)="linkDialogVisible.set($event)"
+  (onHide)="closeLinkDomainsDialog()"
+>
+  <div class="link-dialog">
+    @if (linkableDomainEntries.length) {
+      @for (entry of linkableDomainEntries; track entry.id) {
+        <button
+          type="button"
+          class="link-dialog__item"
+          [class.link-dialog__item--selected]="selectedDomainIdsToLink().includes(entry.id)"
+          (click)="toggleDomainToLink(entry.id)"
+        >
+          <span>{{ entry.name }}</span>
+          @if (selectedDomainIdsToLink().includes(entry.id)) {
+            <span class="link-dialog__check">✓</span>
+          }
+        </button>
+      }
+    } @else {
+      <p class="state">{{ ui.preferences.noMoreDomains }}</p>
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="link-dialog__footer">
+      <p-button
+        type="button"
+        [label]="ui.preferences.cancel"
+        severity="secondary"
+        [text]="true"
+        (onClick)="closeLinkDomainsDialog()"
+      ></p-button>
+      <p-button
+        type="button"
+        [label]="ui.preferences.linkSelectedDomains"
+        icon="pi pi-link"
+        [disabled]="!selectedDomainIdsToLink().length || saving()"
+        [loading]="saving()"
+        (onClick)="linkSelectedDomains()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

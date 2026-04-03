@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
 from django.test import TestCase, override_settings
 from django.utils import translation
 
@@ -148,6 +147,18 @@ class DomainModelTestCase(TestCase):
         d = self._mk_domain()
         d.staff.set([self.staff1, self.staff2])
         self.assertEqual(set(d.staff.values_list("username", flat=True)), {"staff1", "staff2"})
+
+    def test_staff_added_becomes_member_automatically(self):
+        d = self._mk_domain()
+        d.staff.add(self.staff1)
+        self.assertTrue(d.members.filter(pk=self.staff1.pk).exists())
+
+    def test_removing_staff_keeps_member_link(self):
+        d = self._mk_domain()
+        d.staff.add(self.staff1)
+        d.staff.remove(self.staff1)
+        self.assertFalse(d.staff.filter(pk=self.staff1.pk).exists())
+        self.assertTrue(d.members.filter(pk=self.staff1.pk).exists())
 
     # ---------------------------------------------------------------------
     # Meta ordering

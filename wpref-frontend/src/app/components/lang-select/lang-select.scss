@@ -1,3 +1,18 @@
 :host {
   display: block;
 }
+
+:host ::ng-deep .lang-select__trigger.p-button {
+  min-width: 0;
+  padding-inline: 0.75rem;
+}
+
+:host ::ng-deep .lang-select__menu.p-menu {
+  min-width: 4.5rem;
+  width: auto;
+}
+
+:host ::ng-deep .lang-select__menu .p-menu-item-link {
+  justify-content: center;
+  padding-inline: 0.75rem;
+}

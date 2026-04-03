@@ -13,3 +13,4 @@ coverage
 django-parler
 django-environ
 celery[redis]
+django-import-export

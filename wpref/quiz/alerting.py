@@ -10,6 +10,24 @@ if TYPE_CHECKING:
     from .models import Quiz, QuizAlertMessage, QuizAlertThread, QuizQuestion
 
 
+def assignment_alert_copy(language: str | None) -> dict[str, str]:
+    code = (language or "en").lower()
+    if code == "fr":
+        return {
+            "title": "Nouveau quiz assigne",
+            "body": "Un nouveau quiz vous a ete assigne.",
+        }
+    if code == "nl":
+        return {
+            "title": "Nieuwe quiz toegewezen",
+            "body": "Er werd een nieuwe quiz aan u toegewezen.",
+        }
+    return {
+        "title": "New assigned quiz",
+        "body": "A new quiz has been assigned to you.",
+    }
+
+
 def is_alert_participant(thread: "QuizAlertThread", user) -> bool:
     return bool(user and user.is_authenticated and user.id in {thread.reporter_id, thread.owner_id})
 
@@ -141,6 +159,7 @@ def create_alert_thread(*, reporter, quiz: "Quiz", quizquestion: "QuizQuestion",
     now = now or timezone.now()
     thread = QuizAlertThread.objects.create(
         quiz=quiz,
+        kind=QuizAlertThread.KIND_QUESTION,
         quizquestion=quizquestion,
         reporter=reporter,
         owner=owner,
@@ -152,6 +171,31 @@ def create_alert_thread(*, reporter, quiz: "Quiz", quizquestion: "QuizQuestion",
         thread=thread,
         author=reporter,
         body=body.strip(),
+    )
+    return thread
+
+
+def create_assignment_alert_thread(*, reporter, quiz: "Quiz", owner, link: str, now=None):
+    from .models import QuizAlertMessage, QuizAlertThread
+
+    now = now or timezone.now()
+    language = getattr(reporter, "language", None)
+    copy = assignment_alert_copy(language)
+    body = f"{copy['body']}\n{link}".strip()
+    thread = QuizAlertThread.objects.create(
+        quiz=quiz,
+        kind=QuizAlertThread.KIND_ASSIGNMENT,
+        quizquestion=None,
+        reporter=reporter,
+        owner=owner,
+        reported_language=str(language or "en"),
+        last_message_at=now,
+        owner_last_read_at=now,
+    )
+    QuizAlertMessage.objects.create(
+        thread=thread,
+        author=owner,
+        body=body,
     )
     return thread
 

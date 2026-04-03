@@ -8,6 +8,8 @@ from django.core.cache import cache
 from django.test import override_settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from domain.models import Domain
+from language.models import Language
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -18,9 +20,6 @@ User = get_user_model()
 
 class UserViewsTests(APITestCase):
     USER_LIST_CREATE_URL = "/api/user/"
-    USER_DETAIL_URL = lambda self, user_id: f"/api/user/{user_id}/"
-    USER_QUIZ_LIST_URL = lambda self, user_id: f"/api/user/{user_id}/quizzes/"
-
     PASSWORD_RESET_REQUEST_URL = "/api/user/password/reset/"
     PASSWORD_RESET_CONFIRM_URL = "/api/user/password/reset/confirm/"
     EMAIL_CONFIRM_URL = "/api/user/email/confirm/"
@@ -28,8 +27,15 @@ class UserViewsTests(APITestCase):
     ME_URL = "/api/user/me/"
     TOKEN_URL = "/api/token/"
 
+    def USER_DETAIL_URL(self, user_id):
+        return f"/api/user/{user_id}/"
+
+    def USER_QUIZ_LIST_URL(self, user_id):
+        return f"/api/user/{user_id}/quizzes/"
+
     def setUp(self):
         cache.clear()
+        self.lang_fr = Language.objects.create(code="fr", name="Francais", active=True)
         self.u1 = User.objects.create_user(
             username="u1", password="u1pass123!", email="u1@example.com", first_name="U", last_name="One"
         )
@@ -42,6 +48,12 @@ class UserViewsTests(APITestCase):
         self.superuser = User.objects.create_user(
             username="admin", password="adminpass123!", email="admin@example.com", is_superuser=True, is_staff=True
         )
+        self.domain = Domain.objects.create(owner=self.staff, active=True)
+        self.domain.allowed_languages.set([self.lang_fr])
+        self.domain.set_current_language("fr")
+        self.domain.name = "Alpha"
+        self.domain.description = ""
+        self.domain.save()
 
     def tearDown(self):
         cache.clear()
@@ -79,6 +91,23 @@ class UserViewsTests(APITestCase):
 
         created = User.objects.get(username="newbie")
         self.assertTrue(created.check_password("SecretPass123!"))
+
+    def test_user_create_can_link_managed_domains(self):
+        payload = {
+            "username": "domain-newbie",
+            "email": "domain-newbie@example.com",
+            "first_name": "New",
+            "last_name": "Bie",
+            "password": "SecretPass123!",
+            "managed_domain_ids": [self.domain.id],
+        }
+
+        res = self.client.post(self.USER_LIST_CREATE_URL, payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        created = User.objects.get(username="domain-newbie")
+        self.assertEqual(list(created.linked_domains.values_list("id", flat=True)), [self.domain.id])
+        self.assertEqual(created.current_domain_id, self.domain.id)
 
     def test_user_retrieve_requires_self_or_staff(self):
         res = self.client.get(self.USER_DETAIL_URL(self.u1.id))
@@ -182,15 +211,15 @@ class UserViewsTests(APITestCase):
             self.assertEqual(res.status_code, status.HTTP_200_OK)
             send_password_reset_email.assert_called_once_with(self.u1)
 
-    def test_password_reset_request_marks_user_as_new_password_asked(self):
-        self.assertFalse(self.u1.new_password_asked)
+    def test_password_reset_request_marks_user_as_password_change_required(self):
+        self.assertFalse(self.u1.must_change_password)
 
         with patch("customuser.services.send_password_reset_email"):
             res = self.client.post(self.PASSWORD_RESET_REQUEST_URL, {"email": "u1@example.com"}, format="json")
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.u1.refresh_from_db()
-        self.assertTrue(self.u1.new_password_asked)
+        self.assertTrue(self.u1.must_change_password)
 
     def test_password_reset_confirm_invalid_uid_returns_400(self):
         with patch("customuser.services.resolve_user_from_uid", return_value=None):
@@ -219,8 +248,7 @@ class UserViewsTests(APITestCase):
     def test_password_reset_confirm_success_changes_password(self):
         new_pw = "NewPass123!Aa"
         self.u1.must_change_password = True
-        self.u1.new_password_asked = True
-        self.u1.save(update_fields=["must_change_password", "new_password_asked"])
+        self.u1.save(update_fields=["must_change_password"])
         with patch("customuser.services.resolve_user_from_uid", return_value=self.u1), patch(
             "customuser.services.token_is_valid",
             return_value=True,
@@ -235,7 +263,6 @@ class UserViewsTests(APITestCase):
         self.u1.refresh_from_db()
         self.assertTrue(self.u1.check_password(new_pw))
         self.assertFalse(self.u1.must_change_password)
-        self.assertFalse(self.u1.new_password_asked)
 
     def test_email_confirm_success_marks_user_as_confirmed(self):
         uid = urlsafe_base64_encode(force_bytes(self.u1.pk))
@@ -342,8 +369,7 @@ class UserViewsTests(APITestCase):
     def test_password_change_success(self):
         self.client.force_authenticate(user=self.u1)
         self.u1.must_change_password = True
-        self.u1.new_password_asked = True
-        self.u1.save(update_fields=["must_change_password", "new_password_asked"])
+        self.u1.save(update_fields=["must_change_password"])
         res = self.client.post(
             self.PASSWORD_CHANGE_URL,
             {"old_password": "u1pass123!", "new_password": "NewPass123!"},
@@ -353,7 +379,6 @@ class UserViewsTests(APITestCase):
         self.u1.refresh_from_db()
         self.assertTrue(self.u1.check_password("NewPass123!"))
         self.assertFalse(self.u1.must_change_password)
-        self.assertFalse(self.u1.new_password_asked)
 
     def test_me_requires_auth(self):
         res = self.client.get(self.ME_URL)
@@ -366,7 +391,7 @@ class UserViewsTests(APITestCase):
         res = self.client.get(self.ME_URL)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["username"], "u1")
-        self.assertTrue(res.data["must_change_password"])
+        self.assertTrue(res.data["password_change_required"])
 
     def test_me_patch_updates_profile_but_not_sensitive_fields(self):
         self.client.force_authenticate(user=self.u1)
@@ -383,3 +408,13 @@ class UserViewsTests(APITestCase):
 
         res = self.client.patch(self.ME_URL, {"password": "Nope12345!"}, format="json")
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_me_patch_can_update_managed_domains(self):
+        self.client.force_authenticate(user=self.u1)
+
+        res = self.client.patch(self.ME_URL, {"managed_domain_ids": [self.domain.id]}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        self.u1.refresh_from_db()
+        self.assertEqual(list(self.u1.linked_domains.values_list("id", flat=True)), [self.domain.id])
+        self.assertEqual(self.u1.current_domain_id, self.domain.id)

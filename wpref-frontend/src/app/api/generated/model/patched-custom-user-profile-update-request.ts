@@ -15,6 +15,7 @@ export interface PatchedCustomUserProfileUpdateRequestDto {
     first_name?: string;
     last_name?: string;
     language?: LanguageEnumDto;
+    managed_domain_ids?: Array<number>;
 }
 
 

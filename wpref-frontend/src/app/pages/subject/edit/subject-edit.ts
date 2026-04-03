@@ -32,6 +32,8 @@ import {
 } from '../../../shared/forms/localized-text-form';
 import {isEmptyRichText} from '../../../shared/html/is-empty-rich-text';
 import {SubjectEditorFormComponent} from '../../../components/subject-editor-form/subject-editor-form';
+import {QuestionPreviewDialogComponent} from '../../../components/question-preview-dialog/question-preview-dialog';
+import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 
 type QuestionTitleMap = Record<string, { title?: string }>;
@@ -46,11 +48,13 @@ type QuestionTitleMap = Record<string, { title?: string }>;
     ButtonModule,
     TableModule,
     SubjectEditorFormComponent,
+    QuestionPreviewDialogComponent,
   ],
   templateUrl: './subject-edit.html',
   styleUrl: './subject-edit.scss',
 })
 export class SubjectEdit implements OnInit {
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
   id!: number;
 
   // UI state
@@ -68,6 +72,7 @@ export class SubjectEdit implements OnInit {
 
   // questions
   questions = signal<QuestionInSubjectDto[]>([]);
+  previewQuestionId = signal<number | null>(null);
 
   private fb = inject(FormBuilder);
   form = this.fb.group({
@@ -146,6 +151,14 @@ export class SubjectEdit implements OnInit {
 
   goQuestionEdit(id: number): void {
     this.questionService.goEdit(id);
+  }
+
+  openQuestionPreview(id: number): void {
+    this.previewQuestionId.set(id);
+  }
+
+  closeQuestionPreview(): void {
+    this.previewQuestionId.set(null);
   }
 
   goQuestionDelete(id: number): void {

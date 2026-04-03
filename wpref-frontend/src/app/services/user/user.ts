@@ -31,9 +31,7 @@ export class UserService {
   }
 
   shouldForcePasswordChange(user: CustomUserReadDto | null | undefined = this.currentUser()): boolean {
-    return !!user && (
-      user.must_change_password === true || user.new_password_asked === true
-    );
+    return !!user && user.password_change_required === true;
   }
 
   shouldConfirmEmail(user: CustomUserReadDto | null | undefined = this.currentUser()): boolean {

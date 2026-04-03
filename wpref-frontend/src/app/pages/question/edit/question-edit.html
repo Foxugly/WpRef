@@ -1,27 +1,23 @@
 <div class="page">
-  <div class="question__header">
-    <div class="header-left">
+  <div class="header-line">
+    <div class="header-line__left">
       <p-button
         (onClick)="goBack()"
         icon="pi pi-arrow-left"
-        label="Retour"
+        [label]="ui().common.back"
+        class="page-back-button"
         severity="secondary"
-        text
-        type="button">
+        type="button"
+        variant="outlined">
       </p-button>
     </div>
 
-    <h1 class="header-title">Modifier une question</h1>
-
-    <div class="header-right">
-      <p-button
-        (onClick)="goView(id)"
-        icon="pi pi-eye"
-        label="Voir"
-        severity="secondary"
-        type="button">
-      </p-button>
+    <div class="header-center">
+      <h1 class="title">{{ ui().pages.questionEdit.title }}</h1>
+      <p class="subtitle muted">{{ ui().pages.questionEdit.subtitle }}</p>
     </div>
+
+    <div class="header-line__right"></div>
   </div>
 
   @if (error()) {
@@ -42,24 +38,30 @@
     <app-question-editor-form
       [activeLang]="activeLang()"
       [domainReadonlyLabel]="getDomainLabel(q.domain)"
+      [duplicateLabel]="ui().common.duplicate"
       [emptyLanguagesMessage]="emptyLanguagesMessage"
       [form]="form"
       [deleting]="deleting()"
       [saving]="saving()"
+      [showDuplicateAction]="true"
       [showDeleteAction]="true"
+      [showCleanAction]="true"
       [showDomainSelect]="false"
-      [showTranslateAction]="false"
+      [showTranslateAction]="true"
       [subjectOptions]="subjectOptions()"
       [submitError]="submitError()"
-      submitLabel="Enregistrer"
+      [submitLabel]="ui().common.save"
       [tabCodes]="tabCodes()"
-      [translating]="false"
+      [translating]="translating()"
       (addOptionClicked)="addOption()"
       (cancelClicked)="goBack()"
+      (cleanActiveClicked)="clearActiveTab()"
       (deleteClicked)="deleteQuestion()"
+      (duplicateClicked)="duplicateQuestion()"
       (removeOptionClicked)="removeOption($event)"
       (submitted)="save()"
-      (tabChanged)="onTabChange($event)">
+      (tabChanged)="onTabChange($event)"
+      (translateActive)="translateFromActiveTab()">
     </app-question-editor-form>
   }
 </div>

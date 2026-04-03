@@ -1,53 +1,81 @@
-<app-quiz-list-toolbar
-  [search]="q()"
-  [isAdmin]="isAdmin()"
-  (searchChange)="q.set($event)"
-  (compose)="goCompose()"
-  (quickCreate)="goNew()"
-></app-quiz-list-toolbar>
+<div class="page">
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
 
-<p-tabs [value]="activeTab()" (valueChange)="setActiveTab($event)" class="quiz-tabs">
-  <p-tablist>
-    <p-tab value="templates">Quiz templates</p-tab>
-    <p-tab value="sessions">Mes quiz</p-tab>
-  </p-tablist>
+    <div class="header-center">
+      <h1 class="title">{{ uiText().page.title }}</h1>
+      <p class="subtitle muted">{{ uiText().page.subtitle }}</p>
+    </div>
 
-  <p-tabpanels>
-    <p-tabpanel value="templates">
-      <app-quiz-template-table
-        title="Ceux que j'ai crees"
-        description="Templates dont tu es le createur."
-        [kind]="'created'"
-        [templates]="filteredCreatedTemplates()"
-        [loading]="loading()"
-        [creatingTemplateId]="creatingTemplateId()"
-        (createFromTemplate)="createFromTemplate($event)"
-        (openAssign)="openAssignDialog($event)"
-        (openResults)="openResultsDialog($event)"
-        (edit)="goEditTemplate($event)"
-        (remove)="goDeleteTemplate($event)"
-      ></app-quiz-template-table>
+    <div class="header-actions"></div>
+  </div>
 
-      <app-quiz-template-table
-        title="Ceux qui sont publics"
-        description="Templates visibles et partageables."
-        [kind]="'public'"
-        [templates]="filteredPublicTemplates()"
-        [loading]="loading()"
-        [creatingTemplateId]="creatingTemplateId()"
-        (createFromTemplate)="createFromTemplate($event)"
-      ></app-quiz-template-table>
-    </p-tabpanel>
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title"></h2>
 
-    <p-tabpanel value="sessions">
-      <app-quiz-session-table
-        [quizzes]="filteredMyQuizzes()"
-        [loading]="loading()"
-        (viewQuiz)="goView($event)"
-      ></app-quiz-session-table>
-    </p-tabpanel>
-  </p-tabpanels>
-</p-tabs>
+      <div class="card-actions">
+        <input
+          [ngModel]="q()"
+          (ngModelChange)="q.set($event)"
+          pInputText
+          [placeholder]="uiText().page.searchPlaceholder"
+        >
+        @if (canComposeTemplate()) {
+          <p-button
+            (onClick)="goCompose()"
+            icon="pi pi-plus"
+            id="btn_compose_quiz"
+            [label]="uiText().page.compose"
+            severity="primary"
+            type="button"
+          ></p-button>
+        }
+        @if (canCreateQuickTemplate()) {
+          <p-button
+            (onClick)="goNew()"
+            icon="pi pi-plus"
+            id="btn_add_subject"
+            [label]="uiText().page.quickCreate"
+            severity="secondary"
+            type="button"
+          ></p-button>
+        }
+      </div>
+    </div>
+
+    <p-tabs [value]="activeTab()" (valueChange)="setActiveTab($event)" class="quiz-tabs">
+      <p-tablist>
+        <p-tab value="templates">{{ uiText().tabs.templates }}</p-tab>
+        <p-tab value="sessions">{{ uiText().tabs.sessions }}</p-tab>
+      </p-tablist>
+
+      <p-tabpanels class="quiz-tabpanels">
+        <p-tabpanel value="templates">
+          <app-quiz-template-table
+            [templates]="filteredTemplates()"
+            [loading]="loading()"
+            [creatingTemplateId]="creatingTemplateId()"
+            [uiText]="uiText()"
+            (createFromTemplate)="createFromTemplate($event)"
+            (openAssign)="openAssignDialog($event)"
+            (openResults)="openResultsDialog($event)"
+            (edit)="goEditTemplate($event)"
+            (remove)="goDeleteTemplate($event)"
+          ></app-quiz-template-table>
+        </p-tabpanel>
+
+        <p-tabpanel value="sessions">
+          <app-quiz-session-table
+            [quizzes]="filteredMyQuizzes()"
+            [loading]="loading()"
+            (viewQuiz)="goView($event)"
+          ></app-quiz-session-table>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+</div>
 
 <app-quiz-template-assign-dialog
   [visible]="assignDialogVisible()"
@@ -55,6 +83,7 @@
   [users]="assignableUsers()"
   [selectedRecipientIds]="selectedRecipientIds()"
   [assigning]="assigning()"
+  [texts]="uiText()"
   (visibleChange)="assignDialogVisible.set($event)"
   (selectedRecipientIdsChange)="selectedRecipientIds.set($event)"
   (cancel)="closeAssignDialog()"

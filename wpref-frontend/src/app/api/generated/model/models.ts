@@ -7,6 +7,7 @@ export * from './custom-user-read';
 export * from './domain-detail';
 export * from './domain-name-summary';
 export * from './domain-read';
+export * from './domain-write';
 export * from './domain-write-request';
 export * from './email-confirmation-request';
 export * from './email-confirmed-token-obtain-pair-request';

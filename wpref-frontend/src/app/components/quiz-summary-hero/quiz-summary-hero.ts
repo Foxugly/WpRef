@@ -1,5 +1,5 @@
 import {Component, input, output} from '@angular/core';
-import {Button} from 'primeng/button';
+import {ButtonModule} from 'primeng/button';
 import {TagModule} from 'primeng/tag';
 import {QuizDto} from '../../api/generated';
 
@@ -11,7 +11,7 @@ export interface QuizSummaryFact {
 @Component({
   selector: 'app-quiz-summary-hero',
   imports: [
-    Button,
+    ButtonModule,
     TagModule,
   ],
   templateUrl: './quiz-summary-hero.html',

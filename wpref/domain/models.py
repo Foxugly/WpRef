@@ -40,6 +40,11 @@ class Domain(TranslatableModel):
         blank=True,
         related_name="managed_domains",
     )
+    members = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="linked_domains",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -66,3 +71,12 @@ class Domain(TranslatableModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def ensure_staff_are_members(self) -> None:
+        """
+        Business rule:
+        - a domain staff user must always remain linked as a domain member
+        - removing staff status must not remove membership
+        """
+        staff_ids = self.staff.values_list("id", flat=True)
+        self.members.add(*staff_ids)

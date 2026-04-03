@@ -1,28 +1,23 @@
 <div class="page">
-  <div class="header-line header-line--grid">
-    <div class="header-spacer"></div>
-
-    <div class="header-center">
-      <h1 class="title">&#201;diter le sujet</h1>
-      <p class="subtitle muted">Traductions et contenu</p>
-    </div>
-
-    <div class="header-actions">
+  <div class="header-line">
+    <div class="header-line__left">
       <p-button
         (onClick)="goList()"
         icon="pi pi-arrow-left"
-        label="Retour"
+        [label]="ui().common.back"
+        class="page-back-button"
         severity="secondary"
-        type="button">
-      </p-button>
-
-      <p-button
-        (onClick)="save()"
-        icon="pi pi-save"
-        label="Enregistrer"
-        type="button">
+        type="button"
+        variant="outlined">
       </p-button>
     </div>
+
+    <div class="header-center">
+      <h1 class="title">{{ ui().pages.subjectEdit.title }}</h1>
+      <p class="subtitle muted">{{ ui().pages.subjectEdit.subtitle }}</p>
+    </div>
+
+    <div class="header-line__right"></div>
   </div>
 
   @if (loading()) {
@@ -36,7 +31,7 @@
       [loading]="loading()"
       [showDomainSelect]="false"
       [submitError]="submitError()"
-      submitLabel="Enregistrer"
+      [submitLabel]="ui().common.save"
       [tabCodes]="tabCodes()"
       [translating]="translating()"
       (cancel)="goList()"
@@ -47,12 +42,12 @@
 
     <div class="card">
       <div class="card-head">
-        <h2 class="card-title">Questions</h2>
+        <h2 class="card-title">{{ ui().pages.subjectEdit.questionsTitle }}</h2>
         <div class="header-actions">
           <p-button
             (onClick)="goQuestionNew()"
             icon="pi pi-plus"
-            label="Ajouter"
+            [label]="ui().pages.subjectEdit.addQuestion"
             severity="primary"
             type="button">
           </p-button>
@@ -60,7 +55,7 @@
       </div>
 
       @if ((questions() || []).length === 0) {
-        <p class="muted empty-state">Aucune question.</p>
+        <p class="muted empty-state">{{ ui().pages.subjectEdit.noQuestions }}</p>
       } @else {
         <p-table
           [value]="questions()"
@@ -70,8 +65,8 @@
           styleClass="table">
           <ng-template #header>
             <tr>
-              <th>Titre</th>
-              <th class="col-actions">Actions</th>
+              <th>{{ ui().pages.subjectEdit.titleCol }}</th>
+              <th class="col-actions">{{ ui().pages.subjectEdit.actionsCol }}</th>
             </tr>
           </ng-template>
 
@@ -80,6 +75,13 @@
               <td class="truncate">{{ getQuestionTitle(q) }}</td>
               <td class="col-actions">
                 <div class="row-actions">
+                  <p-button
+                    (onClick)="openQuestionPreview(q.id)"
+                    icon="pi pi-eye"
+                    severity="secondary"
+                    size="small"
+                    type="button">
+                  </p-button>
                   <p-button
                     (onClick)="goQuestionEdit(q.id)"
                     icon="pi pi-pencil"
@@ -103,3 +105,9 @@
     </div>
   }
 </div>
+
+<app-question-preview-dialog
+  [questionId]="previewQuestionId()"
+  [visible]="previewQuestionId() !== null"
+  (visibleChange)="!$event && closeQuestionPreview()">
+</app-question-preview-dialog>

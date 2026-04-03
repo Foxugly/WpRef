@@ -244,6 +244,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
           description: Not found
+  /api/domain/{domain_id}/member-role/:
+    post:
+      operationId: domain_member_role_create
+      parameters:
+      - in: path
+        name: domain_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this domain.
+        required: true
+      tags:
+      - domain
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DomainWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DomainWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DomainWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainWrite'
+          description: ''
+  /api/domain/available-for-linking/:
+    get:
+      operationId: domain_available_for_linking_retrieve
+      tags:
+      - domain
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainWrite'
+          description: ''
   /api/lang/:
     get:
       operationId: lang_list
@@ -2888,9 +2936,7 @@ components:
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
-        must_change_password:
-          type: boolean
-        new_password_asked:
+        password_change_required:
           type: boolean
     CustomUserCreateRequest:
       type: object
@@ -2919,6 +2965,12 @@ components:
           minLength: 1
         language:
           $ref: '#/components/schemas/LanguageEnum'
+        managed_domain_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          writeOnly: true
       required:
       - password
       - username
@@ -2949,10 +3001,7 @@ components:
         email_confirmed:
           type: boolean
           readOnly: true
-        must_change_password:
-          type: boolean
-          readOnly: true
-        new_password_asked:
+        password_change_required:
           type: boolean
           readOnly: true
         is_superuser:
@@ -2996,9 +3045,8 @@ components:
       - is_staff
       - is_superuser
       - managed_domain_ids
-      - must_change_password
-      - new_password_asked
       - owned_domain_ids
+      - password_change_required
       - username
     DomainDetail:
       type: object
@@ -3087,6 +3135,11 @@ components:
           items:
             $ref: '#/components/schemas/UserSummary'
           readOnly: true
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSummary'
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3100,10 +3153,27 @@ components:
       - allowed_languages
       - created_at
       - id
+      - members
       - owner
       - staff
       - translations
       - updated_at
+    DomainWrite:
+      type: object
+      properties:
+        allowed_languages:
+          type: array
+          items:
+            type: integer
+        active:
+          type: boolean
+        staff:
+          type: array
+          items:
+            type: integer
+      required:
+      - allowed_languages
+      - staff
     DomainWriteRequest:
       type: object
       properties:
@@ -3796,9 +3866,7 @@ components:
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
-        must_change_password:
-          type: boolean
-        new_password_asked:
+        password_change_required:
           type: boolean
     PatchedCustomUserProfileUpdateRequest:
       type: object
@@ -3816,6 +3884,11 @@ components:
           maxLength: 150
         language:
           $ref: '#/components/schemas/LanguageEnum'
+        managed_domain_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
     PatchedDomainPartialRequest:
       type: object
       properties:
@@ -5013,6 +5086,10 @@ components:
         created_by:
           type: integer
           readOnly: true
+        created_by_username:
+          type: string
+          readOnly: true
+          default: ''
         quiz_questions:
           type: array
           items:
@@ -5022,6 +5099,7 @@ components:
       - can_answer
       - created_at
       - created_by
+      - created_by_username
       - id
       - questions_count
       - quiz_questions

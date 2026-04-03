@@ -18,8 +18,8 @@ def request_password_reset(email: str, request) -> None:
     if not user:
         return
 
-    user.new_password_asked = True
-    user.save(update_fields=["new_password_asked"])
+    user.must_change_password = True
+    user.save(update_fields=["must_change_password"])
     send_password_reset_email(user)
 
 
@@ -30,8 +30,7 @@ def confirm_password_reset(uid: str, token: str, new_password: str):
 
     user.set_password(new_password)
     user.must_change_password = False
-    user.new_password_asked = False
-    user.save(update_fields=["password", "must_change_password", "new_password_asked"])
+    user.save(update_fields=["password", "must_change_password"])
     return user
 
 
@@ -52,6 +51,5 @@ def change_password(user, old_password: str, new_password: str) -> bool:
 
     user.set_password(new_password)
     user.must_change_password = False
-    user.new_password_asked = False
-    user.save(update_fields=["password", "must_change_password", "new_password_asked"])
+    user.save(update_fields=["password", "must_change_password"])
     return True

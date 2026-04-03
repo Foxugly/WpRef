@@ -1,21 +1,23 @@
 <div class="page">
-  <div class="header-line header-line--grid">
-    <div class="header-spacer"></div>
-
-    <div class="header-center">
-      <h1 class="title">Quiz rapide</h1>
-      <p class="subtitle muted">Genere une session de quiz a partir d'un domaine et de sujets cibles.</p>
-    </div>
-
-    <div class="header-actions">
+  <div class="header-line">
+    <div class="header-line__left">
       <p-button
         (onClick)="goBack()"
         icon="pi pi-arrow-left"
-        label="Retour"
+        [label]="ui().common.back"
+        class="page-back-button"
         severity="secondary"
-        type="button">
+        type="button"
+        variant="outlined">
       </p-button>
     </div>
+
+    <div class="header-center">
+      <h1 class="title">{{ ui().pages.quizQuick.title }}</h1>
+      <p class="subtitle muted">{{ ui().pages.quizQuick.subtitle }}</p>
+    </div>
+
+    <div class="header-line__right"></div>
   </div>
 
   <div class="quick-page">
@@ -34,15 +36,15 @@
         [disabled]="saving()"
         [loading]="saving()"
         icon="pi pi-sync"
-        label="Generer le quiz"
+        [label]="ui().pages.quizQuick.submit"
         type="button">
       </p-button>
       <p-button
         (onClick)="goBack()"
-        label="Annuler"
+        [label]="ui().common.cancel"
         severity="secondary"
         type="button"
-        variant="text">
+        variant="outlined">
       </p-button>
     </div>
   </div>

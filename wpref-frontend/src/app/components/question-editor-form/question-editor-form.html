@@ -1,12 +1,12 @@
 <form (ngSubmit)="submit()" [formGroup]="form()" class="form-stack">
   <div class="card form-card">
     <div class="card-head">
-      <h2 class="card-title">Contexte</h2>
+      <h2 class="card-title">{{ ui().questionForm.context }}</h2>
     </div>
 
     <div class="meta-grid meta-grid--context">
       <div class="meta-item">
-        <label class="meta-label">Domaine</label>
+        <label class="meta-label">{{ ui().questionForm.domain }}</label>
         <div class="meta-value">
           @if (showDomainSelect()) {
             <p-select
@@ -15,18 +15,18 @@
               formControlName="domain"
               optionLabel="name"
               optionValue="id"
-              placeholder="Choisir un domaine">
+              [placeholder]="ui().questionForm.chooseDomain">
             </p-select>
           } @else {
             <div class="meta-value--readonly">
-              {{ domainReadonlyLabel() || 'Domaine non disponible' }}
+              {{ domainReadonlyLabel() || ui().questionForm.domainUnavailable }}
             </div>
           }
         </div>
       </div>
 
       <div class="meta-item">
-        <label class="meta-label">Sujets</label>
+        <label class="meta-label">{{ ui().questionForm.subjects }}</label>
         <div class="meta-value">
           <p-multiSelect
             [filter]="true"
@@ -35,23 +35,23 @@
             formControlName="subject_ids"
             optionLabel="name"
             optionValue="code"
-            placeholder="Selectionner un ou plusieurs sujets">
+            [placeholder]="ui().questionForm.chooseSubjects">
           </p-multiSelect>
         </div>
       </div>
       <div class="meta-item">
-        <label class="meta-label">Active</label>
+        <label class="meta-label">{{ ui().questionForm.active }}</label>
         <div class="meta-value widget-center">
           <p-checkbox [binary]="true" formControlName="active"></p-checkbox>
         </div>
       </div>
 
       <div class="meta-item">
-        <label class="meta-label">Mode</label>
+        <label class="meta-label">{{ ui().questionForm.mode }}</label>
         <div class="meta-value mode-row widget-center">
           <label class="mode-chip">
             <p-checkbox [binary]="true" formControlName="is_mode_practice"></p-checkbox>
-            <span>Pratique</span>
+            <span>{{ ui().questionForm.practice }}</span>
             @if (practiceTooltip()) {
               <p-button
                 icon="pi pi-info-circle"
@@ -65,7 +65,7 @@
 
           <label class="mode-chip">
             <p-checkbox [binary]="true" formControlName="is_mode_exam"></p-checkbox>
-            <span>Examen</span>
+            <span>{{ ui().questionForm.exam }}</span>
           </label>
         </div>
       </div>
@@ -77,7 +77,7 @@
       <div class="card form-card split-left">
         @if (tabCodes().length > 0) {
           <div class="card-head">
-            <h2 class="card-title">Contenu</h2>
+            <h2 class="card-title">{{ ui().questionForm.content }}</h2>
           </div>
 
           <p-tabs
@@ -89,41 +89,54 @@
               @for (lang of tabCodes(); track lang) {
                 <p-tab [value]="lang">{{ lang.toUpperCase() }}</p-tab>
               }
+              @if (showTranslateAction() || showCleanAction()) {
+                <div class="tablist-actions">
+                  @if (showTranslateAction()) {
+                    <p-button
+                      (click)="onTranslateActive()"
+                      [disabled]="translating()"
+                      [loading]="translating()"
+                      icon="pi pi-language"
+                      [label]="ui().common.translateOthers"
+                      severity="info"
+                      size="small"
+                      type="button">
+                    </p-button>
+                  }
+                  @if (showCleanAction()) {
+                    <p-button
+                      (click)="onCleanActive()"
+                      icon="pi pi-eraser"
+                      [label]="ui().common.clean"
+                      severity="secondary"
+                      size="small"
+                      type="button"
+                      variant="outlined">
+                    </p-button>
+                  }
+                </div>
+              }
             </p-tablist>
 
             <p-tabpanels class="tabpanels-tight">
               @for (lang of tabCodes(); track lang) {
                 <p-tabpanel [value]="lang">
                   <div class="lang-panel">
-                    @if (showTranslateAction()) {
-                      <div class="lang-toolbar">
-                        <p-button
-                          (click)="onTranslateActive()"
-                          [disabled]="translating()"
-                          [loading]="translating()"
-                          icon="pi pi-language"
-                          label="Traduire vers les autres langues"
-                          severity="info"
-                          type="button">
-                        </p-button>
-                      </div>
-                    }
-
                     <div formGroupName="translations">
                       @if (translationsGroup().contains(lang)) {
                         <div [formGroupName]="lang" class="meta-grid">
                           <div class="meta-item meta-item--full">
-                            <label class="meta-label">Titre ({{ lang.toUpperCase() }})</label>
+                            <label class="meta-label">{{ ui().questionForm.title }} ({{ lang.toUpperCase() }})</label>
                             <div class="meta-value">
-                              <input formControlName="title" pInputText placeholder="Titre..." />
+                              <input formControlName="title" pInputText [placeholder]="ui().questionForm.titlePlaceholder" />
                             </div>
                             @if (form().get(['translations', lang, 'title'])?.invalid && form().get(['translations', lang, 'title'])?.touched) {
-                              <div class="meta-hint meta-hint--error">Titre requis.</div>
+                              <div class="meta-hint meta-hint--error">{{ ui().questionForm.titleRequired }}</div>
                             }
                           </div>
 
                           <div class="meta-item meta-item--full">
-                            <label class="meta-label">Description ({{ lang.toUpperCase() }})</label>
+                            <label class="meta-label">{{ ui().questionForm.description }} ({{ lang.toUpperCase() }})</label>
                             <div class="meta-value">
                               <p-editor class="editor-compact" formControlName="description"></p-editor>
                             </div>
@@ -136,7 +149,7 @@
                     @if (translating()) {
                       <div class="inline-status">
                         <i class="pi pi-spin pi-spinner"></i>
-                        <span>Traduction en cours...</span>
+                        <span>{{ ui().common.translating }}</span>
                       </div>
                     }
                   </div>
@@ -147,18 +160,18 @@
 
           @if (activeLang(); as lang) {
             <div class="answers-block">
-              <label class="meta-label">Reponses possibles ({{ lang.toUpperCase() }})</label>
+              <label class="meta-label">{{ ui().questionForm.answers }} ({{ lang.toUpperCase() }})</label>
 
               <p-panel class="answers">
                 @for (group of answerOptions.controls; track i; let i = $index) {
                   <div class="answer">
                     <div class="answer__correct">
-                      <label class="meta-label">Bonne reponse</label>
+                      <label class="meta-label">{{ ui().questionForm.correctAnswer }}</label>
                       <p-checkbox [binary]="true" [formControl]="answerCorrectCtrl(i)"></p-checkbox>
                     </div>
 
                     <div class="answer__content">
-                      <label class="meta-label">Contenu ({{ lang.toUpperCase() }})</label>
+                      <label class="meta-label">{{ ui().questionForm.answerContent }} ({{ lang.toUpperCase() }})</label>
                       <p-editor
                         [formControl]="answerContentCtrl(i, lang)"
                         class="editor-compact">
@@ -169,7 +182,7 @@
                       <p-button
                         (click)="onRemoveOption(i)"
                         icon="pi pi-trash"
-                        pTooltip="Supprimer cette reponse"
+                        [pTooltip]="ui().questionForm.deleteAnswer"
                         severity="danger"
                         size="small"
                         type="button"
@@ -184,7 +197,7 @@
                 <p-button
                   (click)="onAddOption()"
                   icon="pi pi-plus"
-                  label="Ajouter une reponse"
+                  [label]="ui().questionForm.addAnswer"
                   severity="primary"
                   size="small"
                   type="button"
@@ -196,7 +209,7 @@
                 @if (translationsGroup().contains(lang)) {
                   <div [formGroupName]="lang" class="meta-grid">
                     <div class="meta-item meta-item--full">
-                      <label class="meta-label">Explication ({{ lang.toUpperCase() }})</label>
+                      <label class="meta-label">{{ ui().questionForm.explanation }} ({{ lang.toUpperCase() }})</label>
                       <div class="meta-value">
                         <p-editor class="editor-compact" formControlName="explanation"></p-editor>
                       </div>
@@ -207,18 +220,18 @@
             </div>
           }
         } @else {
-          <div class="status-card">{{ emptyLanguagesMessage() }}</div>
+          <div class="status-card">{{ emptyLanguagesMessage() || ui().questionForm.noActiveLanguages }}</div>
         }
       </div>
 
       <div class="card form-card split-right">
         <div class="card-head">
-          <h2 class="card-title">Medias</h2>
+          <h2 class="card-title">{{ ui().questionForm.media }}</h2>
         </div>
 
         <div class="meta-grid">
           <div class="meta-item meta-item--full">
-            <label class="meta-label">Media</label>
+            <label class="meta-label">{{ ui().questionForm.media }}</label>
             <div class="meta-value widget-center">
               <app-media-selector formControlName="media"></app-media-selector>
             </div>
@@ -247,24 +260,36 @@
           type="button">
         </p-button>
       }
+      @if (showDuplicateAction()) {
+        <p-button
+          (onClick)="onDuplicate()"
+          [disabled]="saving() || deleting() || translating()"
+          icon="pi pi-copy"
+          [label]="duplicateLabel()"
+          severity="secondary"
+          type="button"
+          variant="outlined">
+        </p-button>
+      }
     </div>
 
     <div class="actions__group">
+      <p-button
+        (onClick)="onCancel()"
+        [disabled]="deleting()"
+        icon="pi pi-times"
+        [label]="ui().common.cancel"
+        severity="secondary"
+        variant="outlined"
+        type="button">
+      </p-button>
+
       <p-button
         [disabled]="deleting()"
         [loading]="saving()"
         icon="pi pi-save"
         [label]="submitLabel()"
         type="submit">
-      </p-button>
-
-      <p-button
-        (onClick)="onCancel()"
-        [disabled]="deleting()"
-        icon="pi pi-times"
-        label="Annuler"
-        severity="secondary"
-        type="button">
       </p-button>
     </div>
   </div>

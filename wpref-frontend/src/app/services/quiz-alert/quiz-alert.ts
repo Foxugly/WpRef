@@ -21,8 +21,9 @@ export interface QuizAlertMessageDto {
 export interface QuizAlertThreadListDto {
   id: number;
   quiz: number;
-  question_id: number;
-  question_order: number;
+  kind: 'question' | 'assignment';
+  question_id: number | null;
+  question_order: number | null;
   question_title: string;
   quiz_template_title: string;
   reported_language: string;

@@ -1,21 +1,23 @@
 <div class="page">
-  <div class="header-line header-line--grid">
-    <div class="header-spacer"></div>
-
-    <div class="header-center">
-      <h1 class="title">Cr&#233;er le domaine</h1>
-      <p class="subtitle muted">Traductions, statut et acc&#232;s</p>
-    </div>
-
-    <div class="header-actions">
+  <div class="header-line">
+    <div class="header-line__left">
       <p-button
         (onClick)="goList()"
         icon="pi pi-arrow-left"
-        label="Retour"
+        [label]="ui().common.back"
+        class="page-back-button"
         severity="secondary"
-        type="button">
+        type="button"
+        variant="outlined">
       </p-button>
     </div>
+
+    <div class="header-center">
+      <h1 class="title">{{ ui().pages.domainCreate.title }}</h1>
+      <p class="subtitle muted">{{ ui().pages.domainCreate.subtitle }}</p>
+    </div>
+
+    <div class="header-line__right"></div>
   </div>
 
   @if (loading()) {
@@ -29,13 +31,13 @@
       [form]="form"
       [langCodeOptions]="langCodeOptions()"
       [ownerOptions]="ownerOptions()"
-      [ownerPlaceholder]="'Owner'"
+      [ownerPlaceholder]="ui().domainForm.owner"
       [ownerReadonly]="true"
       [selectedStaff]="selectedStaff()"
       [submitError]="submitError()"
-      submitLabel="Cr&#233;er"
+      [submitLabel]="ui().common.create"
       [tabCodes]="tabCodes()"
-      [titleLabel]="'Name'"
+      [titleLabel]="ui().domainForm.titleLabel"
       [translating]="translating()"
       (cancel)="goList()"
       (staffPickListChange)="onStaffPickListChange()"

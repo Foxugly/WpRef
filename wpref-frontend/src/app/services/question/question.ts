@@ -40,6 +40,7 @@ export type QuestionTranslationForm = {
 };
 
 export type AnswerOptionForm = {
+  id?: number;
   is_correct: boolean;
   sort_order: number;
   translations: Record<LangCode, { content: string }>;
@@ -57,16 +58,48 @@ export type QuestionCreateJsonPayload = {
   media_asset_ids: number[];
 };
 
+export type QuestionDuplicateDraft = {
+  domainId: number;
+  subjectIds: number[];
+  active: boolean;
+  isModePractice: boolean;
+  isModeExam: boolean;
+  translations: Record<LangCode, QuestionTranslationForm>;
+  answerOptions: Array<{
+    is_correct: boolean;
+    sort_order: number;
+    translations: Record<LangCode, { content: string }>;
+  }>;
+  media: Array<{
+    id: number;
+    kind: MediaAssetDto['kind'];
+    sort_order: number;
+    file: string | null;
+    external_url: string | null;
+  }>;
+};
+
 @Injectable({providedIn: 'root'})
 export class QuestionService {
+  private duplicateDraft: QuestionDuplicateDraft | null = null;
+
   constructor(private api: QuestionApi, private router: Router) {
   }
 
-  list(params?: { search?: string; subjectId?: number; domainId?: number; active?: boolean }): Observable<QuestionReadDto[]> {
+  list(params?: {
+    search?: string;
+    subjectId?: number;
+    domainId?: number;
+    active?: boolean;
+    isModePractice?: boolean;
+    isModeExam?: boolean;
+  }): Observable<QuestionReadDto[]> {
     const requestParams: QuestionListRequestParams = {
       active: params?.active,
       search: params?.search,
       domain: params?.domainId,
+      isModePractice: params?.isModePractice,
+      isModeExam: params?.isModeExam,
     };
 
     return this.api.questionList(requestParams).pipe(map((response) => response.results ?? []));
@@ -109,6 +142,53 @@ export class QuestionService {
     this.router.navigate(ROUTES.question.add(), {
       queryParams: domainId ? {domainId} : undefined,
     });
+  }
+
+  duplicateToNew(question: QuestionReadDto): void {
+    this.duplicateDraft = {
+      domainId: question.domain.id,
+      subjectIds: question.subjects.map((subject) => subject.id),
+      active: !!question.active,
+      isModePractice: !!question.is_mode_practice,
+      isModeExam: !!question.is_mode_exam,
+      translations: Object.fromEntries(
+        Object.entries(question.translations ?? {}).map(([lang, value]) => [
+          lang,
+          {
+            title: value?.title ?? '',
+            description: value?.description ?? '',
+            explanation: value?.explanation ?? '',
+          },
+        ]),
+      ) as Record<LangCode, QuestionTranslationForm>,
+      answerOptions: [...(question.answer_options ?? [])]
+        .sort((left, right) => (left.sort_order ?? left.id) - (right.sort_order ?? right.id))
+        .map((answer, index) => ({
+          is_correct: !!answer.is_correct,
+          sort_order: answer.sort_order ?? index + 1,
+          translations: Object.fromEntries(
+            Object.entries(answer.translations ?? {}).map(([lang, value]) => [
+              lang,
+              {content: value?.content ?? ''},
+            ]),
+          ) as Record<LangCode, { content: string }>,
+        })),
+      media: (question.media ?? []).map((media, index) => ({
+        id: media.asset.id,
+        kind: media.asset.kind,
+        sort_order: media.sort_order ?? index + 1,
+        file: media.asset.file ?? null,
+        external_url: media.asset.external_url ?? null,
+      })),
+    };
+
+    this.goNew(question.domain.id);
+  }
+
+  consumeDuplicateDraft(): QuestionDuplicateDraft | null {
+    const draft = this.duplicateDraft;
+    this.duplicateDraft = null;
+    return draft;
   }
 
   goEdit(questionId: number): void {

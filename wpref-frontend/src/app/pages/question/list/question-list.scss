@@ -83,11 +83,7 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 .row-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
-
-  p-button {
-    margin-left: 0.25rem;
-  }
+  gap: 0.35rem;
 }
 
 .active-icon {

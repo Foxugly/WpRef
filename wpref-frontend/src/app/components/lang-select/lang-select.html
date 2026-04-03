@@ -1,9 +1,15 @@
-<p-selectbutton
-  [options]="langOptions"
-  [(ngModel)]="internalLang"
-  (ngModelChange)="onInternalChange($event)"
-  optionLabel="label"
-  optionValue="value"
-  styleClass="lang-select"
->
-</p-selectbutton>
+<p-button
+  styleClass="lang-select__trigger"
+  [label]="internalLang.toUpperCase()"
+  icon="pi pi-globe"
+  severity="secondary"
+  type="button"
+  (click)="toggleMenu($event)"
+></p-button>
+
+<p-menu
+  #langMenu
+  [model]="menuItems"
+  [popup]="true"
+  styleClass="lang-select__menu"
+></p-menu>

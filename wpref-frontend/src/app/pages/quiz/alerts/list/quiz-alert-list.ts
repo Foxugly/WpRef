@@ -67,12 +67,13 @@ export class QuizAlertList implements OnInit {
       }
 
       return this.normalize([
+        thread.kind,
         thread.question_title,
         thread.quiz_template_title,
         thread.last_message_preview,
         thread.reported_language,
-        String(thread.question_id),
-        String(thread.question_order),
+        String(thread.question_id ?? ''),
+        String(thread.question_order ?? ''),
       ].join(' ')).includes(search);
     });
   });

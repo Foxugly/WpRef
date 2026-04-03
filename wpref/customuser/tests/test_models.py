@@ -81,6 +81,28 @@ class CustomUserModelTests(TestCase):
         self.assertEqual(u.get_display_name(), "u2")
         self.assertEqual(str(u), "u2")
 
+    def test_to_field_value_dict_returns_concrete_model_fields(self):
+        u = User.objects.create_user(
+            username="dictuser",
+            password="pass",
+            email="dict@example.com",
+            language="nl",
+            first_name="Dict",
+            last_name="User",
+        )
+        u.current_domain = self.d_active_owned
+        u.must_change_password = True
+        u.save(update_fields=["current_domain", "must_change_password"])
+
+        values = u.to_field_value_dict()
+
+        self.assertEqual(values["username"], "dictuser")
+        self.assertEqual(values["email"], "dict@example.com")
+        self.assertEqual(values["language"], "nl")
+        self.assertEqual(values["current_domain_id"], self.d_active_owned.id)
+        self.assertTrue(values["must_change_password"])
+        self.assertIn("id", values)
+
     # ---------------------------------------------------------------------
     # can_manage_domain
     # ---------------------------------------------------------------------
@@ -90,8 +112,8 @@ class CustomUserModelTests(TestCase):
     def test_can_manage_domain_true_for_superuser(self):
         self.assertTrue(self.superuser.can_manage_domain(self.d_other_only))
 
-    def test_can_manage_domain_true_for_global_staff(self):
-        self.assertTrue(self.global_staff.can_manage_domain(self.d_other_only))
+    def test_can_manage_domain_false_for_global_staff_without_domain_link(self):
+        self.assertFalse(self.global_staff.can_manage_domain(self.d_other_only))
 
     def test_can_manage_domain_true_for_owner(self):
         self.assertTrue(self.owner.can_manage_domain(self.d_active_owned))
@@ -123,9 +145,9 @@ class CustomUserModelTests(TestCase):
         qs = self.superuser.get_manageable_domains(active_only=False)
         self.assertEqual(set(qs.values_list("id", flat=True)), set(Domain.objects.values_list("id", flat=True)))
 
-    def test_get_manageable_domains_for_staff_returns_all(self):
+    def test_get_manageable_domains_for_staff_without_link_returns_none(self):
         qs = self.global_staff.get_manageable_domains(active_only=False)
-        self.assertEqual(set(qs.values_list("id", flat=True)), set(Domain.objects.values_list("id", flat=True)))
+        self.assertEqual(set(qs.values_list("id", flat=True)), set())
 
     def test_get_manageable_domains_active_only_filters_active(self):
         qs = self.superuser.get_manageable_domains(active_only=True)
@@ -275,10 +297,12 @@ class CustomUserModelTests(TestCase):
         u.current_domain = self.d_active_staffed  # manageable via staff
         u.clean()  # ne doit pas lever
 
-    def test_clean_allows_staff_global_even_if_not_owner_or_staff(self):
+    def test_clean_rejects_staff_global_when_current_domain_not_linked(self):
         u = self.global_staff
         u.current_domain = self.d_other_only
-        u.clean()  # staff global => can_manage_domain True
+        with self.assertRaises(ValidationError) as ctx:
+            u.clean()
+        self.assertIn("current_domain", ctx.exception.message_dict)
 
     # ---------------------------------------------------------------------
     # QoL properties

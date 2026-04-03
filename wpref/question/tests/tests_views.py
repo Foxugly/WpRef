@@ -11,7 +11,7 @@ from rest_framework.test import APITestCase
 from domain.models import Domain
 from language.models import Language
 from subject.models import Subject
-from question.models import Question, MediaAsset, QuestionMedia, AnswerOption
+from question.models import Question, MediaAsset, QuestionMedia
 
 User = get_user_model()
 
@@ -133,16 +133,20 @@ class QuestionViewSetTests(APITestCase):
         self.user = self._mk_user(is_staff=False)
         self.domain_owner = self._mk_user(is_staff=False)
         self.domain_staff = self._mk_user(is_staff=False)
+        self.domain_member = self._mk_user(is_staff=False)
         self.outsider = self._mk_user(is_staff=False)
         self.domain = self._mk_domain(self.staff, allowed_codes=("fr", "nl"))
         self.other_domain = self._mk_domain(self.staff, allowed_codes=("fr", "nl"))
         self.domain.owner = self.domain_owner
         self.domain.save(update_fields=["owner"])
         self.domain.staff.add(self.domain_staff)
+        self.domain.members.add(self.domain_member)
         self.domain_owner.current_domain = self.domain
         self.domain_owner.save(update_fields=["current_domain"])
         self.domain_staff.current_domain = self.domain
         self.domain_staff.save(update_fields=["current_domain"])
+        self.domain_member.current_domain = self.domain
+        self.domain_member.save(update_fields=["current_domain"])
 
     # =========================================================
     # Permissions
@@ -169,12 +173,24 @@ class QuestionViewSetTests(APITestCase):
         resp = self.client.get(self._list_url())
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    def test_permissions_list_ok_for_global_staff_without_assigned_domain(self):
-        self.client.force_authenticate(self.staff)
+    def test_permissions_list_ok_for_linked_domain_member(self):
+        self.client.force_authenticate(self.domain_member)
         resp = self.client.get(self._list_url())
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
-    def test_global_staff_sees_questions_from_all_domains(self):
+    def test_permissions_list_returns_empty_for_staff_without_linked_domain(self):
+        self.client.force_authenticate(self.staff)
+        resp = self.client.get(self._list_url())
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        items = data["results"] if isinstance(data, dict) and "results" in data else data
+        self.assertEqual(items, [])
+
+    def test_staff_without_linked_domain_does_not_see_other_domain_questions(self):
+        foreign_owner = self._mk_user(is_staff=False)
+        self.other_domain.owner = foreign_owner
+        self.other_domain.save(update_fields=["owner"])
+
         visible = Question.objects.create(domain=self.domain, active=True, is_mode_practice=True, is_mode_exam=True)
         visible.set_current_language("fr")
         visible.title = "Domain A"
@@ -191,8 +207,8 @@ class QuestionViewSetTests(APITestCase):
         data = resp.json()
         items = data["results"] if isinstance(data, dict) and "results" in data else data
         returned_ids = {item["id"] for item in items}
-        self.assertIn(visible.id, returned_ids)
-        self.assertIn(other.id, returned_ids)
+        self.assertNotIn(visible.id, returned_ids)
+        self.assertNotIn(other.id, returned_ids)
 
     def test_list_only_returns_questions_from_visible_domains(self):
         visible = Question.objects.create(domain=self.domain, active=True, is_mode_practice=True, is_mode_exam=True)

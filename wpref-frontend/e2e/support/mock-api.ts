@@ -42,11 +42,37 @@ const defaultMe = {
   language: 'fr',
   is_staff: true,
   is_superuser: false,
+  email_confirmed: true,
+  password_change_required: false,
+  current_domain: 1,
+  current_domain_title: 'Sciences',
+  owned_domain_ids: [1],
+  managed_domain_ids: [1],
 };
 
 const defaultDomain = {
   id: 1,
   active: true,
+  owner: {
+    id: 1,
+    username: 'admin',
+  },
+  staff: [
+    {
+      id: 1,
+      username: 'admin',
+    },
+  ],
+  members: [
+    {
+      id: 1,
+      username: 'admin',
+    },
+    {
+      id: 2,
+      username: 'apprenant',
+    },
+  ],
   translations: {
     fr: {name: 'Sciences', description: '<p>Domaine sciences</p>'},
   },
@@ -200,6 +226,8 @@ const defaultTemplate = {
   can_answer: true,
   is_public: false,
   created_by: 1,
+  created_by_username: 'admin',
+  domain: 1,
 };
 
 const defaultPublicTemplate = {
@@ -215,6 +243,8 @@ const defaultPublicTemplate = {
   can_answer: true,
   is_public: true,
   created_by: 2,
+  created_by_username: 'apprenant',
+  domain: 1,
 };
 
 const defaultAssignableUser = {
@@ -412,8 +442,7 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
         language: body.language ?? 'fr',
         is_staff: false,
         is_superuser: false,
-        must_change_password: false,
-        new_password_asked: false,
+        password_change_required: false,
         email_confirmed: false,
       }, 201);
       return;
@@ -433,6 +462,16 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
 
     if (path === '/api/user/me/' && request.method() === 'GET') {
       await fulfillJson(route, options.me ?? defaultMe, 200);
+      return;
+    }
+
+    if (path === '/api/user/me/current-domain/' && request.method() === 'POST') {
+      const body = parseBody(request);
+      await fulfillJson(route, {
+        ...(options.me ?? defaultMe),
+        current_domain: Number(body.domain_id ?? 0) || null,
+        current_domain_title: Number(body.domain_id ?? 0) === 1 ? 'Sciences' : '',
+      }, 200);
       return;
     }
 
@@ -501,6 +540,11 @@ export async function mockApi(page: Page, options: MockApiOptions = {}): Promise
     if (path === '/api/quiz/' && request.method() === 'GET') {
       const payload = createdQuiz ? [createdQuiz, ...quizzes] : quizzes;
       await fulfillJson(route, paginated(payload), 200);
+      return;
+    }
+
+    if (path === '/api/quiz/alerts/unread-count/' && request.method() === 'GET') {
+      await fulfillJson(route, {count: 0}, 200);
       return;
     }
 

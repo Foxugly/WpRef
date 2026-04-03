@@ -2,6 +2,8 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from domain.models import Domain
+from language.models import Language
 from quiz.models import Quiz, QuizTemplate
 
 from ..serializers import (
@@ -43,8 +45,7 @@ class CustomUserReadSerializerTests(TestCase):
                 "last_name",
                 "language",
                 "email_confirmed",
-                "must_change_password",
-                "new_password_asked",
+                "password_change_required",
                 "is_staff",
                 "is_superuser",
                 "is_active",
@@ -64,14 +65,24 @@ class CustomUserReadSerializerTests(TestCase):
         serializer = CustomUserReadSerializer()
         self.assertTrue(serializer.get_fields()["id"].read_only)
         self.assertTrue(serializer.get_fields()["email_confirmed"].read_only)
-        self.assertTrue(serializer.get_fields()["must_change_password"].read_only)
-        self.assertTrue(serializer.get_fields()["new_password_asked"].read_only)
+        self.assertTrue(serializer.get_fields()["password_change_required"].read_only)
         self.assertTrue(serializer.get_fields()["is_staff"].read_only)
         self.assertTrue(serializer.get_fields()["is_superuser"].read_only)
         self.assertTrue(serializer.get_fields()["is_active"].read_only)
 
 
 class CustomUserCreateSerializerTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.lang_fr = Language.objects.create(code="fr", name="Francais", active=True)
+        cls.owner = User.objects.create_user(username="owner", password="OwnerPass123!")
+        cls.domain = Domain.objects.create(owner=cls.owner, active=True)
+        cls.domain.allowed_languages.set([cls.lang_fr])
+        cls.domain.set_current_language("fr")
+        cls.domain.name = "Alpha"
+        cls.domain.description = ""
+        cls.domain.save()
+
     def test_create_serializer_creates_user_and_hashes_password(self):
         payload = {
             "username": "newuser",
@@ -89,6 +100,23 @@ class CustomUserCreateSerializerTests(TestCase):
         self.assertEqual(user.email, "new@example.com")
         self.assertFalse(user.email_confirmed)
         self.assertTrue(user.check_password("SecretPass123!"))
+
+    def test_create_serializer_links_managed_domains_when_provided(self):
+        payload = {
+            "username": "linkeduser",
+            "email": "linked@example.com",
+            "first_name": "Linked",
+            "last_name": "User",
+            "password": "SecretPass123!",
+            "managed_domain_ids": [self.domain.id],
+        }
+
+        serializer = CustomUserCreateSerializer(data=payload)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        user = serializer.save()
+
+        self.assertEqual(list(user.linked_domains.values_list("id", flat=True)), [self.domain.id])
+        self.assertEqual(user.current_domain_id, self.domain.id)
 
     def test_create_serializer_password_is_write_only(self):
         user = User.objects.create_user(username="u2", password="SecretPass123!")
@@ -117,6 +145,7 @@ class CustomUserCreateSerializerTests(TestCase):
 
 class CustomUserProfileUpdateSerializerTests(TestCase):
     def setUp(self):
+        self.lang_fr = Language.objects.create(code="fr", name="Francais", active=True)
         self.user = User.objects.create_user(
             username="u3",
             password="OldPass123!",
@@ -125,6 +154,13 @@ class CustomUserProfileUpdateSerializerTests(TestCase):
             last_name="Name",
             is_active=True,
         )
+        self.domain_owner = User.objects.create_user(username="domain-owner", password="DomainPass123!")
+        self.domain = Domain.objects.create(owner=self.domain_owner, active=True)
+        self.domain.allowed_languages.set([self.lang_fr])
+        self.domain.set_current_language("fr")
+        self.domain.name = "Beta"
+        self.domain.description = ""
+        self.domain.save()
 
     def test_profile_update_serializer_updates_non_sensitive_fields(self):
         payload = {
@@ -143,6 +179,15 @@ class CustomUserProfileUpdateSerializerTests(TestCase):
         self.assertEqual(user.language, "fr")
         self.assertTrue(user.is_active)
         self.assertTrue(user.check_password("OldPass123!"))
+
+    def test_profile_update_serializer_updates_managed_domains(self):
+        payload = {"managed_domain_ids": [self.domain.id]}
+        serializer = CustomUserProfileUpdateSerializer(instance=self.user, data=payload, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        user = serializer.save()
+
+        self.assertEqual(list(user.linked_domains.values_list("id", flat=True)), [self.domain.id])
+        self.assertEqual(user.current_domain_id, self.domain.id)
 
 
 class CustomUserAdminUpdateSerializerTests(TestCase):
@@ -184,7 +229,20 @@ class CustomUserAdminUpdateSerializerTests(TestCase):
         self.assertTrue(user.check_password("BrandNewPass123!"))
         self.assertFalse(user.check_password("OldPass123!"))
         self.assertTrue(user.must_change_password)
-        self.assertFalse(user.new_password_asked)
+
+    def test_admin_update_serializer_can_clear_password_change_required(self):
+        self.user.must_change_password = True
+        self.user.save(update_fields=["must_change_password"])
+
+        serializer = CustomUserAdminUpdateSerializer(
+            instance=self.user,
+            data={"password_change_required": False},
+            partial=True,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        user = serializer.save()
+
+        self.assertFalse(user.must_change_password)
 
     def test_admin_update_serializer_validates_password(self):
         with patch("customuser.serializers.validate_password") as mock_validate:

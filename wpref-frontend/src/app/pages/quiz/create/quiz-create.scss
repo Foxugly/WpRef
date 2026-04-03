@@ -3,6 +3,17 @@
   gap: 1.5rem;
 }
 
+.builder-tabs {
+  display: block;
+}
+
+:host ::ng-deep .builder-tabs .p-tabpanel,
+:host ::ng-deep .builder-tabs .p-tabpanels {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
 .builder-card {
   padding: 1.25rem;
 }

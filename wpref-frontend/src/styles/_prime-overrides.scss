@@ -33,3 +33,8 @@
   width: 100%;
   max-width: 900px;
 }
+
+/* PrimeNG tabs: breathing room between tab list and panels */
+.p-tabs .p-tabpanels {
+  margin-top: 0.9rem;
+}

@@ -3,14 +3,22 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from wpref.tools import MyModelViewSet
 
 from .models import Domain
 from .permissions import IsDomainOwnerOrStaff
-from .serializers import DomainReadSerializer, DomainWriteSerializer, DomainPartialSerializer, DomainDetailSerializer
+from .serializers import (
+    DomainReadSerializer,
+    DomainWriteSerializer,
+    DomainPartialSerializer,
+    DomainDetailSerializer,
+    DomainMemberRoleSerializer,
+)
 from wpref.tools import ErrorDetailSerializer
+from django.contrib.auth import get_user_model
 
 
 @extend_schema_view(
@@ -162,7 +170,7 @@ class DomainViewSet(MyModelViewSet):
     lookup_url_kwarg = "domain_id"
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve", "details"]:
+        if self.action in ["list", "retrieve", "details", "available_for_linking"]:
             return [AllowAny()]
         return [IsAuthenticated(), IsDomainOwnerOrStaff()]
 
@@ -182,14 +190,14 @@ class DomainViewSet(MyModelViewSet):
         qs = (
             Domain.objects.all()
             .select_related("owner")
-            .prefetch_related("staff", "allowed_languages", "translations")
+            .prefetch_related("staff", "members", "allowed_languages", "translations")
         )
         user = self.request.user
         if not user or user.is_anonymous:
             return qs.filter(active=True)
-        if user.is_superuser or user.is_staff:
+        if user.is_superuser:
             return qs
-        return qs.filter(Q(owner=user) | Q(staff=user)).distinct()
+        return qs.filter(Q(owner=user) | Q(staff=user) | Q(members=user)).distinct()
 
     def perform_create(self, serializer):
         domain = serializer.save()
@@ -233,4 +241,56 @@ class DomainViewSet(MyModelViewSet):
         instance = self.get_object()
         serializer = self.get_serializer(instance, context=self.get_serializer_context())
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="available-for-linking")
+    def available_for_linking(self, request, *args, **kwargs):
+        queryset = (
+            Domain.objects.filter(active=True)
+            .select_related("owner")
+            .prefetch_related("staff", "members", "allowed_languages", "translations")
+            .order_by("id")
+        )
+        serializer = DomainReadSerializer(queryset, many=True, context=self.get_serializer_context())
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="member-role")
+    def member_role(self, request, *args, **kwargs):
+        domain = self.get_object()
+        serializer = DomainMemberRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user_model = get_user_model()
+        target = user_model.objects.filter(pk=serializer.validated_data["user_id"]).first()
+        if not target:
+            raise ValidationError({"user_id": "User not found."})
+
+        if not domain.members.filter(pk=target.pk).exists() and domain.owner_id != target.pk:
+            raise ValidationError({"user_id": "User must be linked to this domain first."})
+
+        if "is_active" in serializer.validated_data:
+            target.is_active = serializer.validated_data["is_active"]
+
+        if "domain_staff" in serializer.validated_data:
+            make_staff = serializer.validated_data["domain_staff"]
+            if make_staff:
+                domain.staff.add(target)
+                domain.members.add(target)
+                if not target.is_staff:
+                    target.is_staff = True
+            else:
+                domain.staff.remove(target)
+                if target.is_staff and not target.is_superuser and not target.managed_domains.exclude(pk=domain.pk).exists():
+                    target.is_staff = False
+
+        target.save(update_fields=["is_active", "is_staff"])
+        return Response(
+            {
+                "id": target.id,
+                "username": target.username,
+                "is_active": target.is_active,
+                "is_staff": target.is_staff,
+                "domain_staff": domain.staff.filter(pk=target.pk).exists(),
+            },
+            status=status.HTTP_200_OK,
+        )
 

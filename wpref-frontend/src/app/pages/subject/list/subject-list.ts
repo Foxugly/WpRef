@@ -1,7 +1,7 @@
 import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {SubjectService, SubjectTranslationDto} from '../../../services/subject/subject';
-import {Button} from 'primeng/button';
+import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {PaginatorModule} from 'primeng/paginator';
 import {TableModule} from 'primeng/table';
@@ -15,7 +15,7 @@ import {logApiError} from '../../../shared/api/api-errors';
 @Component({
   standalone: true,
   selector: 'app-subject-list',
-  imports: [FormsModule, Button, InputTextModule, PaginatorModule, TableModule, StripPPipe,],
+  imports: [FormsModule, ButtonModule, InputTextModule, PaginatorModule, TableModule, StripPPipe,],
   templateUrl: './subject-list.html',
   styleUrl: './subject-list.scss'
 })
@@ -60,8 +60,12 @@ export class SubjectList implements OnInit {
   }
 
   load() {
+    const currentDomainId = this.userService.currentUser()?.current_domain ?? undefined;
     this.subjectService
-      .list({search: this.q() || undefined})
+      .list({
+        search: this.q() || undefined,
+        domainId: currentDomainId ?? undefined,
+      })
       .subscribe({
         next: (subs: SubjectReadDto[]) => {
           this.subjects.set(subs);

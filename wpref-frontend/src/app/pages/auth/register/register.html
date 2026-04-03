@@ -11,7 +11,7 @@
     </div>
   </div>
 
-  @if (loadingLanguages) {
+  @if (loadingLanguages || loadingDomains) {
     <div class="card">
       <p class="muted">{{ ui.register.loading }}</p>
     </div>
@@ -78,6 +78,24 @@
           @if (submitted && f['language'].invalid) {
             <div class="meta-hint meta-hint--error">{{ ui.register.languageRequired }}</div>
           }
+        </div>
+
+        <div class="meta-item meta-item--full">
+          <label class="meta-label" for="managed_domain_ids">{{ ui.register.domains }}</label>
+          <div class="meta-value widget-center">
+            <p-multiselect
+              inputId="managed_domain_ids"
+              formControlName="managed_domain_ids"
+              [options]="domainOptions"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="ui.register.chooseDomains"
+              [filter]="true"
+              [showClear]="true"
+              display="chip">
+            </p-multiselect>
+          </div>
+          <div class="meta-hint">{{ ui.register.domainsHint }}</div>
         </div>
       </div>
 

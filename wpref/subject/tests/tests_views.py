@@ -19,7 +19,7 @@ User = get_user_model()
 class SubjectViewSetTestCase(TestCase):
     """
     Couvre le fichier views.py de SubjectViewSet :
-    - permissions (staff only)
+    - permissions (auth only + domaines lies)
     - list avec filters + search + pagination (si activée)
     - retrieve
     - details (action)
@@ -32,6 +32,9 @@ class SubjectViewSetTestCase(TestCase):
 
         cls.user = User.objects.create_user(username="u1", password="pwd")
         cls.admin = User.objects.create_user(username="admin", password="pwd", is_staff=True)
+        cls.domain_staff = User.objects.create_user(username="domain_staff", password="pwd")
+        cls.domain_member = User.objects.create_user(username="domain_member", password="pwd")
+        cls.outsider = User.objects.create_user(username="outsider", password="pwd")
 
         # Domain (parler): créer puis poser une traduction si tu veux tester domain_name
         cls.domain = Domain.objects.create(owner=cls.admin, active=True)
@@ -39,6 +42,8 @@ class SubjectViewSetTestCase(TestCase):
         cls.domain.name = "Domaine FR"
         cls.domain.description = ""
         cls.domain.save()
+        cls.domain.staff.add(cls.domain_staff)
+        cls.domain.members.add(cls.domain_member)
 
         # Subjects
         cls.subj1 = Subject.objects.create(domain=cls.domain, active=True)
@@ -122,19 +127,20 @@ class SubjectViewSetTestCase(TestCase):
         resp = self._call("get", "details", user=None, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/details/")
         self.assertIn(resp.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
-    def test_create_requires_admin(self):
+    def test_create_requires_linked_domain(self):
         payload = {"domain": self.domain.pk, "active": True, "translations": {"fr": {"name": "Bio", "description": ""}}}
         resp = self._call("post", "create", user=self.user, data=payload)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("domain", resp.data)
 
-    def test_update_requires_admin(self):
+    def test_update_requires_linked_domain(self):
         payload = {"domain": self.domain.pk, "active": True, "translations": {"fr": {"name": "Math2", "description": ""}}}
-        resp = self._call("put", "update", user=self.user, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/", data=payload)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        resp = self._call("put", "update", user=self.outsider, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/", data=payload)
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_destroy_requires_admin(self):
-        resp = self._call("delete", "destroy", user=self.user, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/")
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+    def test_destroy_requires_linked_domain(self):
+        resp = self._call("delete", "destroy", user=self.outsider, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     # ----------------------------
     # list
@@ -145,6 +151,34 @@ class SubjectViewSetTestCase(TestCase):
         items = self._extract_results(resp)
         self.assertTrue(isinstance(items, list))
         self.assertGreaterEqual(len(items), 2)
+
+    def test_list_returns_only_linked_domain_subjects(self):
+        other_domain = Domain.objects.create(owner=self.outsider, active=True)
+        other_domain.set_current_language("fr")
+        other_domain.name = "Autre domaine"
+        other_domain.description = ""
+        other_domain.save()
+
+        hidden = Subject.objects.create(domain=other_domain, active=True)
+        hidden.set_current_language("fr")
+        hidden.name = "Cache"
+        hidden.description = ""
+        hidden.save()
+
+        resp = self._call("get", "list", user=self.domain_staff)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        items = self._extract_results(resp)
+        ids = {it["id"] for it in items}
+        self.assertIn(self.subj1.pk, ids)
+        self.assertIn(self.subj2.pk, ids)
+        self.assertNotIn(hidden.pk, ids)
+
+    def test_list_returns_items_for_linked_domain_member(self):
+        resp = self._call("get", "list", user=self.domain_member)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        items = self._extract_results(resp)
+        ids = {it["id"] for it in items}
+        self.assertIn(self.subj1.pk, ids)
 
     def test_list_filter_active(self):
         resp = self._call("get", "list", user=self.admin, query={"active": "true"})
@@ -210,7 +244,7 @@ class SubjectViewSetTestCase(TestCase):
     # ----------------------------
     # create / update / patch / delete (admin)
     # ----------------------------
-    def test_create_as_admin(self):
+    def test_create_as_domain_owner(self):
         payload = {"domain": self.domain.pk, "active": True, "translations": {"fr": {"name": "Bio", "description": ""}}}
         resp = self._call("post", "create", user=self.admin, data=payload)
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
@@ -219,23 +253,23 @@ class SubjectViewSetTestCase(TestCase):
         self.assertIn("fr", resp.data["translations"])
         self.assertEqual(resp.data["translations"]["fr"]["name"], "Bio")
 
-    def test_update_as_admin_returns_read_serializer(self):
+    def test_update_as_domain_staff_returns_read_serializer(self):
         payload = {"domain": self.domain.pk, "active": False, "translations": {"fr": {"name": "Math v2", "description": "x"}}}
-        resp = self._call("put", "update", user=self.admin, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/", data=payload)
+        resp = self._call("put", "update", user=self.domain_staff, subject_id=self.subj1.pk, path=f"/api/subject/{self.subj1.pk}/", data=payload)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data["id"], self.subj1.pk)
         self.assertFalse(resp.data["active"])
         self.assertEqual(resp.data["translations"]["fr"]["name"], "Math v2")
 
-    def test_partial_update_as_admin(self):
+    def test_partial_update_as_domain_staff(self):
         payload = {"active": True, "translations": {"fr": {"name": "Math v3", "description": ""}}, "domain": self.domain.pk}
-        resp = self._call("patch", "partial_update", user=self.admin, subject_id=self.subj2.pk, path=f"/api/subject/{self.subj2.pk}/", data=payload)
+        resp = self._call("patch", "partial_update", user=self.domain_staff, subject_id=self.subj2.pk, path=f"/api/subject/{self.subj2.pk}/", data=payload)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data["id"], self.subj2.pk)
         self.assertTrue(resp.data["active"])
         self.assertEqual(resp.data["translations"]["fr"]["name"], "Math v3")
 
-    def test_destroy_as_admin(self):
+    def test_destroy_as_domain_owner(self):
         s = Subject.objects.create(domain=self.domain, active=True)
         s.set_current_language("fr")
         s.name = "Temp"

@@ -31,6 +31,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {path: 'register', loadComponent: () => import('./pages/auth/register/register').then((m) => m.Register)},
+  {path: 'register/confirmation', loadComponent: () => import('./pages/auth/register-pending/register-pending').then((m) => m.RegisterPendingPage)},
   {
     path: 'domain/list',
     loadComponent: () => import('./pages/domain/list/domain-list').then((m) => m.DomainList),
@@ -119,7 +120,7 @@ export const routes: Routes = [
   {
     path: 'quiz/quick',
     loadComponent: () => import('./pages/quiz/quick/quiz-quick').then((m) => m.QuizQuickPage),
-    canActivate: [authGuard, staffGuard],
+    canActivate: [authGuard],
   },
   {
     path: 'quiz/alerts',

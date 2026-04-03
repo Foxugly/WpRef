@@ -6,7 +6,7 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {forkJoin, of} from 'rxjs';
 import {catchError, finalize} from 'rxjs/operators';
 
-import {Button, ButtonModule} from 'primeng/button';
+import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
 
 import {
@@ -28,6 +28,7 @@ import {
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
 import {isEmptyRichText} from '../../../shared/html/is-empty-rich-text';
 import {DomainEditorFormComponent} from '../../../components/domain-editor-form/domain-editor-form';
+import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 type UserOption = { label: string; value: number };
 type DomainWritePayload = DomainWriteRequestDto & {
@@ -49,6 +50,7 @@ type DomainWritePayload = DomainWriteRequestDto & {
   styleUrl: './domain-create.scss',
 })
 export class DomainCreate implements OnInit {
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
   loading = signal(true);
   submitError = signal<string | null>(null);
   translating = signal(false);

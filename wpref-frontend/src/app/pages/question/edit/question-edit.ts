@@ -12,8 +12,12 @@ import {QuestionEditorFormComponent} from '../../../components/question-editor-f
 import {
   addQuestionAnswerOption,
   buildQuestionPatchPayload,
+  clearQuestionTranslationTab,
   createQuestionEditorForm,
+  getAnswerContentControl,
   getQuestionCorrectCount,
+  getQuestionTrGroup,
+  isEmptyQuestionHtml,
   isQuestionEditorFormValid,
   populateQuestionEditorForm,
   QuestionEditorForm,
@@ -22,9 +26,10 @@ import {
 } from '../../../services/question/question-editor-form';
 import {QuestionService} from '../../../services/question/question';
 import {SubjectService} from '../../../services/subject/subject';
-import {LangCode} from '../../../services/translation/translation';
+import {LangCode, TranslateBatchItem, TranslationService} from '../../../services/translation/translation';
 import {UserService} from '../../../services/user/user';
 import {selectTranslation} from '../../../shared/i18n/select-translation';
+import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 @Component({
   standalone: true,
@@ -39,6 +44,7 @@ import {selectTranslation} from '../../../shared/i18n/select-translation';
   ],
 })
 export class QuestionEdit implements OnInit {
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
   id!: number;
   readonly emptyLanguagesMessage = 'Aucune langue active sur ce domaine.';
 
@@ -54,6 +60,8 @@ export class QuestionEdit implements OnInit {
   domainLangs = signal<LangCode[]>([]);
   activeLang = signal<LangCode | null>(null);
   currentLang = signal<LanguageEnumDto>(LanguageEnumDto.Fr);
+  translating = signal(false);
+  translateOverwrite = signal(false);
 
   private fb = inject(NonNullableFormBuilder);
   form: QuestionEditorForm = createQuestionEditorForm(this.fb, {domainDisabled: true});
@@ -62,6 +70,7 @@ export class QuestionEdit implements OnInit {
   private route = inject(ActivatedRoute);
   private questionService = inject(QuestionService);
   private subjectService = inject(SubjectService);
+  private translator = inject(TranslationService);
   private userService = inject(UserService);
 
   readonly filteredSubjects = computed(() => {
@@ -132,6 +141,121 @@ export class QuestionEdit implements OnInit {
 
   goView(questionId: number): void {
     this.questionService.goView(questionId);
+  }
+
+  duplicateQuestion(): void {
+    const question = this.question();
+    if (!question) {
+      return;
+    }
+    this.questionService.duplicateToNew(question);
+  }
+
+  clearActiveTab(): void {
+    const lang = this.activeLang();
+    if (!lang) {
+      return;
+    }
+    clearQuestionTranslationTab(this.form, lang);
+  }
+
+  answerContentCtrl(index: number, lang: LangCode) {
+    return getAnswerContentControl(this.form, index, lang);
+  }
+
+  async translateFromActiveTab(): Promise<void> {
+    const source = this.activeLang();
+    if (!source) {
+      return;
+    }
+    await this.translateFrom(source);
+  }
+
+  async translateFrom(sourceLang: LangCode): Promise<void> {
+    const codes = this.tabCodes();
+    if (!codes.includes(sourceLang)) {
+      return;
+    }
+
+    this.translating.set(true);
+    this.submitError.set(null);
+
+    try {
+      const sourceGroup = getQuestionTrGroup(this.form, sourceLang);
+      const sourceTitle = sourceGroup.controls.title.value ?? '';
+      const sourceDescription = sourceGroup.controls.description.value ?? '';
+      const sourceExplanation = sourceGroup.controls.explanation.value ?? '';
+      const overwrite = this.translateOverwrite();
+
+      for (const targetLang of codes) {
+        if (targetLang === sourceLang) {
+          continue;
+        }
+
+        const targetGroup = getQuestionTrGroup(this.form, targetLang);
+        const items: TranslateBatchItem[] = [];
+
+        const needsTitle = overwrite || !(targetGroup.controls.title.value ?? '').trim();
+        if (needsTitle) {
+          items.push({key: 'title', text: sourceTitle, format: 'text'});
+        }
+
+        const needsDescription = overwrite || isEmptyQuestionHtml(targetGroup.controls.description.value ?? '');
+        if (needsDescription) {
+          items.push({key: 'description', text: sourceDescription, format: 'html'});
+        }
+
+        const needsExplanation = overwrite || isEmptyQuestionHtml(targetGroup.controls.explanation.value ?? '');
+        if (needsExplanation) {
+          items.push({key: 'explanation', text: sourceExplanation, format: 'html'});
+        }
+
+        for (let i = 0; i < this.form.controls.answer_options.length; i += 1) {
+          const targetControl = this.answerContentCtrl(i, targetLang);
+          const needsAnswer = overwrite || isEmptyQuestionHtml(targetControl.value ?? '');
+          if (!needsAnswer) {
+            continue;
+          }
+
+          const sourceControl = this.answerContentCtrl(i, sourceLang);
+          items.push({key: `ans_${i}`, text: sourceControl.value ?? '', format: 'html'});
+        }
+
+        if (!items.length) {
+          continue;
+        }
+
+        const translated = await this.translator.translateBatch(sourceLang, targetLang, items);
+
+        if (needsTitle && translated['title'] !== undefined) {
+          targetGroup.controls.title.setValue(translated['title']);
+          targetGroup.controls.title.markAsDirty();
+        }
+        if (needsDescription && translated['description'] !== undefined) {
+          targetGroup.controls.description.setValue(translated['description']);
+          targetGroup.controls.description.markAsDirty();
+        }
+        if (needsExplanation && translated['explanation'] !== undefined) {
+          targetGroup.controls.explanation.setValue(translated['explanation']);
+          targetGroup.controls.explanation.markAsDirty();
+        }
+
+        for (let i = 0; i < this.form.controls.answer_options.length; i += 1) {
+          const key = `ans_${i}`;
+          if (translated[key] === undefined) {
+            continue;
+          }
+          const targetControl = this.answerContentCtrl(i, targetLang);
+          targetControl.setValue(translated[key]);
+          targetControl.markAsDirty();
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      this.submitError.set('Erreur lors de la traduction.');
+    } finally {
+      this.translating.set(false);
+    }
   }
 
   async deleteQuestion(): Promise<void> {

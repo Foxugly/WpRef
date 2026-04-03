@@ -15,6 +15,7 @@ import {DomainOption, DomainService, DomainTranslations} from '../../../services
 import {
   addQuestionAnswerOption,
   buildQuestionCreatePayload,
+  clearQuestionTranslationTab,
   createQuestionEditorForm,
   ensureQuestionTranslationControls,
   getAnswerContentControl,
@@ -22,6 +23,7 @@ import {
   getQuestionTrGroup,
   isEmptyQuestionHtml,
   isQuestionEditorFormValid,
+  populateQuestionEditorFormFromDraft,
   QuestionEditorForm,
   resetQuestionTranslationsOnly,
   syncLangAnswerArraysWithRoot,
@@ -33,6 +35,7 @@ import {SubjectService} from '../../../services/subject/subject';
 import {LangCode, TranslateBatchItem, TranslationService} from '../../../services/translation/translation';
 import {UserService} from '../../../services/user/user';
 import {selectTranslation} from '../../../shared/i18n/select-translation';
+import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 @Component({
   standalone: true,
@@ -48,6 +51,7 @@ import {selectTranslation} from '../../../shared/i18n/select-translation';
   ],
 })
 export class QuestionCreate implements OnInit {
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
   readonly emptyLanguagesMessage = "Ce domaine n'a pas de langues actives configurees.";
   readonly practiceTooltip = 'la question sera publique et selectionnable pour les quizzes generes.';
 
@@ -159,6 +163,7 @@ export class QuestionCreate implements OnInit {
         next: ({domains, subjects}) => {
           this.domains.set(domains ?? []);
           this.subjects.set(subjects ?? []);
+          this.tryApplyDuplicateDraft();
         },
         error: (err) => {
           console.error(err);
@@ -178,6 +183,14 @@ export class QuestionCreate implements OnInit {
 
   goBack(): void {
     this.questionService.goBack();
+  }
+
+  clearActiveTab(): void {
+    const lang = this.activeLang();
+    if (!lang) {
+      return;
+    }
+    clearQuestionTranslationTab(this.form, lang);
   }
 
   onTabChange(value: string | number | undefined): void {
@@ -380,6 +393,26 @@ export class QuestionCreate implements OnInit {
           this.error.set('Impossible de charger le domaine selectionne.');
         },
       });
+  }
+
+  private tryApplyDuplicateDraft(): void {
+    const draft = this.questionService.consumeDuplicateDraft();
+    if (!draft) {
+      return;
+    }
+
+    this.selectedDomainId.set(draft.domainId);
+
+    const domain = this.domains().find((item) => item.id === draft.domainId);
+    const codes = (domain?.allowed_languages ?? [])
+      .filter((language) => !!language.active)
+      .map((language) => language.code)
+      .filter((code): code is LangCode => !!code);
+
+    const langs = codes.length ? codes : (Object.keys(draft.translations) as LangCode[]);
+    this.domainLangs.set(langs);
+    populateQuestionEditorFormFromDraft(this.fb, this.form, draft, langs);
+    this.activeLang.set(langs[0] ?? null);
   }
 
   private getDomainLabel(domain: DomainReadDto, lang: LanguageEnumDto): string {

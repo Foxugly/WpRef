@@ -69,7 +69,7 @@ test('cree un compte puis confirme son email', async ({page}) => {
   await page.locator('input[type="password"]').nth(1).fill('secret123');
   await page.getByRole('button', {name: /compte/i}).click();
 
-  await expect(page.getByText(/verifiez votre boite mail/i)).toBeVisible();
+  await expect(page.getByText(/boite mail|mailbox/i)).toBeVisible();
   expect(api.requests.register).toHaveLength(1);
 
   await page.goto('/user/confirm-email/uid-1/token-1');

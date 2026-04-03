@@ -1,5 +1,5 @@
 import {Component, computed, inject, OnInit, signal} from '@angular/core';
-import {Button} from 'primeng/button';
+import {ButtonModule} from 'primeng/button';
 import {ActivatedRoute} from '@angular/router';
 import {DomainService, DomainTranslationDto} from '../../../services/domain/domain';
 import {DomainReadDto, SubjectReadDto} from '../../../api/generated';
@@ -9,7 +9,7 @@ import {UserService} from '../../../services/user/user';
 @Component({
   selector: 'app-domain-delete',
   imports: [
-    Button
+    ButtonModule
   ],
   templateUrl: './domain-delete.html',
   styleUrl: './domain-delete.scss',

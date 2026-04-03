@@ -10,18 +10,32 @@ def user_matches_template_domain(user, quiz_template) -> bool:
     return user_can_access_domain(user, quiz_template.domain_id)
 
 
+def user_manages_template_domain(user, quiz_template) -> bool:
+    if quiz_template.domain_id is None:
+        return True
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    return quiz_template.domain_id in manageable_domain_ids(user)
+
+
 def _can_access_public_template(user, quiz_template) -> bool:
     if not quiz_template.is_public:
         return False
     if getattr(user, "is_superuser", False):
         return True
-    if getattr(user, "is_staff", False):
-        return user_matches_template_domain(user, quiz_template)
-    return True
+    if quiz_template.domain_id is None:
+        return True
+    return user_can_access_domain(user, quiz_template.domain_id)
 
 
 def user_can_access_template(user, quiz_template) -> bool:
+    if not user or not getattr(user, "is_authenticated", False):
+        return _can_access_public_template(user, quiz_template)
     if user.is_superuser:
+        return True
+    if user_manages_template_domain(user, quiz_template):
         return True
     if quiz_template.created_by_id == getattr(user, "id", None):
         return True
@@ -44,23 +58,39 @@ def user_can_manage_template_assignments(user, quiz_template) -> bool:
         and (
             user.is_superuser
             or quiz_template.created_by_id == user.id
-            or user_matches_template_domain(user, quiz_template)
+            or user_manages_template_domain(user, quiz_template)
         )
     )
 
 
 def user_can_create_quiz_from_template(user, quiz_template) -> bool:
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
     if user.is_superuser:
+        return True
+    if user_manages_template_domain(user, quiz_template):
         return True
     if quiz_template.created_by_id == user.id:
         return True
     return _can_access_public_template(user, quiz_template)
 
 
+def user_can_edit_template(user, quiz_template) -> bool:
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    if user_manages_template_domain(user, quiz_template):
+        return True
+    return (
+        quiz_template.mode == quiz_template.MODE_PRACTICE
+        and quiz_template.created_by_id == user.id
+        and user_matches_template_domain(user, quiz_template)
+    )
+
+
 def validate_target_user_domain(quiz_template, target_user) -> None:
     if quiz_template.domain_id is None:
-        return
-    if not manageable_domain_ids(target_user):
         return
     if user_matches_template_domain(target_user, quiz_template):
         return

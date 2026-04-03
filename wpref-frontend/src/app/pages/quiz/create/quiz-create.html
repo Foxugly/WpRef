@@ -22,9 +22,9 @@
     <div class="card">
       <p class="muted">Chargement...</p>
     </div>
-  } @else if (!isAdmin()) {
+  } @else if (!canManageAnyDomain()) {
     <div class="card">
-      <div class="alert alert--error">La composition de quiz est reservee aux administrateurs.</div>
+      <div class="alert alert--error">La composition de quiz est reservee au owner ou au staff d'un domaine.</div>
     </div>
   } @else {
     @if (error()) {
@@ -34,168 +34,187 @@
     }
 
     <form (ngSubmit)="saveQuiz()" [formGroup]="quizForm" class="builder-stack">
-      <div class="card builder-card">
-        <div class="card-head">
-          <h2 class="card-title">{{ uiText().settingsTitle }}</h2>
-        </div>
+      <p-tabs [value]="activeEditorTab()" (valueChange)="setActiveEditorTab($event)" class="builder-tabs">
+        <p-tablist>
+          <p-tab value="settings">{{ uiText().settingsTab }}</p-tab>
+          <p-tab value="questions">{{ uiText().questionsTab }}</p-tab>
+        </p-tablist>
 
-        <div class="builder-grid">
-          <label class="field">
-            <span class="field__label">{{ uiText().domain }}</span>
-            <p-select
-              appendTo="body"
-              class="field__control"
-              formControlName="domain"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Choisir un domaine"
-              [options]="domainOptions()">
-            </p-select>
-          </label>
+        <p-tabpanels class="builder-tabpanels">
+          <p-tabpanel value="settings">
+            <div class="card builder-card">
+              <div class="card-head">
+                <h2 class="card-title">{{ uiText().settingsTitle }}</h2>
+              </div>
 
-          <label class="field">
-            <span class="field__label">{{ uiText().mode }}</span>
-            <p-select
-              appendTo="body"
-              class="field__control"
-              formControlName="mode"
-              optionLabel="label"
-              optionValue="value"
-              [options]="modeOptions()">
-            </p-select>
-          </label>
+              <div class="builder-grid">
+                <label class="field">
+                  <span class="field__label">{{ uiText().domain }}</span>
+                  <p-select
+                    appendTo="body"
+                    class="field__control"
+                    formControlName="domain"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Choisir un domaine"
+                    [options]="domainOptions()">
+                  </p-select>
+                </label>
 
-          <label class="field field--checkbox">
-            <span class="field__label">{{ uiText().timer }}</span>
-            <p-toggleswitch formControlName="with_duration" inputId="with_duration"></p-toggleswitch>
-          </label>
+                <label class="field">
+                  <span class="field__label">{{ uiText().mode }}</span>
+                  <p-select
+                    appendTo="body"
+                    class="field__control"
+                    formControlName="mode"
+                    optionLabel="label"
+                    optionValue="value"
+                    [options]="modeOptions()">
+                  </p-select>
+                </label>
 
-          <label class="field">
-            <span class="field__label">{{ uiText().duration }}</span>
-            <p-inputnumber
-              styleClass="field__number"
-              buttonLayout="horizontal"
-              formControlName="duration"
-              inputId="duration"
-              mode="decimal"
-              placeholder="Minutes"
-              spinnerMode="horizontal"
-              [showButtons]="true"
-              [min]="1"
-              [max]="9999"
-              [step]="1"
-              [minFractionDigits]="0"
-              [maxFractionDigits]="0">
-              <ng-template #incrementbuttonicon>
-                <span class="pi pi-plus"></span>
-              </ng-template>
-              <ng-template #decrementbuttonicon>
-                <span class="pi pi-minus"></span>
-              </ng-template>
-            </p-inputnumber>
-          </label>
-        </div>
+                <label class="field field--checkbox">
+                  <span class="field__label">{{ uiText().timer }}</span>
+                  <p-toggleswitch formControlName="with_duration" inputId="with_duration"></p-toggleswitch>
+                </label>
 
-        <div class="builder-grid builder-grid--secondary">
-          <label class="field field--checkbox">
-            <span class="field__label">{{ uiText().active }}</span>
-            <p-toggleswitch formControlName="active" inputId="active"></p-toggleswitch>
-          </label>
+                <label class="field">
+                  <span class="field__label">{{ uiText().duration }}</span>
+                  <p-inputnumber
+                    styleClass="field__number"
+                    buttonLayout="horizontal"
+                    formControlName="duration"
+                    inputId="duration"
+                    mode="decimal"
+                    placeholder="Minutes"
+                    spinnerMode="horizontal"
+                    [showButtons]="true"
+                    [min]="1"
+                    [max]="9999"
+                    [step]="1"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0">
+                    <ng-template #incrementbuttonicon>
+                      <span class="pi pi-plus"></span>
+                    </ng-template>
+                    <ng-template #decrementbuttonicon>
+                      <span class="pi pi-minus"></span>
+                    </ng-template>
+                  </p-inputnumber>
+                </label>
+              </div>
 
-          <label class="field field--checkbox">
-            <span class="field__label">{{ uiText().permanent }}</span>
-            <p-toggleswitch formControlName="permanent" inputId="permanent"></p-toggleswitch>
-          </label>
+              <div class="builder-grid builder-grid--secondary">
+                <label class="field field--checkbox">
+                  <span class="field__label">{{ uiText().active }}</span>
+                  <p-toggleswitch formControlName="active" inputId="active"></p-toggleswitch>
+                </label>
 
-          <label class="field">
-            <span class="field__label">{{ uiText().startedAt }}</span>
-            <p-datepicker
-              appendTo="body"
-              class="field__control"
-              [dateFormat]="datePickerFormat()"
-              formControlName="started_at"
-              inputId="started_at"
-              [showTime]="true"
-              hourFormat="24">
-            </p-datepicker>
-          </label>
+                <label class="field field--checkbox">
+                  <span class="field__label">{{ uiText().permanent }}</span>
+                  <p-toggleswitch formControlName="permanent" inputId="permanent"></p-toggleswitch>
+                </label>
 
-          <label class="field">
-            <span class="field__label">{{ uiText().endedAt }}</span>
-            <p-datepicker
-              appendTo="body"
-              class="field__control"
-              [dateFormat]="datePickerFormat()"
-              formControlName="ended_at"
-              inputId="ended_at"
-              [showTime]="true"
-              hourFormat="24">
-            </p-datepicker>
-          </label>
+                <label class="field">
+                  <span class="field__label">{{ uiText().startedAt }}</span>
+                  <p-datepicker
+                    appendTo="body"
+                    class="field__control"
+                    [dateFormat]="datePickerFormat()"
+                    formControlName="started_at"
+                    inputId="started_at"
+                    [showTime]="true"
+                    hourFormat="24">
+                  </p-datepicker>
+                </label>
 
-          <label class="field">
-            <span class="field__label">{{ uiText().detailVisibility }}</span>
-            <p-select
-              appendTo="body"
-              class="field__control"
-              formControlName="detail_visibility"
-              optionLabel="label"
-              optionValue="value"
-              [options]="visibilityOptions()">
-            </p-select>
-          </label>
+                <label class="field">
+                  <span class="field__label">{{ uiText().endedAt }}</span>
+                  <p-datepicker
+                    appendTo="body"
+                    class="field__control"
+                    [dateFormat]="datePickerFormat()"
+                    formControlName="ended_at"
+                    inputId="ended_at"
+                    [showTime]="true"
+                    hourFormat="24">
+                  </p-datepicker>
+                </label>
 
-          <label class="field">
-            <span class="field__label">{{ uiText().detailAvailableAt }}</span>
-            <p-datepicker
-              appendTo="body"
-              class="field__control"
-              [dateFormat]="datePickerFormat()"
-              formControlName="detail_available_at"
-              inputId="detail_available_at"
-              [showTime]="true"
-              hourFormat="24">
-            </p-datepicker>
-          </label>
-        </div>
+                <label class="field">
+                  <span class="field__label">{{ uiText().detailVisibility }}</span>
+                  <p-select
+                    appendTo="body"
+                    class="field__control"
+                    formControlName="detail_visibility"
+                    optionLabel="label"
+                    optionValue="value"
+                    [options]="visibilityOptions()">
+                  </p-select>
+                </label>
 
-        <div class="builder-grid">
-          <label class="field field--full">
-            <span class="field__label">{{ uiText().quizTitle }}</span>
-            <input formControlName="title" pInputText placeholder="Ex: Examen blanc chimie" type="text" />
-          </label>
+                <label class="field">
+                  <span class="field__label">{{ uiText().detailAvailableAt }}</span>
+                  <p-datepicker
+                    appendTo="body"
+                    class="field__control"
+                    [dateFormat]="datePickerFormat()"
+                    formControlName="detail_available_at"
+                    inputId="detail_available_at"
+                    [showTime]="true"
+                    hourFormat="24">
+                  </p-datepicker>
+                </label>
+              </div>
 
-          <label class="field field--full">
-            <span class="field__label">{{ uiText().quizDescription }}</span>
-            <textarea
-              class="field__control field__control--textarea"
-              formControlName="description"
-              placeholder="Contexte ou consignes du quiz">
-            </textarea>
-          </label>
-        </div>
-      </div>
+              <div class="builder-grid">
+                <label class="field field--full">
+                  <span class="field__label">{{ uiText().quizTitle }}</span>
+                  <input formControlName="title" pInputText placeholder="Ex: Examen blanc chimie" type="text" />
+                </label>
 
-      <div class="builder-columns">
-        <app-quiz-question-library
-          [items]="availableQuestionCards()"
-          [loading]="questionsLoading()"
-          [search]="search()"
-          [selectedDomainId]="selectedDomainId()"
-          (addQuestion)="addExistingQuestion($event)"
-          (createQuestion)="openQuestionDialog()"
-          (previewQuestion)="openQuestionPreview($event)"
-          (searchChanged)="onSearchInput($event)">
-        </app-quiz-question-library>
+                <label class="field field--full">
+                  <span class="field__label">{{ uiText().quizDescription }}</span>
+                  <textarea
+                    class="field__control field__control--textarea"
+                    formControlName="description"
+                    placeholder="Contexte ou consignes du quiz">
+                  </textarea>
+                </label>
+              </div>
+            </div>
+          </p-tabpanel>
 
-        <app-quiz-template-composition
-          [items]="selectedQuestionCards()"
-          (moveQuestion)="moveSelectedQuestion($event.index, $event.direction)"
-          (previewQuestion)="openQuestionPreviewById($event)"
-          (removeQuestion)="removeSelectedQuestion($event)"
-          (weightChanged)="onWeightChange($event.index, $event.event)">
-        </app-quiz-template-composition>
-      </div>
+          <p-tabpanel value="questions">
+            <div class="builder-columns">
+              <app-quiz-question-library
+                [items]="availableQuestionCards()"
+                [loading]="questionsLoading()"
+                [search]="search()"
+                [selectedDomainId]="selectedDomainId()"
+                [selectedSubjectIds]="selectedQuestionSubjectIds()"
+                [subjectOptions]="subjectOptions()"
+                [texts]="uiText()"
+                (addQuestion)="addExistingQuestion($event)"
+                (createQuestion)="openQuestionDialog()"
+                (previewQuestion)="openQuestionPreview($event)"
+                (searchChanged)="onSearchInput($event)"
+                (selectedSubjectIdsChange)="onQuestionSubjectFilterChange($event)">
+              </app-quiz-question-library>
+
+              <app-quiz-template-composition
+                [items]="selectedQuestionCards()"
+                [texts]="uiText()"
+                (moveQuestion)="moveSelectedQuestion($event.index, $event.direction)"
+                (previewQuestion)="openQuestionPreviewById($event)"
+                (removeQuestion)="removeSelectedQuestion($event)"
+                (weightChanged)="onWeightChange($event.index, $event.event)"
+                (weightSet)="setWeight($event.index, $event.value)">
+              </app-quiz-template-composition>
+            </div>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
 
       @if (submitError()) {
         <div class="error">{{ submitError() }}</div>

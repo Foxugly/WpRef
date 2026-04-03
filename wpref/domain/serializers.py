@@ -24,6 +24,7 @@ class DomainReadSerializer(serializers.ModelSerializer):
     allowed_languages = serializers.SerializerMethodField()
     owner = serializers.SerializerMethodField()
     staff = serializers.SerializerMethodField()
+    members = serializers.SerializerMethodField()
 
     class Meta:
         model = Domain
@@ -34,6 +35,7 @@ class DomainReadSerializer(serializers.ModelSerializer):
             "active",
             "owner",
             "staff",
+            "members",
             "created_at",
             "updated_at",
         ]
@@ -47,6 +49,10 @@ class DomainReadSerializer(serializers.ModelSerializer):
     @extend_schema_field(UserSummarySerializer(many=True))
     def get_staff(self, obj: Domain) -> list[dict[str, int | str]]:
         return [{"id": u.id, "username": u.username} for u in obj.staff.all()]
+
+    @extend_schema_field(UserSummarySerializer(many=True))
+    def get_members(self, obj: Domain) -> list[dict[str, int | str]]:
+        return [{"id": u.id, "username": u.username} for u in obj.members.all()]
 
     @extend_schema_field(LanguageReadSerializer(many=True))
     def get_allowed_languages(self, obj: Domain) -> list[dict]:
@@ -128,7 +134,7 @@ class DomainWriteSerializer(serializers.ModelSerializer):
         if "allowed_languages" in attrs and allowed_langs == []:
             raise serializers.ValidationError({"allowed_languages": "Au moins une langue est requise."})
         if allowed_langs is not None:
-            allowed_codes = {l.code for l in allowed_langs}
+            allowed_codes = {language.code for language in allowed_langs}
             provided = set(translations.keys())
             invalid_codes = provided - LANG_CODES
             if invalid_codes:
@@ -156,6 +162,7 @@ class DomainWriteSerializer(serializers.ModelSerializer):
             domain = Domain.objects.create(owner=request.user, **validated_data)
             if staff:
                 domain.staff.set(staff)
+                domain.ensure_staff_are_members()
             if langs:
                 domain.allowed_languages.set(langs)
             self._apply_translations(domain, translations)
@@ -172,6 +179,7 @@ class DomainWriteSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             if staff is not None:
                 instance.staff.set(staff)
+                instance.ensure_staff_are_members()
 
             if langs is not None:
                 instance.allowed_languages.set(langs)
@@ -231,3 +239,14 @@ class DomainDetailSerializer(DomainReadSerializer):
 
     def validate(self, attrs):
         raise serializers.ValidationError("This serializer is read-only.")
+
+
+class DomainMemberRoleSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(min_value=1)
+    domain_staff = serializers.BooleanField(required=False)
+    is_active = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if "domain_staff" not in attrs and "is_active" not in attrs:
+            raise serializers.ValidationError("At least one field must be provided.")
+        return attrs

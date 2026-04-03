@@ -10,7 +10,7 @@ To start a local development server, run:
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Once the server is running, open your browser and navigate to `http://localhost:4200/` or `http://127.0.0.1:4200/`. The dev server explicitly accepts both hosts, and in local development the frontend automatically targets the Django API on the same host (`localhost:8000` or `127.0.0.1:8000`). The application will automatically reload whenever you modify any of the source files.
 
 ## Code scaffolding
 

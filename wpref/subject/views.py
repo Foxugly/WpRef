@@ -10,7 +10,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from wpref.tools import MyModelViewSet, ErrorDetailSerializer
 
@@ -174,14 +174,22 @@ class SubjectViewSet(MyModelViewSet):
         return SubjectWriteSerializer
 
     def get_permissions(self):
-        return [IsAdminUser()]
+        return [IsAuthenticated()]
 
     # ==========================================================
     # Queryset optimisations (optionnel mais conseillé)
     # ==========================================================
 
     def get_queryset(self):
+        user = getattr(self.request, "user", None)
+
+        if not getattr(user, "is_authenticated", False):
+            return Subject.objects.none()
+
         qs = Subject.objects.all().select_related("domain")
+
+        if not getattr(user, "is_superuser", False):
+            qs = qs.filter(domain__in=user.get_visible_domains(active_only=False))
 
         if self.action in ["retrieve", "details"]:
             qs = qs.prefetch_related(
@@ -192,7 +200,7 @@ class SubjectViewSet(MyModelViewSet):
             # optionnel (si tu veux éviter N+1 si ailleurs tu enrichis):
             # qs = qs.prefetch_related("questions__answer_options", "questions__media")
 
-        return qs
+        return qs.distinct()
 
     # ==========================================================
     # CRUD implicite : surcharges

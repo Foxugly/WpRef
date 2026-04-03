@@ -59,9 +59,9 @@ class IsDomainOwnerOrStaffTests(APITestCase):
         req = self._req_with_user(self.superuser)
         self.assertTrue(self.perm.has_object_permission(req, self.view, self.domain))
 
-    def test_allows_staff_global(self):
+    def test_denies_staff_global_without_domain_link(self):
         req = self._req_with_user(self.staff_global)
-        self.assertTrue(self.perm.has_object_permission(req, self.view, self.domain))
+        self.assertFalse(self.perm.has_object_permission(req, self.view, self.domain))
 
     def test_allows_domain_owner(self):
         req = self._req_with_user(self.owner)

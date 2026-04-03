@@ -64,7 +64,11 @@
 .preferences-grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.preferences-form {
+  display: contents;
 }
 
 .panel {
@@ -74,6 +78,10 @@
 .form {
   display: grid;
   gap: 1rem;
+}
+
+.form--stacked {
+  align-content: start;
 }
 
 .field-grid {
@@ -154,6 +162,119 @@
   text-align: right;
 }
 
+.domain-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.domain-list__title {
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.domain-list__item {
+  align-items: center;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.8rem 0.95rem;
+}
+
+.domain-list__content {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.domain-list__name {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.domain-list__role {
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.domain-list__owner {
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.domain-list__badge {
+  background: rgba(14, 165, 233, 0.14);
+  border: 1px solid rgba(14, 165, 233, 0.18);
+  border-radius: 999px;
+  color: #0369a1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.38rem 0.65rem;
+  white-space: nowrap;
+}
+
+.domain-toolbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.domain-list__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.link-dialog {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.link-dialog__item {
+  align-items: center;
+  background: rgba(248, 250, 252, 0.96);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 14px;
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-weight: 600;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+  width: 100%;
+}
+
+.link-dialog__item:hover {
+  border-color: rgba(14, 165, 233, 0.45);
+  transform: translateY(-1px);
+}
+
+.link-dialog__item--selected {
+  background: rgba(224, 242, 254, 0.95);
+  border-color: rgba(14, 165, 233, 0.45);
+}
+
+.link-dialog__check {
+  color: #0369a1;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.link-dialog__footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
 @media (max-width: 960px) {
   .preferences-grid {
     grid-template-columns: 1fr;
@@ -181,5 +302,14 @@
 
   .summary dd {
     text-align: left;
+  }
+
+  .domain-list__item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .domain-list__actions {
+    justify-content: flex-start;
   }
 }

@@ -48,6 +48,7 @@
         <tr>
           <th>Titre</th>
           <th class="col-active">Actif</th>
+          <th>Modes</th>
           <th>Domaines</th>
           <th>Subjects</th>
           <th class="col-actions">Actions</th>
@@ -56,23 +57,29 @@
 
       <ng-template #body let-q>
         <tr>
-          <td>{{ getTitle(q) }}
-            <p-button
-              icon="pi pi-info-circle"
-              size="small"
-              pTooltip="{{ getDescription(q) }}"
-              [escape]="false"
-              tooltipPosition="right"
-              variant="text"
-              severity="secondary"
-            ></p-button>
-          </td>
+          <td>{{ getTitle(q) }}</td>
 
           <td class="center-cell col-active">
             <i
               [ngClass]="q.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
               class="pi">
             </i>
+          </td>
+
+          <td class="subjects-cell">
+            @if (getModes(q).length) {
+              <div class="quiz-question__subjects">
+                @for (mode of getModes(q); track mode) {
+                  <p-button
+                    [label]="mode"
+                    severity="secondary"
+                    size="small"
+                    type="button"
+                    variant="outlined">
+                  </p-button>
+                }
+              </div>
+            }
           </td>
 
           <td class="subjects-cell">
@@ -150,3 +157,9 @@
     }
   </div>
 </div>
+
+<app-question-preview-dialog
+  [questionId]="previewQuestionId()"
+  [visible]="previewQuestionId() !== null"
+  (visibleChange)="!$event && closePreview()">
+</app-question-preview-dialog>

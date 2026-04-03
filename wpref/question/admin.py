@@ -5,6 +5,7 @@ from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms import BaseInlineFormSet
 from django.utils.translation import gettext_lazy as _
+from import_export.admin import ImportExportMixin
 
 from parler.admin import TranslatableAdmin, TranslatableTabularInline
 
@@ -15,6 +16,7 @@ from .models import (
     QuestionSubject,
     MediaAsset,
 )
+from .resources import QuestionResource
 
 # ==========================================================
 # Formsets (validations inline)
@@ -83,7 +85,8 @@ class QuestionSubjectInline(admin.TabularInline):
 # ==========================================================
 
 @admin.register(Question)
-class QuestionAdmin(TranslatableAdmin):
+class QuestionAdmin(ImportExportMixin, TranslatableAdmin):
+    resource_classes = [QuestionResource]
     list_display = (
         "id",
         "title_any",

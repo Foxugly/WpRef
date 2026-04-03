@@ -1,4 +1,3 @@
-from domain.models import Domain
 from rest_framework import serializers
 
 from .models import Language

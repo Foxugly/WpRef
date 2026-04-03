@@ -56,12 +56,14 @@ celery -A wpref worker -l info
 Notes d exploitation :
 
 - les emails backend sont emis dans la langue du destinataire
+- une assignation de quiz cree aussi une alerte applicative non lue dans la langue du destinataire avec lien frontend direct vers le quiz
 - `python manage.py process_outbound_email --limit 100` reste disponible pour du rattrapage, pas pour le flux nominal
 - le worker Celery doit tourner en continu ; ne pas compter sur le process web pour envoyer les mails
 - Redis est une dependance runtime du flux email
 - si `USE_DEEPL=True`, la cle DeepL doit rester hors Git et etre geree comme un secret
 - les erreurs transitoires DeepL sont retriees cote HTTP client puis remontees sous une forme applicative simple
 - en prod, les refus `401/403` remontent en `WARNING`, le bruit de debug restant reserve au profil dev
+- l admin Django permet l import/export de `Domain`, `Subject` et `Question` via `django-import-export`
 
 Architecture email :
 

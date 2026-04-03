@@ -419,6 +419,7 @@ class QuestionSerializersTestCase(TestCase):
         second = self._mk_answer_option(q, is_correct=False, sort_order=1, fr="B FR", en="B EN")
 
         payload = {
+            "allow_multiple_correct": True,
             "answer_options": [
                 {
                     "id": first.id,
@@ -468,6 +469,7 @@ class QuestionSerializersTestCase(TestCase):
         answer.selected_options.set([second])
 
         payload = {
+            "allow_multiple_correct": True,
             "answer_options": [
                 {
                     "id": first.id,
@@ -484,3 +486,92 @@ class QuestionSerializersTestCase(TestCase):
             s.save()
         self.assertIn("answer_options", ctx.exception.detail)
         self.assertIn("deja utilisees", str(ctx.exception.detail["answer_options"]))
+
+    def test_question_write_serializer_update_allows_text_change_for_answer_option_used_in_quiz(self):
+        from quiz.models import Quiz, QuizQuestion, QuizQuestionAnswer, QuizTemplate
+
+        q = self._mk_question_with_translations()
+        first = self._mk_answer_option(q, is_correct=True, sort_order=0, fr="A FR", en="A EN")
+        second = self._mk_answer_option(q, is_correct=False, sort_order=1, fr="B FR", en="B EN")
+
+        template = QuizTemplate.objects.create(title="Serializer Quiz", created_by=self.owner)
+        quiz_question = QuizQuestion.objects.create(quiz=template, question=q, sort_order=1, weight=1)
+        quiz = Quiz.objects.create(
+            quiz_template=template,
+            user=self.owner,
+            active=True,
+            started_at=timezone.now(),
+        )
+        answer = QuizQuestionAnswer.objects.create(quiz=quiz, quizquestion=quiz_question, question_order=1)
+        answer.selected_options.set([second])
+
+        payload = {
+            "is_mode_exam": True,
+            "answer_options": [
+                {
+                    "id": first.id,
+                    "is_correct": True,
+                    "sort_order": 0,
+                    "translations": {"fr": {"content": "A FR mod"}, "en": {"content": "A EN mod"}},
+                },
+                {
+                    "id": second.id,
+                    "is_correct": False,
+                    "sort_order": 1,
+                    "translations": {"fr": {"content": "B FR mod"}, "en": {"content": "B EN mod"}},
+                },
+            ],
+        }
+
+        s = QuestionWriteSerializer(instance=q, data=payload, partial=True, context={"request": SimpleNamespace(user=self.owner)})
+        self.assertTrue(s.is_valid(), s.errors)
+        updated = s.save()
+
+        updated.refresh_from_db()
+        second.refresh_from_db()
+        self.assertTrue(updated.is_mode_exam)
+        self.assertEqual(second.safe_translation_getter("content", language_code="fr"), "B FR mod")
+        self.assertFalse(second.is_correct)
+
+    def test_question_write_serializer_update_rejects_correctness_change_for_answer_option_used_in_quiz(self):
+        from quiz.models import Quiz, QuizQuestion, QuizQuestionAnswer, QuizTemplate
+
+        q = self._mk_question_with_translations()
+        first = self._mk_answer_option(q, is_correct=True, sort_order=0, fr="A FR", en="A EN")
+        second = self._mk_answer_option(q, is_correct=False, sort_order=1, fr="B FR", en="B EN")
+
+        template = QuizTemplate.objects.create(title="Serializer Quiz", created_by=self.owner)
+        quiz_question = QuizQuestion.objects.create(quiz=template, question=q, sort_order=1, weight=1)
+        quiz = Quiz.objects.create(
+            quiz_template=template,
+            user=self.owner,
+            active=True,
+            started_at=timezone.now(),
+        )
+        answer = QuizQuestionAnswer.objects.create(quiz=quiz, quizquestion=quiz_question, question_order=1)
+        answer.selected_options.set([second])
+
+        payload = {
+            "allow_multiple_correct": True,
+            "answer_options": [
+                {
+                    "id": first.id,
+                    "is_correct": True,
+                    "sort_order": 0,
+                    "translations": {"fr": {"content": "A FR"}, "en": {"content": "A EN"}},
+                },
+                {
+                    "id": second.id,
+                    "is_correct": True,
+                    "sort_order": 1,
+                    "translations": {"fr": {"content": "B FR"}, "en": {"content": "B EN"}},
+                },
+            ]
+        }
+
+        s = QuestionWriteSerializer(instance=q, data=payload, partial=True, context={"request": SimpleNamespace(user=self.owner)})
+        self.assertTrue(s.is_valid(), s.errors)
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            s.save()
+        self.assertIn("answer_options", ctx.exception.detail)
+        self.assertIn("correcte/incorrecte", str(ctx.exception.detail["answer_options"]))

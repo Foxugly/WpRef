@@ -8,6 +8,7 @@ export let ROUTES = {
   home : () =>['/home'] as const,
   auth : {
     register: () => ['/register/'] as const,
+    registerPending: () => ['/register/confirmation'] as const,
     login:() => ['/login/'] as const,
     changePassword: () => ['/change-password'] as const,
     resetPasswordRequest: () => ['/reset-password'] as const,

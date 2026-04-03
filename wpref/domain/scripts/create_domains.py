@@ -58,7 +58,7 @@ def run():
 
     codes_needed = {"fr", "nl", "en"}
     waterpolo_langs = list(Language.objects.filter(code__in=codes_needed))
-    missing = sorted(codes_needed - {l.code for l in waterpolo_langs})
+    missing = sorted(codes_needed - {language.code for language in waterpolo_langs})
     if missing:
         raise Exception(
             f"Missing languages for Water-polo: {', '.join(missing)}. Run init_languages first."
@@ -93,6 +93,5 @@ def run():
     print(f"✅ IT domain id={it_domain.id}")
 
     print("🎉 Domains initialized")
-
 
 

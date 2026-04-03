@@ -7,6 +7,7 @@ from domain.models import Domain
 from question.models import AnswerOption, Question, QuestionSubject
 from quiz.constants import VISIBILITY_IMMEDIATE
 from quiz.models import Quiz, QuizAlertThread, QuizQuestion, QuizTemplate
+from quiz.services import create_quizzes_from_template
 from rest_framework import status
 from rest_framework.test import APITestCase
 from subject.models import Subject
@@ -278,3 +279,27 @@ class QuizAlertsApiTestCase(APITestCase):
         detail_url = self._rev("quiz-alert-detail", alert_id=thread.id)
         res = self.client.get(detail_url)
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_assigning_quiz_creates_unread_assignment_alert_in_recipient_language(self):
+        self.reporter.language = "fr"
+        self.reporter.save(update_fields=["language"])
+
+        with self.captureOnCommitCallbacks(execute=True):
+            created = create_quizzes_from_template(
+                quiz_template=self.template,
+                users=[self.reporter],
+                validate_target_user=lambda _template, _user: None,
+                assigned_by=self.owner,
+            )
+
+        self.assertEqual(len(created), 1)
+        thread = QuizAlertThread.objects.get(quiz=created[0], kind=QuizAlertThread.KIND_ASSIGNMENT)
+        self.assertEqual(thread.reporter_id, self.reporter.id)
+        self.assertEqual(thread.owner_id, self.owner.id)
+        self.assertEqual(thread.reported_language, "fr")
+        self.assertIsNone(thread.quizquestion_id)
+        self.assertTrue(thread.unread_for(self.reporter))
+        self.assertEqual(thread.unread_count_for(self.reporter), 1)
+        self.assertFalse(thread.can_user_reply(self.reporter))
+        self.assertEqual(thread.question_title, "Nouveau quiz assigne")
+        self.assertIn("/quiz/", thread.messages.first().body)

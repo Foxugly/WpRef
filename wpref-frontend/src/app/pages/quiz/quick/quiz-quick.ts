@@ -1,10 +1,12 @@
 import {CommonModule} from '@angular/common';
-import {Component, DestroyRef, inject, signal, ViewChild} from '@angular/core';
+import {Component, computed, DestroyRef, inject, signal, ViewChild} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ButtonModule} from 'primeng/button';
 import {QuizSubjectCreatePayload, QuizService} from '../../../services/quiz/quiz';
 import {QuizSubjectForm} from '../subject-form/subject-form';
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
+import {UserService} from '../../../services/user/user';
+import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 @Component({
   standalone: true,
@@ -14,6 +16,7 @@ import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors'
   styleUrl: './quiz-quick.scss',
 })
 export class QuizQuickPage {
+  readonly ui = computed(() => getEditorUiText(this.userService.currentLang));
   @ViewChild(QuizSubjectForm) private subjectForm?: QuizSubjectForm;
 
   saving = signal(false);
@@ -22,6 +25,7 @@ export class QuizQuickPage {
 
   private readonly quizService = inject(QuizService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly userService = inject(UserService);
 
   onGenerate(payload: QuizSubjectCreatePayload): void {
     this.saving.set(true);

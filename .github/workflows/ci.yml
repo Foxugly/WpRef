@@ -109,7 +109,7 @@ jobs:
           pip install ruff
 
       - name: Run backend lint
-        run: ruff check . --select E9,F63,F7,F82 --exclude migrations
+        run: ruff check . --exclude migrations
 
       - name: Check backend migrations are up to date
         env:
@@ -161,6 +161,9 @@ jobs:
 
       - name: Run frontend lint
         run: npm run lint
+
+      - name: Run frontend typecheck
+        run: npm run typecheck
 
       - name: Run unit tests
         env:

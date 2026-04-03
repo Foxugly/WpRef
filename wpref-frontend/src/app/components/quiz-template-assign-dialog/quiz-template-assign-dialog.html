@@ -2,44 +2,105 @@
   [visible]="visible()"
   (visibleChange)="onVisibleChange($event)"
   [modal]="true"
-  [style]="{width: '34rem'}"
-  header="Envoyer le quiz"
+  [style]="{width: '48rem', maxWidth: '92vw'}"
+  [header]="texts().assignDialog.header"
   (onHide)="onCancel()"
 >
   @if (template(); as selectedTemplate) {
     <div class="dialog-stack">
       <p class="dialog-intro">
-        Selectionne une ou plusieurs personnes pour leur envoyer
+        {{ texts().assignDialog.intro }}
         <strong>{{ selectedTemplate.title }}</strong>.
       </p>
 
-      <div class="recipient-list">
-        @for (user of users(); track user.id) {
-          <label class="recipient-row">
-            <p-checkbox
-              [binary]="true"
-              [inputId]="'assign-user-' + user.id"
-              [ngModel]="selectedRecipientIds().includes(user.id)"
-              (ngModelChange)="toggleRecipient(user.id, !!$event)"
-            ></p-checkbox>
-            <span class="recipient-row__identity">
-              <strong>{{ user.username }}</strong>
-              <small>{{ user.email }}</small>
-            </span>
-          </label>
-        }
+      <div class="assign-toolbar">
+        <input
+          pInputText
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event ?? '')"
+          [placeholder]="texts().assignDialog.searchPlaceholder"
+        />
+        <div class="assign-toolbar__roles">
+          <p-button
+            [label]="texts().assignDialog.roleAll"
+            [outlined]="roleFilter() !== 'all'"
+            size="small"
+            type="button"
+            (onClick)="setRoleFilter('all')"
+          ></p-button>
+          <p-button
+            [label]="texts().assignDialog.roleOwner"
+            [outlined]="roleFilter() !== 'owner'"
+            size="small"
+            type="button"
+            (onClick)="setRoleFilter('owner')"
+          ></p-button>
+          <p-button
+            [label]="texts().assignDialog.roleStaff"
+            [outlined]="roleFilter() !== 'staff'"
+            size="small"
+            type="button"
+            (onClick)="setRoleFilter('staff')"
+          ></p-button>
+          <p-button
+            [label]="texts().assignDialog.roleMember"
+            [outlined]="roleFilter() !== 'member'"
+            size="small"
+            type="button"
+            (onClick)="setRoleFilter('member')"
+          ></p-button>
+        </div>
+        <div class="assign-toolbar__bulk">
+          <p-button
+            [label]="texts().assignDialog.selectAll"
+            size="small"
+            type="button"
+            text
+            (onClick)="selectAllVisible()"
+          ></p-button>
+          <p-button
+            [label]="texts().assignDialog.clearSelection"
+            size="small"
+            type="button"
+            text
+            (onClick)="clearVisibleSelection()"
+          ></p-button>
+        </div>
       </div>
+
+      @if (filteredUsers().length) {
+        <div class="recipient-list">
+          @for (user of filteredUsers(); track user.id) {
+            <label class="recipient-row">
+              <p-checkbox
+                [binary]="true"
+                [inputId]="'assign-user-' + user.id"
+                [ngModel]="selectedRecipientIds().includes(user.id)"
+                (ngModelChange)="toggleRecipient(user.id, !!$event)"
+              ></p-checkbox>
+              <span class="recipient-row__identity">
+                <span class="recipient-row__main">
+                  <strong>{{ user.username }}</strong>
+                  <p-tag [severity]="roleSeverity(user.role)" [value]="roleLabel(user.role)"></p-tag>
+                </span>
+              </span>
+            </label>
+          }
+        </div>
+      } @else {
+        <p>{{ texts().assignDialog.noRecipients }}</p>
+      }
     </div>
   }
 
   <ng-template pTemplate="footer">
-    <p-button (onClick)="onCancel()" label="Annuler" severity="secondary" text></p-button>
+    <p-button (onClick)="onCancel()" [label]="texts().assignDialog.cancel" severity="secondary" text></p-button>
     <p-button
       (onClick)="onSubmit()"
       [disabled]="!selectedRecipientIds().length"
       [loading]="assigning()"
       icon="pi pi-send"
-      label="Envoyer"
+      [label]="texts().assignDialog.submit"
     ></p-button>
   </ng-template>
 </p-dialog>

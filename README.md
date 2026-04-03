@@ -72,6 +72,11 @@ Variables backend notables :
 - `DEEPL_AUTH_KEY`
 - `DEEPL_IS_FREE`
 
+Admin backend :
+
+- `django-import-export` est branché sur `Domain`, `Subject` et `Question`
+- l import/export admin inclut les colonnes de traduction par langue (`name_fr`, `title_en`, etc.)
+
 Variables d upload / pagination :
 
 - `API_PAGE_SIZE` definit la taille de page par defaut des endpoints pagines
@@ -95,6 +100,7 @@ python manage.py process_outbound_email --limit 100
 ```
 
 Tous les emails backend sont emis dans la langue du destinataire.
+Quand un quiz est assigne a un utilisateur, il recoit aussi une alerte applicative dans sa langue avec un lien direct vers le quiz.
 
 Architecture email :
 
@@ -102,6 +108,12 @@ Architecture email :
 - `transaction.on_commit(...)` declenche une tache Celery
 - le worker Celery lit l outbox et envoie le mail via le backend SMTP Django
 - la commande `process_outbound_email` sert uniquement de rattrapage
+
+Alertes quiz :
+
+- le menu messages du frontend repose sur les `QuizAlertThread`
+- une assignation de quiz cree une alerte applicative non lue pour le destinataire
+- cette alerte contient un message localise et le lien frontend du quiz
 
 DeepL :
 

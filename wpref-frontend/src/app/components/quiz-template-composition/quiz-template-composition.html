@@ -1,19 +1,51 @@
 <div class="card builder-card">
   <div class="card-head">
-    <h2 class="card-title">Composition du quiz</h2>
-    <p class="muted">Ajuste l'ordre et le poids de chaque question avant enregistrement.</p>
+    <div class="card-head__title-row">
+      <h2 class="card-title">{{ texts.compositionTitle }}</h2>
+      <button
+        class="info-button"
+        type="button"
+        [pTooltip]="texts.compositionHelp"
+        tooltipPosition="top"
+      >
+        <i class="pi pi-info-circle"></i>
+      </button>
+    </div>
   </div>
 
   @if (items.length === 0) {
-    <div class="empty-state">Ajoute au moins une question pour composer le quiz.</div>
+    <div class="empty-state">{{ texts.compositionEmpty }}</div>
   } @else {
     <div class="selected-list">
       @for (entry of items; track entry.questionId; let i = $index) {
         <article class="selected-card">
           <div class="selected-card__header">
-            <div>
+            <div class="selected-card__meta-row">
               <span class="order-pill">#{{ entry.item.sort_order }}</span>
-              <h3>{{ entry.title }}</h3>
+            </div>
+
+            <div class="weight-input-wrap">
+              <span class="weight-stepper__label">{{ texts.weight }}</span>
+              <p-inputnumber
+                buttonLayout="horizontal"
+                inputStyleClass="weight-input"
+                inputId="weight-{{ i }}"
+                spinnerMode="horizontal"
+                [showButtons]="true"
+                [step]="1"
+                [min]="1"
+                [max]="20"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="0"
+                [ngModel]="entry.item.weight"
+                (ngModelChange)="weightSet.emit({index: i, value: $event ?? 1})">
+                <ng-template #incrementbuttonicon>
+                  <span class="pi pi-plus"></span>
+                </ng-template>
+                <ng-template #decrementbuttonicon>
+                  <span class="pi pi-minus"></span>
+                </ng-template>
+              </p-inputnumber>
             </div>
 
             <div class="selected-card__actions">
@@ -51,21 +83,11 @@
             </div>
           </div>
 
+          <h3>{{ entry.title }}</h3>
+
           @if (entry.subjectsLabel) {
             <p class="muted">{{ entry.subjectsLabel }}</p>
           }
-
-          <div class="selected-card__grid">
-            <label class="field">
-              <span class="field__label">Poids</span>
-              <input
-                class="field__control"
-                [value]="entry.item.weight"
-                (change)="weightChanged.emit({index: i, event: $event})"
-                min="1"
-                type="number" />
-            </label>
-          </div>
         </article>
       }
     </div>

@@ -95,7 +95,7 @@ export class QuizService {
     }
 
     const selected = new Set(subjectIds);
-    return this.questionApi.questionList({active: true}).pipe(
+    return this.questionApi.questionList({active: true, isModePractice: true}).pipe(
       map((response) => response.results ?? []),
       map((questions) => ({
         count: questions.filter((question) =>
