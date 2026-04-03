@@ -10,6 +10,7 @@ def quiz_template_queryset():
         QuizTemplate.objects
         .annotate(_questions_count=Count("questions", distinct=True))
         .prefetch_related("quiz_questions__question")
+        .order_by("title", "pk")
     )
 
 
@@ -29,7 +30,7 @@ def accessible_quiz_template_queryset(user):
         | Q(is_public=True, domain__owner=user)
         | Q(is_public=True, domain__staff=user)
         | Q(is_public=True, domain__members=user)
-    ).distinct()
+    ).distinct().order_by("title", "pk")
 
 
 def quiz_queryset_for_user(user, *, include_details: bool):
