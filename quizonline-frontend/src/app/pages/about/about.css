@@ -49,10 +49,10 @@
   font-weight: 600;
 }
 
-.about-grid {
+.about-layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.95fr);
+  gap: 1.5rem;
 }
 
 .card {
@@ -63,7 +63,8 @@
   box-shadow: 0 12px 30px rgba(30, 44, 56, 0.06);
 }
 
-.card h2 {
+.card h2,
+.card h3 {
   margin: 0 0 1rem;
   font-size: 1.15rem;
   color: #1e2c38;
@@ -72,16 +73,17 @@
 .card p {
   margin: 0 0 0.75rem;
   color: #4f6170;
+  line-height: 1.65;
 }
 
 .card ul {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: 1.2rem;
   color: #334250;
 }
 
 .card li + li {
-  margin-top: 0.45rem;
+  margin-top: 0.65rem;
 }
 
 .mono {
@@ -90,8 +92,65 @@
   color: #1e2c38;
 }
 
+.feature-card {
+  align-self: start;
+}
+
+.tech-column {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.tech-column__intro {
+  padding: 0 0.25rem;
+}
+
+.tech-column__intro h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.3rem;
+  color: #1e2c38;
+}
+
+.tech-column__intro p {
+  margin: 0;
+  color: #4f6170;
+  line-height: 1.65;
+}
+
+.tech-card {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.tech-card p,
+.meta-block {
+  margin: 0;
+}
+
+.meta-block {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.meta-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a4b20;
+}
+
+.mono-link {
+  text-decoration: none;
+}
+
+.mono-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 900px) {
-  .about-grid {
+  .about-layout {
     grid-template-columns: 1fr;
   }
 

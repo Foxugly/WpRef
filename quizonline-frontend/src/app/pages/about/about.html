@@ -1,48 +1,49 @@
 <section class="about-page">
   <header class="hero">
-    <p class="eyebrow">A propos du projet</p>
-    <h1>WpRef</h1>
-    <p class="lead">
-      Plateforme de gestion et de passage de quiz avec contenus multilingues, édition des questions
-      et suivi des sessions.
-    </p>
+    <p class="eyebrow">{{ ui().eyebrow }}</p>
+    <h1>{{ ui().title }}</h1>
+    <p class="lead">{{ ui().lead }}</p>
     <a class="repo-link" [href]="repositoryUrl" rel="noreferrer" target="_blank">
-      Voir le repository
+      {{ ui().viewRepository }}
     </a>
   </header>
 
-  <section class="about-grid">
-    <article class="card">
-      <h2>Repository</h2>
-      <p>Code source principal du projet :</p>
-      <p class="mono">{{ repositoryUrl }}</p>
-    </article>
-
-    <article class="card">
-      <h2>Frontend</h2>
+  <section class="about-layout">
+    <article class="card feature-card">
+      <h2>{{ ui().featuresTitle }}</h2>
+      <p>{{ ui().featuresIntro }}</p>
       <ul>
-        @for (item of frontendStack; track item) {
+        @for (item of ui().features; track item) {
           <li>{{ item }}</li>
         }
       </ul>
     </article>
 
-    <article class="card">
-      <h2>Backend</h2>
-      <ul>
-        @for (item of backendStack; track item) {
-          <li>{{ item }}</li>
-        }
-      </ul>
-    </article>
+    <aside class="tech-column" [attr.aria-label]="ui().technicalTitle">
+      <div class="tech-column__intro">
+        <h2>{{ ui().technicalTitle }}</h2>
+        <p>{{ ui().technicalIntro }}</p>
+      </div>
 
-    <article class="card">
-      <h2>Fonctionnalités</h2>
-      <ul>
-        @for (item of projectHighlights; track item) {
-          <li>{{ item }}</li>
-        }
-      </ul>
-    </article>
+      @for (key of technicalCardKeys; track key) {
+        <article class="card tech-card">
+          <h3>{{ ui().cards[key].title }}</h3>
+          <p>{{ ui().cards[key].description }}</p>
+          @if (key === 'repository') {
+            <div class="meta-block">
+              <span class="meta-label">{{ ui().repositoryUrlLabel }}</span>
+              <a class="mono mono-link" [href]="repositoryUrl" rel="noreferrer" target="_blank">
+                {{ repositoryUrl }}
+              </a>
+            </div>
+          }
+          <ul>
+            @for (item of ui().cards[key].items; track item) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        </article>
+      }
+    </aside>
   </section>
 </section>
