@@ -3135,6 +3135,11 @@ components:
           items:
             $ref: '#/components/schemas/UserSummary'
           readOnly: true
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSummary'
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3148,6 +3153,7 @@ components:
       - allowed_languages
       - created_at
       - id
+      - members
       - owner
       - staff
       - translations
@@ -4520,12 +4526,17 @@ components:
         quiz:
           type: integer
           readOnly: true
+        kind:
+          type: string
+          readOnly: true
         question_id:
           type: integer
           readOnly: true
+          nullable: true
         question_order:
           type: integer
           readOnly: true
+          nullable: true
         question_title:
           type: string
           readOnly: true
@@ -4602,6 +4613,7 @@ components:
       - closed_by
       - created_at
       - id
+      - kind
       - last_message_at
       - last_message_preview
       - messages
@@ -4628,12 +4640,17 @@ components:
         quiz:
           type: integer
           readOnly: true
+        kind:
+          type: string
+          readOnly: true
         question_id:
           type: integer
           readOnly: true
+          nullable: true
         question_order:
           type: integer
           readOnly: true
+          nullable: true
         question_title:
           type: string
           readOnly: true
@@ -4670,6 +4687,7 @@ components:
       required:
       - created_at
       - id
+      - kind
       - last_message_at
       - last_message_preview
       - question_id
@@ -5080,6 +5098,10 @@ components:
         created_by:
           type: integer
           readOnly: true
+        created_by_username:
+          type: string
+          readOnly: true
+          default: ''
         quiz_questions:
           type: array
           items:
@@ -5089,6 +5111,7 @@ components:
       - can_answer
       - created_at
       - created_by
+      - created_by_username
       - id
       - questions_count
       - quiz_questions

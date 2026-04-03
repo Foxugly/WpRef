@@ -15,8 +15,9 @@ import { QuizAlertMessageDto } from './quiz-alert-message';
 export interface QuizAlertThreadDetailDto { 
     readonly id: number;
     readonly quiz: number;
-    readonly question_id: number;
-    readonly question_order: number;
+    readonly kind: string;
+    readonly question_id: number | null;
+    readonly question_order: number | null;
     readonly question_title: string;
     readonly quiz_template_title: string;
     readonly reported_language: string;

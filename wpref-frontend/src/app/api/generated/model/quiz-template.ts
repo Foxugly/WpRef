@@ -53,6 +53,7 @@ export interface QuizTemplateDto {
     detail_available_at?: string | null;
     is_public?: boolean;
     readonly created_by: number;
+    readonly created_by_username: string;
     readonly quiz_questions: Array<QuizQuestionDto>;
 }
 

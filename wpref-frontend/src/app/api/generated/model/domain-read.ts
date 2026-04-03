@@ -19,6 +19,7 @@ export interface DomainReadDto {
     readonly active: boolean;
     readonly owner: UserSummaryDto;
     readonly staff: Array<UserSummaryDto>;
+    readonly members: Array<UserSummaryDto>;
     readonly created_at: string;
     readonly updated_at: string;
 }

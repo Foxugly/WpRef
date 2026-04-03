@@ -4526,12 +4526,17 @@ components:
         quiz:
           type: integer
           readOnly: true
+        kind:
+          type: string
+          readOnly: true
         question_id:
           type: integer
           readOnly: true
+          nullable: true
         question_order:
           type: integer
           readOnly: true
+          nullable: true
         question_title:
           type: string
           readOnly: true
@@ -4608,6 +4613,7 @@ components:
       - closed_by
       - created_at
       - id
+      - kind
       - last_message_at
       - last_message_preview
       - messages
@@ -4634,12 +4640,17 @@ components:
         quiz:
           type: integer
           readOnly: true
+        kind:
+          type: string
+          readOnly: true
         question_id:
           type: integer
           readOnly: true
+          nullable: true
         question_order:
           type: integer
           readOnly: true
+          nullable: true
         question_title:
           type: string
           readOnly: true
@@ -4676,6 +4687,7 @@ components:
       required:
       - created_at
       - id
+      - kind
       - last_message_at
       - last_message_preview
       - question_id

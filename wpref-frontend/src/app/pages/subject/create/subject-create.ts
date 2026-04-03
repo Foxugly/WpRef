@@ -14,7 +14,7 @@ import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
 
-import {DomainReadDto, LanguageEnumDto, SubjectWriteRequestDto} from '../../../api/generated';
+import {DomainDetailDto, DomainReadDto, LanguageEnumDto, SubjectWriteRequestDto} from '../../../api/generated';
 import {DomainOption, DomainService, DomainTranslations} from '../../../services/domain/domain';
 import {SubjectService, SubjectLangGroup} from '../../../services/subject/subject';
 import {isLangCode, LangCode, TranslateBatchItem, TranslationService} from '../../../services/translation/translation';
@@ -54,6 +54,8 @@ export class SubjectCreate implements OnInit {
   submitError = signal<string | null>(null);
 
   readonly isLocked = computed(() => this.loading() || this.translating());
+
+  private readonly domainMetaFallbacks: LanguageEnumDto[] = [LanguageEnumDto.Fr, LanguageEnumDto.En, LanguageEnumDto.Nl];
 
   // Domain list
   domains = signal<DomainReadDto[]>([]);
@@ -303,14 +305,13 @@ export class SubjectCreate implements OnInit {
     return this.subjectService.buildWritePayload(domainId, translations);
   }
 
-  private getDomainLabel(domain: DomainReadDto, lang: LanguageEnumDto): string {
+  private getDomainLabel(domain: Pick<DomainReadDto, 'id' | 'translations'>, lang: LanguageEnumDto): string {
     const tr = domain.translations as DomainTranslations | undefined;
 
     const inCurrent = tr?.[lang]?.name?.trim();
     if (inCurrent) return inCurrent;
 
-    const fallbacks: LanguageEnumDto[] = [LanguageEnumDto.Fr, LanguageEnumDto.En, LanguageEnumDto.Nl];
-    for (const fb of fallbacks) {
+    for (const fb of this.domainMetaFallbacks) {
       const v = tr?.[fb]?.name?.trim();
       if (v) return v;
     }
@@ -318,7 +319,7 @@ export class SubjectCreate implements OnInit {
     return `Domain #${domain.id}`;
   }
 
-  private extractLangCodes(domain: DomainReadDto): LangCode[] {
+  private extractLangCodes(domain: Pick<DomainDetailDto, 'allowed_languages'>): LangCode[] {
     const codes = (domain.allowed_languages ?? [])
       .filter((language) => language.active)
       .map((language) => language.code)

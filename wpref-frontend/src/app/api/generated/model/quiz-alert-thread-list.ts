@@ -13,8 +13,9 @@ import { StatusEnumDto } from './status-enum';
 export interface QuizAlertThreadListDto { 
     readonly id: number;
     readonly quiz: number;
-    readonly question_id: number;
-    readonly question_order: number;
+    readonly kind: string;
+    readonly question_id: number | null;
+    readonly question_order: number | null;
     readonly question_title: string;
     readonly quiz_template_title: string;
     readonly reported_language: string;
