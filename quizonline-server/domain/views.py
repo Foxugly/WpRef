@@ -202,7 +202,7 @@ class DomainViewSet(MyModelViewSet):
         return qs.filter(Q(owner=user) | Q(staff=user) | Q(members=user)).distinct()
 
     def perform_create(self, serializer):
-        domain = serializer.save()
+        domain = serializer.save(created_by=self.request.user)
         if self.request.user and not self.request.user.is_anonymous:
             domain.staff.add(self.request.user)
 

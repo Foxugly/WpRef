@@ -4,12 +4,13 @@ from django.db import models
 from django.db.models import UniqueConstraint, Q
 from django.utils.translation import gettext_lazy as _
 from parler.models import TranslatedFields, TranslatableModel
+from config.models import AuditMixin
 from subject.models import Subject
 
 from .youtube import normalize_external_url
 
 
-class Question(TranslatableModel):
+class Question(AuditMixin, TranslatableModel):
     domain = models.ForeignKey(
         "domain.Domain",
         on_delete=models.PROTECT,

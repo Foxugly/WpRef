@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
+from config.models import AuditMixin
 from question.models import Question, AnswerOption
 
 from .constants import (
@@ -16,7 +17,7 @@ from .constants import (
 )
 
 
-class QuizTemplate(models.Model):
+class QuizTemplate(AuditMixin, models.Model):
     """
     Modèle de configuration de quiz (template).
     Définit le mode, le pool de questions, la durée, etc.
@@ -91,13 +92,6 @@ class QuizTemplate(models.Model):
         help_text="Utilisé uniquement si la visibilité est 'À partir d'une date'.",
     )
     is_public = models.BooleanField("Public ?", default=False)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="created_quiz_templates",
-    )
     active = models.BooleanField("Actif ?", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

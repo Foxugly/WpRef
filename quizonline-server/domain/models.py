@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from parler.models import TranslatableModel, TranslatedFields
+from config.models import AuditMixin
 
 User = get_user_model()
 
@@ -12,7 +13,7 @@ def settings_language_codes() -> set[str]:
     return {code for code, _ in getattr(settings, "LANGUAGES", [])}
 
 
-class Domain(TranslatableModel):
+class Domain(AuditMixin, TranslatableModel):
     """
         Domain represents a logical grouping of subjects and questions,
         with multilingual support and language restrictions.
