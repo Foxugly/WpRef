@@ -105,9 +105,20 @@ class QuestionModelsTestCase(TestCase):
     def test_mediaasset_external_valid(self):
         asset = MediaAsset(
             kind=MediaAsset.EXTERNAL,
-            external_url="https://example.com/video",
+            external_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         )
         asset.full_clean()  # ne doit pas lever
+
+    def test_mediaasset_external_non_youtube_url_is_rejected(self):
+        asset = MediaAsset(
+            kind=MediaAsset.EXTERNAL,
+            external_url="https://example.com/video",
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            asset.full_clean()
+
+        self.assertIn("external_url", ctx.exception.message_dict)
 
     def test_mediaasset_external_youtube_url_is_normalized(self):
         asset = MediaAsset(
@@ -134,7 +145,10 @@ class QuestionModelsTestCase(TestCase):
         self.assertIn("external_url", ctx.exception.message_dict)
 
     def test_mediaasset_external_invalid_with_file(self):
-        asset = MediaAsset(kind=MediaAsset.EXTERNAL, external_url="https://example.com")
+        asset = MediaAsset(
+            kind=MediaAsset.EXTERNAL,
+            external_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        )
         asset.file = SimpleUploadedFile("x.txt", b"abc", content_type="text/plain")
 
         self.assertEqual(MediaAsset.EXTERNAL, "external")
@@ -186,7 +200,7 @@ class QuestionModelsTestCase(TestCase):
     def test_mediaasset_str_external(self):
         asset = MediaAsset.objects.create(
             kind=MediaAsset.EXTERNAL,
-            external_url="https://example.com",
+            external_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         )
         self.assertIn("external", str(asset))
 
@@ -198,7 +212,7 @@ class QuestionModelsTestCase(TestCase):
         q = Question.objects.create(domain=self.domain)
         asset = MediaAsset.objects.create(
             kind=MediaAsset.EXTERNAL,
-            external_url="https://example.com",
+            external_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         )
 
         QuestionMedia.objects.create(question=q, asset=asset)
@@ -210,7 +224,7 @@ class QuestionModelsTestCase(TestCase):
         q = Question.objects.create(domain=self.domain)
         asset = MediaAsset.objects.create(
             kind=MediaAsset.EXTERNAL,
-            external_url="https://example.com",
+            external_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         )
         qm = QuestionMedia.objects.create(
             question=q,

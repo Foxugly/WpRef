@@ -4,6 +4,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 from django.utils import translation
@@ -11,6 +12,7 @@ from domain.models import Domain
 from question.models import Question, AnswerOption, QuestionSubject
 from quiz.constants import VISIBILITY_IMMEDIATE
 from quiz.models import QuizTemplate, QuizQuestion, Quiz, QuizQuestionAnswer
+from customuser.throttling import QuizAnswerRateThrottle
 from quiz.views import QuizTemplateQuizQuestionViewSet, QuizQuestionAnswerViewSet, QuizViewSet
 from rest_framework import status
 from rest_framework.response import Response
@@ -1382,6 +1384,25 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
 
         quiz.refresh_from_db()
         self.assertFalse(quiz.active)
+
+    def test_answer_create_is_rate_limited(self):
+        cache.clear()
+        quiz = self._create_quiz(self.qt_ok, self.u1, active=True, started_at=timezone.now())
+        self._auth(self.u1)
+        correct = self.qq1.question.answer_options.filter(is_correct=True).first()
+        payload = {
+            "question_order": 1,
+            "selected_options": [correct.id] if correct else [],
+        }
+
+        with patch.object(QuizAnswerRateThrottle, "rate", "2/min", create=True):
+            first = self.client.post(self._answers_list_url(quiz), payload, format="json")
+            second = self.client.post(self._answers_list_url(quiz), payload, format="json")
+            third = self.client.post(self._answers_list_url(quiz), payload, format="json")
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(third.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
     # ---------------------------------------------------------------------
     # QuizQuestionAnswerViewSet: get_queryset swagger_fake_view -> .none()

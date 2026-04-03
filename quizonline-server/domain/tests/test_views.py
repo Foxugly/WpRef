@@ -259,6 +259,22 @@ class DomainViewSetTests(TestCase):
         self.assertEqual(domain.name, "Nouveau")
         self.assertEqual(domain.description, "X")
 
+    def test_create_authenticated_sets_created_by(self):
+        view = DomainViewSet.as_view({"post": "create"})
+        payload = {
+            "translations": {"fr": {"name": "Audit", "description": ""}},
+            "allowed_languages": [self.lang_fr.id],
+            "active": True,
+            "staff": [],
+        }
+        request = self.factory.post("/api/domain/", payload, format="json")
+        force_authenticate(request, user=self.owner)
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        domain = Domain.objects.get(pk=response.data["id"])
+        self.assertEqual(domain.created_by_id, self.owner.id)
+
     # ----------------------------
     # UPDATE (PUT)
     # ----------------------------

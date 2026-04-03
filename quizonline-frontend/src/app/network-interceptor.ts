@@ -4,7 +4,7 @@ import {catchError, throwError, timeout} from 'rxjs';
 import {environment} from '../environments/environment';
 import {BackendStatusService} from './services/status/status';
 
-// Délai max avant de considérer "pas de réponse" (adapter selon besoin)
+// Delai max avant de considerer "pas de reponse" (adapter selon besoin)
 const REQ_TIMEOUT_MS = 8000;
 
 export const NetworkInterceptor: HttpInterceptorFn = (req, next) => {
@@ -16,15 +16,15 @@ export const NetworkInterceptor: HttpInterceptorFn = (req, next) => {
       // Timeout RxJS "simule" un status 0 pour nous
       if (err instanceof HttpErrorResponse) {
         if (err.status === 0) {
-          // Échec de connexion: serveur down, CORS, DNS, etc.
-          status.setDown(`API inaccessible. Vérifie que l'API tourne sur ${environment.apiUrl}`);
+          // Echec de connexion: serveur down, CORS, DNS, etc.
+          status.setDown(`API inaccessible. Verifie que l'API tourne sur ${environment.apiBaseUrl}`);
         } else {
-          // HTTP valide (ex: 400/401/500), le backend répond
+          // HTTP valide (ex: 400/401/500), le backend repond
           status.setUp();
         }
       } else {
-        // Erreur non-HTTP (timeout opérateur, etc.)
-        status.setDown('API : délai dépassé.');
+        // Erreur non-HTTP (timeout operateur, etc.)
+        status.setDown('API : delai depasse.');
       }
       return throwError(() => err);
     })

@@ -148,7 +148,7 @@ class QuestionSerializersTestCase(TestCase):
         self._set_parler_translation(ao, "en", content=en)
         return AnswerOption.objects.get(pk=ao.pk)
 
-    def _mk_external_asset(self, url="https://example.com") -> MediaAsset:
+    def _mk_external_asset(self, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ") -> MediaAsset:
         return MediaAsset.objects.create(kind=MediaAsset.EXTERNAL, external_url=url)
 
     def _mk_image_upload(self, name="img.png", content=b"pngbytes") -> SimpleUploadedFile:
@@ -218,7 +218,7 @@ class QuestionSerializersTestCase(TestCase):
         asset = self._mk_external_asset()
         data = MediaAssetSerializer(asset).data
         self.assertEqual(data["kind"], MediaAsset.EXTERNAL)
-        self.assertEqual(data["external_url"], "https://example.com")
+        self.assertEqual(data["external_url"], "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
     def test_question_media_read_serializer_nests_asset(self):
         q = self._mk_question_with_translations()
@@ -226,7 +226,7 @@ class QuestionSerializersTestCase(TestCase):
         link = QuestionMedia.objects.create(question=q, asset=asset, sort_order=0)
         data = QuestionMediaReadSerializer(link).data
         self.assertEqual(data["sort_order"], 0)
-        self.assertEqual(data["asset"]["external_url"], "https://example.com")
+        self.assertEqual(data["asset"]["external_url"], "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
     # ---------------------------------------------------------------------
     # Answer option serializers
@@ -290,7 +290,7 @@ class QuestionSerializersTestCase(TestCase):
         self._mk_answer_option(q, is_correct=True, sort_order=0, fr="A", en="A")
         self._mk_answer_option(q, is_correct=False, sort_order=1, fr="B", en="B")
 
-        asset = self._mk_external_asset("https://example.com")
+        asset = self._mk_external_asset("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         QuestionMedia.objects.create(question=q, asset=asset, sort_order=0)
 
         # Refetch clean + prefetched
@@ -309,7 +309,7 @@ class QuestionSerializersTestCase(TestCase):
         self.assertIn("fr", data["translations"])
         self.assertEqual(data["translations"]["fr"]["title"], "Titre FR")
 
-        self.assertEqual(data["media"][0]["asset"]["external_url"], "https://example.com")
+        self.assertEqual(data["media"][0]["asset"]["external_url"], "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         self.assertNotIn("is_correct", data["answer_options"][0])
 
         s2 = QuestionReadSerializer(q, context={"show_correct": True, "view": view})
@@ -398,8 +398,8 @@ class QuestionSerializersTestCase(TestCase):
         self.assertIn("nouveau domain", str(s.errors["subject_ids"]))
 
     def test_question_write_serializer_create_full(self):
-        a1 = self._mk_external_asset("https://example.com/a1")
-        a2 = self._mk_external_asset("https://a2.example.com")
+        a1 = self._mk_external_asset("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        a2 = self._mk_external_asset("https://www.youtube.com/watch?v=9bZkp7q19f0")
 
         payload = self._base_question_payload()
         payload["media_asset_ids"] = [a1.id, a2.id, a1.id]  # duplicate => dedup
@@ -418,7 +418,13 @@ class QuestionSerializersTestCase(TestCase):
         self.assertEqual(set(q.subjects.values_list("id", flat=True)), {self.subj1.id, self.subj2.id})
 
         media_urls = list(q.media.order_by("sort_order").values_list("asset__external_url", flat=True))
-        self.assertEqual(media_urls, ["https://example.com/a1", "https://a2.example.com"])
+        self.assertEqual(
+            media_urls,
+            [
+                "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                "https://www.youtube.com/watch?v=9bZkp7q19f0",
+            ],
+        )
 
     def test_question_write_serializer_create_media_asset_ids_missing_raises(self):
         payload = self._base_question_payload()

@@ -256,13 +256,26 @@ class QuestionViewSetTests(APITestCase):
     def test_media_external_creates_or_returns_existing(self):
         self.client.force_authenticate(self.staff)
 
-        resp1 = self.client.post(self._media_url(), data={"external_url": "https://example.com/ok"}, format="json")
+        youtube_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        resp1 = self.client.post(self._media_url(), data={"external_url": youtube_url}, format="json")
         self.assertEqual(resp1.status_code, status.HTTP_201_CREATED)
 
-        resp2 = self.client.post(self._media_url(), data={"external_url": "https://example.com/ok"}, format="json")
+        resp2 = self.client.post(self._media_url(), data={"external_url": youtube_url}, format="json")
         self.assertEqual(resp2.status_code, status.HTTP_200_OK)
 
         self.assertEqual(resp1.json()["id"], resp2.json()["id"])
+
+    def test_media_external_non_youtube_url_is_rejected(self):
+        self.client.force_authenticate(self.staff)
+
+        resp = self.client.post(
+            self._media_url(),
+            data={"external_url": "https://example.com/ok"},
+            format="json",
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("external_url", resp.json())
 
     def test_media_external_youtube_url_is_normalized(self):
         self.client.force_authenticate(self.staff)
@@ -363,7 +376,7 @@ class QuestionViewSetTests(APITestCase):
         s1 = self._mk_subject(self.domain, name_fr="S1")
         s2 = self._mk_subject(self.domain, name_fr="S2")
 
-        a_ext = self._upload_external("https://example.com/v1")
+        a_ext = self._upload_external("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         a_img = self._upload_image("img.png", b"img-content")
 
         payload = self._payload_create(
@@ -397,6 +410,17 @@ class QuestionViewSetTests(APITestCase):
             "A",
         )
 
+    def test_create_json_sets_created_by(self):
+        s1 = self._mk_subject(self.domain, name_fr="S1")
+        payload = self._payload_create(self.domain, subject_ids=[s1.pk])
+
+        self.client.force_authenticate(self.domain_owner)
+        resp = self.client.post(self._list_url(), data=payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.json())
+
+        question = Question.objects.get(pk=resp.json()["id"])
+        self.assertEqual(question.created_by_id, self.domain_owner.id)
+
     def test_create_rejects_subject_from_other_domain(self):
         valid_subject = self._mk_subject(self.domain, name_fr="S1")
         foreign_subject = self._mk_subject(self.other_domain, name_fr="Foreign S")
@@ -428,8 +452,8 @@ class QuestionViewSetTests(APITestCase):
         s1 = self._mk_subject(self.domain, name_fr="S1")
         s2 = self._mk_subject(self.domain, name_fr="S2")
 
-        a1 = self._upload_external("https://example.com/a1")
-        a2 = self._upload_external("https://example.com/a2")
+        a1 = self._upload_external("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        a2 = self._upload_external("https://www.youtube.com/watch?v=9bZkp7q19f0")
 
         payload = self._payload_create(
             self.domain,
@@ -457,12 +481,12 @@ class QuestionViewSetTests(APITestCase):
         q.save()
 
         # attach old media
-        old_ext = self._upload_external("https://example.com/old")
+        old_ext = self._upload_external("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         QuestionMedia.objects.create(question=q, asset=old_ext, sort_order=0)
         self.assertEqual(q.media.count(), 1)
 
         # new media
-        new_ext = self._upload_external("https://example.com/new")
+        new_ext = self._upload_external("https://www.youtube.com/watch?v=9bZkp7q19f0")
         new_img = self._upload_image("new.png", b"zzz")
 
         payload = self._payload_create(self.domain, media_asset_ids=[new_ext.pk, new_img.pk])
@@ -484,7 +508,7 @@ class QuestionViewSetTests(APITestCase):
         q.title = "Keep"
         q.save()
 
-        old_ext = self._upload_external("https://example.com/keep")
+        old_ext = self._upload_external("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         QuestionMedia.objects.create(question=q, asset=old_ext, sort_order=0)
 
         self.client.force_authenticate(self.domain_owner)
@@ -505,10 +529,10 @@ class QuestionViewSetTests(APITestCase):
         q.title = "Old"
         q.save()
 
-        old_ext = self._upload_external("https://example.com/old")
+        old_ext = self._upload_external("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
         QuestionMedia.objects.create(question=q, asset=old_ext, sort_order=0)
 
-        new_ext = self._upload_external("https://example.com/new")
+        new_ext = self._upload_external("https://www.youtube.com/watch?v=9bZkp7q19f0")
 
         self.client.force_authenticate(self.domain_owner)
         resp = self.client.patch(
