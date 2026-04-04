@@ -313,6 +313,7 @@ class QuizTemplateViewSet(MyModelViewSet):
             with_duration=with_duration,
             duration=duration,
             created_by=request.user,
+            updated_by=request.user,
             is_public=False,
         )
         quiz_questions = []

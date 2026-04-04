@@ -167,20 +167,67 @@
                 </label>
               </div>
 
-              <div class="builder-grid">
-                <label class="field field--full">
-                  <span class="field__label">{{ uiText().quizTitle }}</span>
-                  <input formControlName="title" pInputText placeholder="Ex: Examen blanc chimie" type="text" />
-                </label>
+              <div class="translations-card" formGroupName="translations">
+                <div class="card-head card-head--with-badge">
+                  <h3 class="card-title">{{ uiText().translationsTitle }}</h3>
+                  <span class="badge">{{ quizTemplateLangs().length }} {{ uiText().languagesCount }}</span>
+                </div>
+                <p class="muted translations-hint">{{ uiText().translationHint }}</p>
 
-                <label class="field field--full">
-                  <span class="field__label">{{ uiText().quizDescription }}</span>
-                  <textarea
-                    class="field__control field__control--textarea"
-                    formControlName="description"
-                    placeholder="Contexte ou consignes du quiz">
-                  </textarea>
-                </label>
+                @if (quizTemplateLangs().length > 0) {
+                  <p-tabs
+                    (valueChange)="onQuizTemplateTabChange($event)"
+                    [value]="quizTemplateActiveLang() ?? undefined"
+                    class="translations-tabs">
+
+                    <p-tablist>
+                      @for (lang of quizTemplateLangs(); track lang) {
+                        <p-tab [value]="lang">{{ lang.toUpperCase() }}</p-tab>
+                      }
+                      <div class="tablist-actions">
+                        <p-button
+                          (onClick)="translateQuizTemplate()"
+                          [disabled]="quizTemplateTranslating()"
+                          [loading]="quizTemplateTranslating()"
+                          icon="pi pi-language"
+                          [label]="uiText().translateOthers"
+                          severity="info"
+                          size="small"
+                          type="button">
+                        </p-button>
+                      </div>
+                    </p-tablist>
+
+                    <p-tabpanels>
+                      @for (lang of quizTemplateLangs(); track lang) {
+                        <p-tabpanel [value]="lang">
+                          <div class="builder-grid builder-grid--translations" [formGroupName]="lang">
+                            <label class="field field--full">
+                              <span class="field__label">{{ uiText().quizTitle }} ({{ lang.toUpperCase() }})</span>
+                              <input formControlName="title" pInputText placeholder="Ex: Examen blanc chimie" type="text" />
+                            </label>
+
+                            <label class="field field--full">
+                              <span class="field__label">{{ uiText().quizDescription }} ({{ lang.toUpperCase() }})</span>
+                              <textarea
+                                class="field__control field__control--textarea"
+                                formControlName="description"
+                                placeholder="Contexte ou consignes du quiz">
+                              </textarea>
+                            </label>
+                          </div>
+
+                          @if (quizTemplateTranslating()) {
+                            <div class="inline-status">
+                              <i class="pi pi-spin pi-spinner"></i>
+                              <span>{{ uiText().translating }}</span>
+                            </div>
+                          }
+                        </p-tabpanel>
+                      }
+                    </p-tabpanels>
+                  </p-tabs>
+                }
               </div>
             </div>
           </p-tabpanel>

@@ -47,6 +47,11 @@ class LocalizedSubjectDetailTranslationSerializer(serializers.Serializer):
     domain_name = serializers.CharField()
 
 
+class LocalizedQuizTemplateTranslationSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    description = serializers.CharField()
+
+
 @extend_schema_field(OpenApiTypes.OBJECT)
 class JSONDictOrStringField(serializers.Field):
     """

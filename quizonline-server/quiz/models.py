@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.translation import get_language
 from django.utils import timezone
 from django.utils.text import slugify
 from config.models import AuditMixin
@@ -45,6 +46,7 @@ class QuizTemplate(AuditMixin, models.Model):
         default=MODE_PRACTICE,  # par défaut : mode examen
     )
     description = models.TextField("Description", blank=True)
+    translations = models.JSONField(default=dict, blank=True)
 
     # Nombre de questions à utiliser dans ce quiz (parmi le pool)
     max_questions = models.PositiveIntegerField(
@@ -101,6 +103,68 @@ class QuizTemplate(AuditMixin, models.Model):
     def __str__(self):
         return self.title
 
+    def normalized_translations(self) -> dict[str, dict[str, str]]:
+        raw = self.translations if isinstance(self.translations, dict) else {}
+        normalized: dict[str, dict[str, str]] = {}
+        for lang_code, payload in raw.items():
+            if not isinstance(lang_code, str) or not isinstance(payload, dict):
+                continue
+            normalized[lang_code] = {
+                "title": str(payload.get("title", "") or ""),
+                "description": str(payload.get("description", "") or ""),
+            }
+        return normalized
+
+    def get_localized_content(self, language_code: str | None = None) -> dict[str, str]:
+        translations = self.normalized_translations()
+        candidates: list[str] = []
+        if language_code:
+            candidates.append(language_code)
+        active_language = get_language()
+        if active_language:
+            candidates.append(active_language)
+        candidates.extend(["fr", "en"])
+
+        seen: set[str] = set()
+        for candidate in candidates:
+            if not candidate or candidate in seen:
+                continue
+            seen.add(candidate)
+            payload = translations.get(candidate)
+            if payload and (payload.get("title") or payload.get("description")):
+                return {
+                    "title": payload.get("title", "") or self.title or "",
+                    "description": payload.get("description", "") or "",
+                }
+
+        for payload in translations.values():
+            if payload.get("title") or payload.get("description"):
+                return {
+                    "title": payload.get("title", "") or self.title or "",
+                    "description": payload.get("description", "") or "",
+                }
+
+        return {
+            "title": self.title or "",
+            "description": self.description or "",
+        }
+
+    def sync_translations_from_fields(self, language_code: str | None = None) -> None:
+        translations = self.normalized_translations()
+        preferred_language = language_code or get_language() or "fr"
+        if not translations:
+            translations[preferred_language] = {
+                "title": self.title or "",
+                "description": self.description or "",
+            }
+        self.translations = translations
+
+    def sync_fields_from_translations(self, language_code: str | None = None) -> None:
+        self.sync_translations_from_fields(language_code)
+        localized = self.get_localized_content(language_code)
+        self.title = localized["title"] or self.title or "Quiz"
+        self.description = localized["description"] or ""
+
     def _make_unique_title(self):
         """Rend self.title unique en ajoutant un suffixe ' (n)' si nécessaire."""
         base = (self.title or "").strip() or "Quiz"
@@ -119,9 +183,19 @@ class QuizTemplate(AuditMixin, models.Model):
         self.title = title
 
     def save(self, *args, **kwargs):
+        preferred_language = kwargs.pop("preferred_language", None)
+        original_title = self.title
+        self.sync_fields_from_translations(preferred_language)
         creating = self.pk is None
         if creating:
             self._make_unique_title()
+            if self.title != original_title:
+                translations = self.normalized_translations()
+                target_language = preferred_language or get_language() or "fr"
+                payload = translations.setdefault(target_language, {"title": "", "description": ""})
+                if not payload.get("title") or payload.get("title") == original_title:
+                    payload["title"] = self.title
+                self.translations = translations
         if not self.slug:
             base_slug = slugify(self.title) or "quiz"
             slug = base_slug

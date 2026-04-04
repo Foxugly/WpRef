@@ -24,6 +24,8 @@ export * from './localized-name-description-translation-request';
 export * from './localized-question-title-translation';
 export * from './localized-question-translation';
 export * from './localized-question-translation-request';
+export * from './localized-quiz-template-translation';
+export * from './localized-quiz-template-translation-request';
 export * from './localized-subject-detail-translation';
 export * from './localized-subject-translation';
 export * from './media-asset';

@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { LocalizedQuizTemplateTranslationRequestDto } from './localized-quiz-template-translation-request';
 import { ModeEnumDto } from './mode-enum';
 import { VisibilityEnumDto } from './visibility-enum';
 
@@ -16,6 +17,7 @@ export interface PatchedQuizTemplatePartialRequestDto {
     title?: string;
     mode?: ModeEnumDto;
     description?: string;
+    translations?: { [key: string]: LocalizedQuizTemplateTranslationRequestDto; };
     max_questions?: number;
     permanent?: boolean;
     started_at?: string | null;

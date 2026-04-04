@@ -27,13 +27,13 @@ export type AboutUiText = {
 const FR: AboutUiText = {
   eyebrow: 'À propos du projet',
   title: 'QuizOnline',
-  lead: 'Plateforme de création, d attribution et de passage de quiz multilingues avec administration des contenus, des domaines et des sessions.',
+  lead: 'Plateforme de création, d\'attribution et de passage de quiz multilingues avec administration des contenus, des domaines et des sessions.',
   viewRepository: 'Voir le repository',
   featuresTitle: 'Fonctionnalités',
-  featuresIntro: 'Le produit couvre à la fois l administration des contenus, la diffusion des quiz et le suivi des utilisateurs.',
+  featuresIntro: 'Le produit couvre à la fois l\'administration des contenus, la diffusion des quiz et le suivi des utilisateurs.',
   features: [
-    'Inscription, connexion, confirmation d email, réinitialisation et changement de mot de passe.',
-    'Choix de la langue d interface et synchronisation de la préférence utilisateur.',
+    'Inscription, connexion, confirmation d\'email, réinitialisation et changement de mot de passe.',
+    'Choix de la langue d\'interface et synchronisation de la préférence utilisateur.',
     'Gestion des domaines avec propriétaire, staff, membres liés et domaine courant.',
     'Création, édition et suppression des sujets rattachés à un domaine.',
     'Banque de questions multilingues avec titres, descriptions, réponses et explications localisées.',
@@ -41,9 +41,9 @@ const FR: AboutUiText = {
     'Support des médias externes via URLs YouTube normalisées et contrôlées.',
     'Composition de templates de quiz avec mode, durée, disponibilité, activation et visibilité des corrections.',
     'Création rapide de quiz et parcours complet de lecture, navigation et réponse aux questions.',
-    'Attribution de templates aux utilisateurs liés à un domaine depuis l interface staff.',
+    'Attribution de templates aux utilisateurs liés à un domaine depuis l\'interface staff.',
     'Consultation des sessions, des résultats et des écrans de correction selon les règles métier.',
-    'Centre d alertes pour suivre les actions et événements reliés aux quiz.',
+    'Centre d\'alertes pour suivre les actions et événements reliés aux quiz.',
   ],
   technicalTitle: 'Informations techniques',
   technicalIntro: 'Le projet est organisé comme un monorepo avec un frontend Angular, un backend Django REST et un contrat OpenAPI partagé.',
@@ -70,7 +70,7 @@ const FR: AboutUiText = {
     },
     frontend: {
       title: 'Frontend',
-      description: 'SPA d administration et de passage de quiz.',
+      description: 'SPA d\'administration et de passage de quiz.',
       items: [
         'Angular 21, TypeScript et RxJS',
         'PrimeNG 21, PrimeFlex et PrimeIcons',

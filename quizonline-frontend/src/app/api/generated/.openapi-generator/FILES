@@ -46,6 +46,8 @@ model/localized-name-description-translation.ts
 model/localized-question-title-translation.ts
 model/localized-question-translation-request.ts
 model/localized-question-translation.ts
+model/localized-quiz-template-translation-request.ts
+model/localized-quiz-template-translation.ts
 model/localized-subject-detail-translation.ts
 model/localized-subject-translation.ts
 model/media-asset-kind-enum.ts

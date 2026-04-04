@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { ModeEnumDto } from './mode-enum';
+import { LocalizedQuizTemplateTranslationDto } from './localized-quiz-template-translation';
 import { QuizQuestionDto } from './quiz-question';
 import { VisibilityEnumDto } from './visibility-enum';
 
@@ -18,10 +19,11 @@ import { VisibilityEnumDto } from './visibility-enum';
 export interface QuizTemplateDto { 
     readonly id: number;
     domain?: number | null;
-    title: string;
+    readonly title: string;
     readonly slug: string;
     mode?: ModeEnumDto;
-    description?: string;
+    readonly description: string;
+    readonly translations: { [key: string]: LocalizedQuizTemplateTranslationDto; };
     /**
      * Nombre de questions à poser parmi le pool lié.
      */

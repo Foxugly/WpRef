@@ -5,6 +5,11 @@ from question.models import Question
 from question.serializers import QuestionInQuizQuestionSerializer, QuestionReadSerializer
 from rest_framework import serializers
 from config.serializers import UserSummarySerializer
+from config.serializers import (
+    LocalizedQuizTemplateTranslationSerializer,
+    LocalizedTranslationsDictField,
+    localized_translations_map_schema,
+)
 
 from .models import (
     QuizTemplate,
@@ -40,6 +45,15 @@ logger = logging.getLogger(__name__)
 class RequestUserMixin:
     def request_user(self):
         return getattr(self.context.get("request"), "user", None)
+
+    def preferred_language(self) -> str:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        return (
+            getattr(user, "language", None)
+            or getattr(request, "LANGUAGE_CODE", None)
+            or "fr"
+        )
 
 
 class ShowCorrectContextMixin:
@@ -107,13 +121,16 @@ class QuizQuestionSerializer(ShowCorrectContextMixin, serializers.ModelSerialize
         read_only_fields = ["quiz", "question"]
 
 
-class QuizTemplateSerializer(serializers.ModelSerializer):
+class QuizTemplateSerializer(RequestUserMixin, serializers.ModelSerializer):
     """
     Serializer principal pour QuizTemplate (usage admin).
     - lecture : inclut les QuizQuestion avec la Question associÃ©e
     - Ã©criture : tu peux rester simple et gÃ©rer les QuizQuestion via des endpoints dÃ©diÃ©s.
     """
 
+    title = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    translations = serializers.SerializerMethodField()
     questions_count = serializers.IntegerField(read_only=True)
     can_answer = serializers.BooleanField(read_only=True)
     quiz_questions = QuizQuestionSerializer(many=True, read_only=True)
@@ -129,6 +146,7 @@ class QuizTemplateSerializer(serializers.ModelSerializer):
             "slug",
             "mode",
             "description",
+            "translations",
             "max_questions",
             "permanent",
             "started_at",
@@ -150,14 +168,84 @@ class QuizTemplateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["slug", "created_at", "questions_count", "can_answer"]
 
+    def get_title(self, obj: QuizTemplate) -> str:
+        return obj.get_localized_content(self.preferred_language()).get("title", "")
 
-class QuizTemplateWriteSerializer(serializers.ModelSerializer):
+    def get_description(self, obj: QuizTemplate) -> str:
+        return obj.get_localized_content(self.preferred_language()).get("description", "")
+
+    @extend_schema_field(
+        localized_translations_map_schema(
+            LocalizedQuizTemplateTranslationSerializer,
+            "LocalizedQuizTemplateTranslations",
+        )
+    )
+    def get_translations(self, obj: QuizTemplate) -> dict[str, dict[str, str]]:
+        translations = obj.normalized_translations()
+        if translations:
+            return translations
+        preferred_language = self.preferred_language()
+        return {
+            preferred_language: {
+                "title": obj.title or "",
+                "description": obj.description or "",
+            }
+        }
+
+
+class QuizTemplateWriteSerializer(RequestUserMixin, serializers.ModelSerializer):
+    translations = LocalizedTranslationsDictField(
+        value_serializer=LocalizedQuizTemplateTranslationSerializer,
+        write_only=True,
+        required=False,
+        help_text='Ex: {"fr":{"title":"Quiz FR","description":"Consignes FR"},"en":{"title":"Quiz EN","description":"Instructions EN"}}',
+    )
+
+    def _normalize_translations(self, translations: dict | None, fallback_title: str, fallback_description: str) -> dict:
+        preferred_language = self.preferred_language()
+        normalized: dict[str, dict[str, str]] = {}
+        for lang_code, payload in (translations or {}).items():
+            if not isinstance(lang_code, str) or not isinstance(payload, dict):
+                continue
+            normalized[lang_code] = {
+                "title": str(payload.get("title", "") or ""),
+                "description": str(payload.get("description", "") or ""),
+            }
+        if not normalized:
+            normalized[preferred_language] = {
+                "title": fallback_title,
+                "description": fallback_description,
+            }
+        return normalized
+
+    def _payload_language(self, translations: dict, fallback_title: str) -> str:
+        title = (fallback_title or "").strip()
+        if title:
+            for lang_code, payload in translations.items():
+                if str((payload or {}).get("title", "")).strip() == title:
+                    return lang_code
+        return self.preferred_language()
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if not user or not getattr(user, "is_authenticated", False):
             raise serializers.ValidationError("Authentication required.")
+
+        translations = attrs.get("translations")
+        fallback_title = str(attrs.get("title") or getattr(self.instance, "title", "") or "").strip()
+        fallback_description = str(
+            attrs.get("description") or getattr(self.instance, "description", "") or ""
+        ).strip()
+        attrs["translations"] = self._normalize_translations(
+            translations,
+            fallback_title,
+            fallback_description,
+        )
+
+        if not any((value or {}).get("title") for value in attrs["translations"].values()):
+            raise serializers.ValidationError({"translations": "At least one translated title is required."})
 
         domain = attrs.get("domain") or getattr(self.instance, "domain", None)
         mode = attrs.get("mode") or getattr(self.instance, "mode", QuizTemplate.MODE_PRACTICE)
@@ -181,6 +269,27 @@ class QuizTemplateWriteSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    def create(self, validated_data):
+        translations = validated_data.pop("translations", {})
+        payload_language = self._payload_language(translations, validated_data.get("title", ""))
+        instance = QuizTemplate(**validated_data)
+        instance.translations = translations
+        instance.sync_fields_from_translations(payload_language)
+        instance.save(preferred_language=payload_language)
+        return instance
+
+    def update(self, instance, validated_data):
+        translations = validated_data.pop("translations", None)
+        next_title = validated_data.get("title", instance.title)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if translations is not None:
+            instance.translations = translations
+        payload_language = self._payload_language(instance.normalized_translations(), next_title)
+        instance.sync_fields_from_translations(payload_language)
+        instance.save(preferred_language=payload_language)
+        return instance
+
     class Meta:
         model = QuizTemplate
         fields = [
@@ -188,6 +297,7 @@ class QuizTemplateWriteSerializer(serializers.ModelSerializer):
             "title",
             "mode",
             "description",
+            "translations",
             "max_questions",
             "permanent",
             "started_at",
@@ -208,6 +318,11 @@ class QuizTemplatePartialSerializer(QuizTemplateWriteSerializer):
     title = serializers.CharField(required=False)
     mode = serializers.ChoiceField(choices=QuizTemplate.MODE_CHOICES, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
+    translations = LocalizedTranslationsDictField(
+        value_serializer=LocalizedQuizTemplateTranslationSerializer,
+        write_only=True,
+        required=False,
+    )
     max_questions = serializers.IntegerField(required=False, min_value=1)
     permanent = serializers.BooleanField(required=False)
     started_at = serializers.DateTimeField(required=False, allow_null=True)
@@ -323,11 +438,11 @@ class QuizQuestionReadSerializer(ShowCorrectContextMixin, serializers.ModelSeria
         ).data
 
 
-class QuizListSerializer(serializers.ModelSerializer):
+class QuizListSerializer(RequestUserMixin, serializers.ModelSerializer):
     """RÃ©sumÃ© lÃ©ger d'une session de quiz pour la liste."""
 
-    quiz_template_title = serializers.CharField(source="quiz_template.title", read_only=True)
-    quiz_template_description = serializers.CharField(source="quiz_template.description", read_only=True)
+    quiz_template_title = serializers.SerializerMethodField()
+    quiz_template_description = serializers.SerializerMethodField()
     mode = serializers.CharField(source="quiz_template.mode", read_only=True)
     max_questions = serializers.IntegerField(source="quiz_template.max_questions", read_only=True)
     can_answer = serializers.SerializerMethodField()
@@ -379,6 +494,12 @@ class QuizListSerializer(serializers.ModelSerializer):
 
     def get_can_answer(self, obj) -> bool:
         return obj.can_answer
+
+    def get_quiz_template_title(self, obj) -> str:
+        return obj.quiz_template.get_localized_content(self.preferred_language()).get("title", "")
+
+    def get_quiz_template_description(self, obj) -> str:
+        return obj.quiz_template.get_localized_content(self.preferred_language()).get("description", "")
 
 
 class QuizSerializer(QuizListSerializer):

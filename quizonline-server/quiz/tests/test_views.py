@@ -435,6 +435,8 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         qt_id = res.data["id"]
         qt = QuizTemplate.objects.get(pk=qt_id)
         self.assertEqual(qt.quiz_questions.count(), 2)
+        self.assertEqual(qt.created_by_id, self.admin.id)
+        self.assertEqual(qt.updated_by_id, self.admin.id)
 
     def test_generate_from_subjects_persists_duration_settings(self):
         self._auth(self.admin)

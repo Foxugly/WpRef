@@ -3403,6 +3403,32 @@ components:
       type: object
       additionalProperties:
         $ref: '#/components/schemas/LocalizedQuestionTranslation'
+    LocalizedQuizTemplateTranslation:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+      required:
+      - description
+      - title
+    LocalizedQuizTemplateTranslationRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+      required:
+      - description
+      - title
+    LocalizedQuizTemplateTranslations:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/LocalizedQuizTemplateTranslation'
     LocalizedSubjectDetailTranslation:
       type: object
       properties:
@@ -4017,6 +4043,11 @@ components:
           $ref: '#/components/schemas/ModeEnum'
         description:
           type: string
+        translations:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedQuizTemplateTranslationRequest'
+          writeOnly: true
         max_questions:
           type: integer
           minimum: 1
@@ -5009,8 +5040,7 @@ components:
           nullable: true
         title:
           type: string
-          title: Titre du quiz
-          maxLength: 200
+          readOnly: true
         slug:
           type: string
           readOnly: true
@@ -5019,6 +5049,11 @@ components:
           $ref: '#/components/schemas/ModeEnum'
         description:
           type: string
+          readOnly: true
+        translations:
+          allOf:
+          - $ref: '#/components/schemas/LocalizedQuizTemplateTranslations'
+          readOnly: true
         max_questions:
           type: integer
           maximum: 9223372036854775807
@@ -5111,11 +5146,13 @@ components:
       - created_at
       - created_by
       - created_by_username
+      - description
       - id
       - questions_count
       - quiz_questions
       - slug
       - title
+      - translations
     QuizTemplateWriteRequest:
       type: object
       properties:
@@ -5131,6 +5168,13 @@ components:
           $ref: '#/components/schemas/ModeEnum'
         description:
           type: string
+        translations:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedQuizTemplateTranslationRequest'
+          writeOnly: true
+          description: 'Ex: {"fr":{"title":"Quiz FR","description":"Consignes FR"},"en":{"title":"Quiz
+            EN","description":"Instructions EN"}}'
         max_questions:
           type: integer
           maximum: 9223372036854775807

@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { LocalizedQuizTemplateTranslationRequestDto } from './localized-quiz-template-translation-request';
 import { ModeEnumDto } from './mode-enum';
 import { VisibilityEnumDto } from './visibility-enum';
 
@@ -16,6 +17,10 @@ export interface QuizTemplateWriteRequestDto {
     title: string;
     mode?: ModeEnumDto;
     description?: string;
+    /**
+     * Ex: {\"fr\":{\"title\":\"Quiz FR\",\"description\":\"Consignes FR\"},\"en\":{\"title\":\"Quiz EN\",\"description\":\"Instructions EN\"}}
+     */
+    translations?: { [key: string]: LocalizedQuizTemplateTranslationRequestDto; };
     /**
      * Nombre de questions à poser parmi le pool lié.
      */

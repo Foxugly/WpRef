@@ -93,6 +93,36 @@
   resize: vertical;
 }
 
+.translations-card {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.translations-hint {
+  margin: 0;
+}
+
+.builder-grid--translations {
+  grid-template-columns: 1fr;
+}
+
+.tablist-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 0.75rem;
+}
+
+.inline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #526275;
+  margin-top: 1rem;
+}
+
 .empty-state {
   background: #f8fafc;
   border: 1px dashed #cbd5e1;

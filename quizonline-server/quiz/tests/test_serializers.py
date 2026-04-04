@@ -15,6 +15,7 @@ from quiz.serializers import (
     QuizListSerializer,
     QuizQuestionSerializer,
     QuizTemplateSerializer,
+    QuizTemplateWriteSerializer,
     QuizQuestionWriteSerializer,
     QuizQuestionAnswerSerializer,
     QuizQuestionReadSerializer,
@@ -232,6 +233,46 @@ class QuizTemplateSerializerTests(LocalizedTestCase):
         data = QuizTemplateSerializer(self.qt).data
         self.assertIn("quiz_questions", data)
         self.assertEqual(len(data["quiz_questions"]), 2)
+
+    def test_serialization_exposes_translations_map(self):
+        self.qt.translations = {
+            "fr": {"title": "Template FR", "description": "Desc FR"},
+            "en": {"title": "Template EN", "description": "Desc EN"},
+        }
+        self.qt.save()
+
+        data = QuizTemplateSerializer(self.qt).data
+        self.assertIn("translations", data)
+        self.assertEqual(data["translations"]["fr"]["title"], "Template FR")
+
+    def test_write_serializer_accepts_translations(self):
+        payload = {
+            "domain": self.domain.id,
+            "title": "Template FR",
+            "description": "Desc FR",
+            "translations": {
+                "fr": {"title": "Template FR", "description": "Desc FR"},
+                "en": {"title": "Template EN", "description": "Desc EN"},
+            },
+            "mode": QuizTemplate.MODE_PRACTICE,
+            "max_questions": 3,
+            "permanent": True,
+            "with_duration": False,
+            "duration": 10,
+            "is_public": False,
+            "active": True,
+            "result_visibility": VISIBILITY_IMMEDIATE,
+            "detail_visibility": VISIBILITY_IMMEDIATE,
+        }
+        factory = APIRequestFactory()
+        request = factory.post("/api/quiz/template/")
+        request.user = self.user
+
+        serializer = QuizTemplateWriteSerializer(data=payload, context={"request": request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save()
+        self.assertEqual(instance.translations["en"]["title"], "Template EN")
+        self.assertEqual(instance.title, "Template FR")
 
     def test_read_only_fields_are_not_writable(self):
         payload = {
