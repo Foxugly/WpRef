@@ -8,6 +8,7 @@ import {finalize} from 'rxjs/operators';
 
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
+import {MessageService} from 'primeng/api';
 
 import {DomainReadDto, LanguageEnumDto, SubjectReadDto} from '../../../api/generated';
 import {QuestionEditorFormComponent} from '../../../components/question-editor-form/question-editor-form';
@@ -119,6 +120,8 @@ export class QuestionCreate implements OnInit {
   private questionService = inject(QuestionService);
   private translator = inject(TranslationService);
   private userService = inject(UserService);
+  private messageService = inject(MessageService);
+  private pendingDuplicateDraft = this.questionService.consumeDuplicateDraft();
 
   constructor() {
     effect(() => {
@@ -163,7 +166,18 @@ export class QuestionCreate implements OnInit {
         next: ({domains, subjects}) => {
           this.domains.set(domains ?? []);
           this.subjects.set(subjects ?? []);
-          this.tryApplyDuplicateDraft();
+
+          if (this.pendingDuplicateDraft) {
+            this.form.controls.domain.setValue(this.pendingDuplicateDraft.domainId, {emitEvent: false});
+            this.onDomainChange(this.pendingDuplicateDraft.domainId);
+            return;
+          }
+
+          const currentDomainId = this.userService.currentUser()?.current_domain ?? 0;
+          if (currentDomainId > 0 && (domains ?? []).some((domain) => domain.id === currentDomainId)) {
+            this.form.controls.domain.setValue(currentDomainId, {emitEvent: false});
+            this.onDomainChange(currentDomainId);
+          }
         },
         error: (err) => {
           console.error(err);
@@ -172,8 +186,9 @@ export class QuestionCreate implements OnInit {
       });
 
     const queryDomainId = Number(this.route.snapshot.queryParamMap.get('domainId') ?? 0);
-    if (queryDomainId > 0) {
-      this.form.controls.domain.setValue(queryDomainId);
+    if (!this.pendingDuplicateDraft && queryDomainId > 0) {
+      this.form.controls.domain.setValue(queryDomainId, {emitEvent: false});
+      this.onDomainChange(queryDomainId);
     }
   }
 
@@ -316,15 +331,17 @@ export class QuestionCreate implements OnInit {
     this.submitError.set(null);
 
     if (!isQuestionEditorFormValid(this.form, this.domainLangs(), {requireDomain: true})) {
-      this.error.set(
-        'Merci de selectionner un domaine et de completer au minimum le titre dans chaque langue et toutes les reponses.',
-      );
+      const detail = this.getCreateValidationErrorText().missingFields;
+      this.error.set(detail);
+      this.showErrorToast(detail);
       this.form.markAllAsTouched();
       return;
     }
 
     if (getQuestionCorrectCount(this.form) === 0) {
-      this.submitError.set('Il faut cocher au moins une reponse correcte.');
+      const detail = this.getCreateValidationErrorText().missingCorrectAnswer;
+      this.submitError.set(detail);
+      this.showErrorToast(detail);
       return;
     }
 
@@ -341,7 +358,9 @@ export class QuestionCreate implements OnInit {
       this.goList();
     } catch (error) {
       console.error('Erreur creation question', error);
-      this.submitError.set("Erreur lors de l'enregistrement de la question.");
+      const detail = this.getCreateValidationErrorText().saveFailed;
+      this.submitError.set(detail);
+      this.showErrorToast(detail);
     } finally {
       this.saving.set(false);
     }
@@ -359,6 +378,15 @@ export class QuestionCreate implements OnInit {
 
     if (!domainId || domainId <= 0) {
       return;
+    }
+
+    const draft = this.pendingDuplicateDraft;
+    if (draft && draft.domainId === domainId) {
+      const draftLangs = this.resolveDraftLangs(draft);
+      this.domainLangs.set(draftLangs);
+      populateQuestionEditorFormFromDraft(this.fb, this.form, draft, draftLangs);
+      this.activeLang.set(draftLangs[0] ?? null);
+      this.pendingDuplicateDraft = null;
     }
 
     this.domainLoading.set(true);
@@ -386,7 +414,13 @@ export class QuestionCreate implements OnInit {
             syncLangAnswerArraysWithRoot(this.fb, this.form, langs);
           }
 
-          this.activeLang.set(langs[0] ?? null);
+          const draft = this.pendingDuplicateDraft;
+          if (draft && draft.domainId === domainId) {
+            populateQuestionEditorFormFromDraft(this.fb, this.form, draft, langs);
+            this.pendingDuplicateDraft = null;
+          }
+
+          this.activeLang.set(this.resolvePreferredLang(langs));
         },
         error: (error) => {
           console.error(error);
@@ -395,24 +429,22 @@ export class QuestionCreate implements OnInit {
       });
   }
 
-  private tryApplyDuplicateDraft(): void {
-    const draft = this.questionService.consumeDuplicateDraft();
-    if (!draft) {
-      return;
-    }
-
-    this.selectedDomainId.set(draft.domainId);
-
+  private resolveDraftLangs(draft: NonNullable<QuestionCreate['pendingDuplicateDraft']>): LangCode[] {
     const domain = this.domains().find((item) => item.id === draft.domainId);
     const codes = (domain?.allowed_languages ?? [])
       .filter((language) => !!language.active)
       .map((language) => language.code)
       .filter((code): code is LangCode => !!code);
 
-    const langs = codes.length ? codes : (Object.keys(draft.translations) as LangCode[]);
-    this.domainLangs.set(langs);
-    populateQuestionEditorFormFromDraft(this.fb, this.form, draft, langs);
-    this.activeLang.set(langs[0] ?? null);
+    return codes.length ? codes : (Object.keys(draft.translations) as LangCode[]);
+  }
+
+  private resolvePreferredLang(langs: LangCode[]): LangCode | null {
+    const current = this.currentLang();
+    if (langs.includes(current as LangCode)) {
+      return current as LangCode;
+    }
+    return langs[0] ?? null;
   }
 
   private getDomainLabel(domain: DomainReadDto, lang: LanguageEnumDto): string {
@@ -431,5 +463,59 @@ export class QuestionCreate implements OnInit {
     }
 
     return `Domain #${domain.id}`;
+  }
+
+  private showErrorToast(detail: string): void {
+    this.messageService.add({
+      severity: 'error',
+      summary: this.getCreateValidationErrorText().summary,
+      detail,
+    });
+  }
+
+  private getCreateValidationErrorText(): {
+    summary: string;
+    missingFields: string;
+    missingCorrectAnswer: string;
+    saveFailed: string;
+  } {
+    switch (this.userService.currentLang) {
+      case LanguageEnumDto.Fr:
+        return {
+          summary: 'Erreur',
+          missingFields: 'Merci de selectionner un domaine et de completer au minimum le titre dans chaque langue et toutes les reponses.',
+          missingCorrectAnswer: 'Il faut cocher au moins une reponse correcte.',
+          saveFailed: "Erreur lors de l'enregistrement de la question.",
+        };
+      case LanguageEnumDto.Nl:
+        return {
+          summary: 'Fout',
+          missingFields: 'Kies een domein en vul minstens de titel in elke taal en alle antwoorden in.',
+          missingCorrectAnswer: 'Duid minstens een correct antwoord aan.',
+          saveFailed: 'Er is een fout opgetreden bij het opslaan van de vraag.',
+        };
+      case LanguageEnumDto.It:
+        return {
+          summary: 'Errore',
+          missingFields: 'Seleziona un dominio e compila almeno il titolo in ogni lingua e tutte le risposte.',
+          missingCorrectAnswer: 'Devi selezionare almeno una risposta corretta.',
+          saveFailed: 'Si e verificato un errore durante il salvataggio della domanda.',
+        };
+      case LanguageEnumDto.Es:
+        return {
+          summary: 'Error',
+          missingFields: 'Selecciona un dominio y completa al menos el titulo en cada idioma y todas las respuestas.',
+          missingCorrectAnswer: 'Debes marcar al menos una respuesta correcta.',
+          saveFailed: 'Se produjo un error al guardar la pregunta.',
+        };
+      case LanguageEnumDto.En:
+      default:
+        return {
+          summary: 'Error',
+          missingFields: 'Select a domain and fill in at least the title in each language and all answers.',
+          missingCorrectAnswer: 'Select at least one correct answer.',
+          saveFailed: 'An error occurred while saving the question.',
+        };
+    }
   }
 }

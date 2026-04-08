@@ -559,11 +559,26 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
       - in: query
         name: search
         schema:
           type: string
         description: Recherche simple (title__icontains).
+      - in: query
+        name: subject_ids
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Liste d'IDs de sujets pour filtrer les questions.
+        explode: false
+        style: form
       tags:
       - Question
       security:
@@ -3125,6 +3140,12 @@ components:
         active:
           type: boolean
           readOnly: true
+        subjects_count:
+          type: integer
+          readOnly: true
+        questions_count:
+          type: integer
+          readOnly: true
         owner:
           allOf:
           - $ref: '#/components/schemas/UserSummary'
@@ -3154,7 +3175,9 @@ components:
       - id
       - members
       - owner
+      - questions_count
       - staff
+      - subjects_count
       - translations
       - updated_at
     DomainWrite:

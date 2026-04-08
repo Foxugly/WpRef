@@ -1,14 +1,22 @@
 <section class="list-section">
-  <p-table [value]="quizzes()" showGridlines size="small" stripedRows>
+  <p-table
+    [paginator]="quizzes().length > 10"
+    [rows]="10"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [value]="quizzes()"
+    showGridlines
+    size="small"
+    sortMode="single"
+    stripedRows>
     <ng-template #header>
       <tr>
-        <th>Titre</th>
-        <th>Statut</th>
-        <th>Mode</th>
-        <th>Questions</th>
-        <th>Demarre le</th>
-        <th>Termine le</th>
-        <th>Note</th>
+        <th pSortableColumn="quiz_template_title">Titre <p-sortIcon field="quiz_template_title"></p-sortIcon></th>
+        <th pSortableColumn="status">Statut <p-sortIcon field="status"></p-sortIcon></th>
+        <th pSortableColumn="mode">Mode <p-sortIcon field="mode"></p-sortIcon></th>
+        <th pSortableColumn="max_questions">Questions <p-sortIcon field="max_questions"></p-sortIcon></th>
+        <th pSortableColumn="started_at">Demarre le <p-sortIcon field="started_at"></p-sortIcon></th>
+        <th pSortableColumn="ended_at">Termine le <p-sortIcon field="ended_at"></p-sortIcon></th>
+        <th pSortableColumn="earned_score">Note <p-sortIcon field="earned_score"></p-sortIcon></th>
         <th style="width: 120px;">Actions</th>
       </tr>
     </ng-template>

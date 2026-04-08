@@ -58,21 +58,54 @@
         <p class="muted empty-state">{{ ui().pages.subjectEdit.noQuestions }}</p>
       } @else {
         <p-table
+          [dataKey]="'id'"
+          [paginator]="questions().length > 10"
+          [rows]="10"
+          [rowsPerPageOptions]="[10, 20, 50]"
+          [tableStyle]="{'table-layout': 'fixed', 'width': '100%'}"
           [value]="questions()"
+          currentPageReportTemplate="{first} - {last} / {totalRecords}"
+          responsiveLayout="scroll"
           showGridlines
           size="small"
           stripedRows
           styleClass="table">
           <ng-template #header>
             <tr>
-              <th>{{ ui().pages.subjectEdit.titleCol }}</th>
+              <th class="col-title">{{ ui().pages.subjectEdit.titleCol }}</th>
+              <th class="col-active">Active</th>
+              <th class="col-mode">Mode</th>
               <th class="col-actions">{{ ui().pages.subjectEdit.actionsCol }}</th>
             </tr>
           </ng-template>
 
           <ng-template #body let-q>
             <tr>
-              <td class="truncate">{{ getQuestionTitle(q) }}</td>
+              <td class="truncate col-title">{{ getQuestionTitle(q) }}</td>
+
+              <td class="center-cell col-active">
+                <i
+                  [ngClass]="isQuestionActive(q) ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+                  class="pi">
+                </i>
+              </td>
+
+              <td class="subjects-cell col-mode">
+                @if (getQuestionModes(q).length) {
+                  <div class="quiz-question__subjects">
+                    @for (mode of getQuestionModes(q); track mode) {
+                      <p-button
+                        [label]="mode"
+                        severity="secondary"
+                        size="small"
+                        type="button"
+                        variant="outlined">
+                      </p-button>
+                    }
+                  </div>
+                }
+              </td>
+
               <td class="col-actions">
                 <div class="row-actions">
                   <p-button

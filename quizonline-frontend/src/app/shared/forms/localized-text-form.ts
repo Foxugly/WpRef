@@ -24,8 +24,8 @@ export function createLocalizedTextGroup(
   }
 
   return fb.group({
-    name: fb.control('', {nonNullable: true, validators: nameValidators}),
-    description: fb.control('', {nonNullable: true}),
+    name: fb.control('', nameValidators),
+    description: fb.control(''),
   }) as LocalizedTextGroup;
 }
 

@@ -61,8 +61,12 @@ export interface QuestionListRequestParams {
     isModePractice?: boolean;
     /** A page number within the paginated result set. */
     page?: number;
+    /** Number of results to return per page. */
+    pageSize?: number;
     /** Recherche simple (title__icontains). */
     search?: string;
+    /** Liste d\&#39;IDs de sujets pour filtrer les questions. */
+    subjectIds?: Array<number>;
 }
 
 export interface QuestionMediaCreateRequestParams {
@@ -263,7 +267,9 @@ export class QuestionApi extends BaseService {
         const isModeExam = requestParameters?.isModeExam;
         const isModePractice = requestParameters?.isModePractice;
         const page = requestParameters?.page;
+        const pageSize = requestParameters?.pageSize;
         const search = requestParameters?.search;
+        const subjectIds = requestParameters?.subjectIds;
 
         let localVarQueryParameters = new HttpParams({encoder: this.encoder});
         localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
@@ -277,7 +283,13 @@ export class QuestionApi extends BaseService {
         localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
           <any>page, 'page');
         localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
+          <any>pageSize, 'page_size');
+        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
           <any>search, 'search');
+        if (subjectIds) {
+            localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
+                [...subjectIds].join(COLLECTION_FORMATS['csv']), 'subject_ids');
+        }
 
         let localVarHeaders = this.defaultHeaders;
 

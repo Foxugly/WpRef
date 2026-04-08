@@ -1,9 +1,10 @@
+import {CommonModule} from '@angular/common';
 import {Component, computed, DestroyRef, inject, OnInit, signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators,} from '@angular/forms';
 
 import {catchError, finalize} from 'rxjs/operators';
-import {EMPTY} from 'rxjs';
+import {EMPTY, forkJoin, of} from 'rxjs';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 import {InputTextModule} from 'primeng/inputtext';
@@ -13,7 +14,7 @@ import {
   DomainReadDto,
   LanguageEnumDto,
   LanguageReadDto,
-  QuestionInSubjectDto,
+  QuestionReadDto,
   SubjectDetailDto,
   SubjectWriteRequestDto,
 } from '../../../api/generated';
@@ -36,13 +37,11 @@ import {QuestionPreviewDialogComponent} from '../../../components/question-previ
 import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 
-type QuestionTitleMap = Record<string, { title?: string }>;
-
-
 @Component({
   standalone: true,
   selector: 'app-subject-edit',
   imports: [
+    CommonModule,
     ReactiveFormsModule,
     InputTextModule,
     ButtonModule,
@@ -71,7 +70,7 @@ export class SubjectEdit implements OnInit {
   activeLang = signal<LangCode | undefined>(undefined);
 
   // questions
-  questions = signal<QuestionInSubjectDto[]>([]);
+  questions = signal<QuestionReadDto[]>([]);
   previewQuestionId = signal<number | null>(null);
 
   private fb = inject(FormBuilder);
@@ -239,18 +238,43 @@ export class SubjectEdit implements OnInit {
           this.error.set('Impossible de charger le sujet.');
           return EMPTY;
         }),
-        finalize(() => this.loading.set(false)),
       )
       .subscribe((s: SubjectDetailDto) => {
         this.domainId.set(s.domain);
-        this.questions.set(s.questions ?? []);
+        this.loadSubjectQuestions(s);
 
         const domainId = s.domain ?? null;
         if (domainId) {
           this.loadDomainLanguages(domainId, s);
         } else {
           this.fallbackFromSubjectOnly(s);
+          this.loading.set(false);
         }
+      });
+  }
+
+  private loadSubjectQuestions(subject: SubjectDetailDto): void {
+    const questionIds = (subject.questions ?? []).map((question) => question.id);
+    if (!questionIds.length) {
+      this.questions.set([]);
+      return;
+    }
+
+    forkJoin(
+      questionIds.map((questionId) =>
+        this.questionService.retrieve(questionId).pipe(
+          catchError((error) => {
+            console.error(`Erreur chargement question ${questionId}`, error);
+            return of(null);
+          }),
+        ),
+      ),
+    )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((questions) => {
+        this.questions.set(
+          questions.filter((question): question is QuestionReadDto => question !== null),
+        );
       });
   }
 
@@ -347,9 +371,24 @@ export class SubjectEdit implements OnInit {
     return this.subjectService.buildWritePayload(domainId, translations);
   }
 
-  protected getQuestionTitle(q: QuestionInSubjectDto): string {
+  protected getQuestionTitle(q: QuestionReadDto): string {
     const lang = String(this.activeLang()).toLowerCase();
-    const titles = (q.title ?? {}) as QuestionTitleMap;
-    return titles[lang]?.title ?? `Question #${q.id}`;
+    const titles = q.translations as Record<string, { title?: string }>;
+    return titles?.[lang]?.title ?? `Question #${q.id}`;
+  }
+
+  protected isQuestionActive(q: QuestionReadDto): boolean {
+    return !!q.active;
+  }
+
+  protected getQuestionModes(q: QuestionReadDto): string[] {
+    const modes: string[] = [];
+    if (q.is_mode_practice) {
+      modes.push(this.ui().questionForm.practice);
+    }
+    if (q.is_mode_exam) {
+      modes.push(this.ui().questionForm.exam);
+    }
+    return modes;
   }
 }

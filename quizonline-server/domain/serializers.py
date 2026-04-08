@@ -25,6 +25,8 @@ class DomainReadSerializer(serializers.ModelSerializer):
     owner = serializers.SerializerMethodField()
     staff = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
+    subjects_count = serializers.IntegerField(read_only=True)
+    questions_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Domain
@@ -33,6 +35,8 @@ class DomainReadSerializer(serializers.ModelSerializer):
             "translations",
             "allowed_languages",
             "active",
+            "subjects_count",
+            "questions_count",
             "owner",
             "staff",
             "members",

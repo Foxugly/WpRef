@@ -1,0 +1,102 @@
+<div class="page">
+  <div class="header-line">
+    <div class="header-line__left">
+      <p-button
+        (onClick)="goBack()"
+        icon="pi pi-arrow-left"
+        [label]="text().back"
+        class="page-back-button"
+        severity="secondary"
+        type="button"
+        variant="outlined">
+      </p-button>
+    </div>
+
+    <div class="header-center">
+      <h1 class="title">{{ text().title }}</h1>
+      <p class="subtitle muted">{{ text().subtitle }}</p>
+    </div>
+
+    <div class="header-line__right"></div>
+  </div>
+
+  <div class="card import-card">
+    <section class="import-section">
+      <h2>{{ text().explanationTitle }}</h2>
+      <p class="muted">{{ text().explanation }}</p>
+
+      <div class="section-actions">
+        <p-button
+          (onClick)="downloadExample()"
+          icon="pi pi-download"
+          [label]="text().exampleButton"
+          severity="secondary"
+          type="button"
+          variant="outlined">
+        </p-button>
+      </div>
+    </section>
+
+    <section class="import-section">
+      <h2>{{ text().uploadTitle }}</h2>
+
+      <p-fileupload
+        mode="basic"
+        name="questionImportFile"
+        accept=".json,application/json"
+        [auto]="false"
+        [chooseLabel]="text().chooseFile"
+        [multiple]="false"
+        (onSelect)="onFileSelected($event)">
+      </p-fileupload>
+
+      <div class="selected-file">
+        <strong>{{ text().selectedFile }}:</strong>
+        <span>{{ selectedFileName() ?? text().noFile }}</span>
+      </div>
+    </section>
+
+    <section class="import-section validation-section">
+      <h2>{{ text().validationTitle }}</h2>
+
+      @if (selectedFileName() && hasValidFile()) {
+        <div class="validation-box validation-box--success">
+          <strong>{{ text().formatValid }}</strong>
+          <p>{{ text().fileValidated(questions().length) }}</p>
+        </div>
+      } @else if (validationErrors().length) {
+        <div class="validation-box validation-box--error">
+          <strong>{{ text().formatInvalid }}</strong>
+          <ul>
+            @for (error of validationErrors(); track error) {
+              <li>{{ error }}</li>
+            }
+          </ul>
+        </div>
+      } @else {
+        <div class="validation-box">
+          <p class="muted">{{ text().noFile }}</p>
+        </div>
+      }
+    </section>
+
+    <div class="page-actions">
+      <p-button
+        (onClick)="cancel()"
+        [label]="text().cancelLabel"
+        severity="secondary"
+        type="button"
+        variant="outlined">
+      </p-button>
+
+      <p-button
+        (onClick)="importQuestions()"
+        [disabled]="!hasValidFile() || importing()"
+        [label]="text().importLabel"
+        [loading]="importing()"
+        severity="primary"
+        type="button">
+      </p-button>
+    </div>
+  </div>
+</div>

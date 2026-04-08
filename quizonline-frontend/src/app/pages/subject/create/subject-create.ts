@@ -13,6 +13,7 @@ import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
+import {MessageService} from 'primeng/api';
 
 import {DomainDetailDto, DomainReadDto, LanguageEnumDto, SubjectWriteRequestDto} from '../../../api/generated';
 import {DomainOption, DomainService, DomainTranslations} from '../../../services/domain/domain';
@@ -87,8 +88,10 @@ export class SubjectCreate implements OnInit {
   private subjectService = inject(SubjectService);
   private translator = inject(TranslationService);
   private userService = inject(UserService);
+  private messageService = inject(MessageService);
   private destroyRef = inject(DestroyRef);
   private selectedDomainId$ = toObservable(this.selectedDomainId);
+  private lastToastMessage: string | null = null;
 
   constructor() {
     // lock/unlock the form
@@ -96,6 +99,19 @@ export class SubjectCreate implements OnInit {
       const locked = this.isLocked();
       if (locked) this.form.disable({emitEvent: false});
       else this.form.enable({emitEvent: false});
+    });
+    effect(() => {
+      const detail = this.submitError() ?? this.error();
+      if (!detail || detail === this.lastToastMessage) {
+        return;
+      }
+
+      this.lastToastMessage = detail;
+      this.messageService.add({
+        severity: 'error',
+        summary: this.localizedSummary(),
+        detail: this.localizeDetail(detail),
+      });
     });
   }
 
@@ -111,7 +127,14 @@ export class SubjectCreate implements OnInit {
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: (domains) => this.domains.set(domains ?? []),
+        next: (domains) => {
+          this.domains.set(domains ?? []);
+
+          const currentDomainId = this.userService.currentUser()?.current_domain ?? 0;
+          if (currentDomainId > 0 && (domains ?? []).some((domain) => domain.id === currentDomainId)) {
+            this.selectedDomainId.set(currentDomainId);
+          }
+        },
         error: (err) => {
           console.error(err);
           this.error.set('Impossible de charger les domaines.');
@@ -144,7 +167,7 @@ export class SubjectCreate implements OnInit {
             this.domainLangs.set(codes);
 
             this.ensureLanguageControls(codes);
-            this.activeLang.set(codes[0] ?? null);
+            this.activeLang.set(this.resolvePreferredLang(codes));
           });
       });
   }
@@ -326,6 +349,59 @@ export class SubjectCreate implements OnInit {
       .filter(isLangCode);
 
     return codes.length ? codes : [LanguageEnumDto.Fr as LangCode];
+  }
+
+  private resolvePreferredLang(codes: LangCode[]): LangCode | undefined {
+    const current = this.currentLang();
+    return codes.includes(current as LangCode) ? current as LangCode : codes[0];
+  }
+
+  private localizedSummary(): string {
+    switch (this.userService.currentLang) {
+      case LanguageEnumDto.Nl:
+        return 'Fout';
+      case LanguageEnumDto.It:
+        return 'Errore';
+      case LanguageEnumDto.Es:
+      case LanguageEnumDto.En:
+        return 'Error';
+      case LanguageEnumDto.Fr:
+      default:
+        return 'Erreur';
+    }
+  }
+
+  private localizeDetail(detail: string): string {
+    switch (detail) {
+      case 'Impossible de charger les domaines.':
+        return this.msg('Unable to load domains.', 'Impossible de charger les domaines.', 'Kan de domeinen niet laden.', 'Impossibile caricare i domini.', 'No se pueden cargar los dominios.');
+      case 'Impossible de charger le domaine sÃ©lectionnÃ©.':
+        return this.msg('Unable to load the selected domain.', 'Impossible de charger le domaine selectionne.', 'Kan het geselecteerde domein niet laden.', 'Impossibile caricare il dominio selezionato.', 'No se puede cargar el dominio seleccionado.');
+      case 'Erreur lors de la traduction.':
+        return this.msg('Translation failed.', 'Erreur lors de la traduction.', 'Fout tijdens het vertalen.', 'Errore durante la traduzione.', 'Error durante la traduccion.');
+      case 'Merci de remplir au minimum le champ "name" pour chaque langue.':
+        return this.msg('Fill in at least the name field for each language.', 'Merci de remplir au minimum le champ "name" pour chaque langue.', 'Vul minstens het veld naam in voor elke taal.', 'Compila almeno il campo nome per ogni lingua.', 'Completa al menos el campo nombre para cada idioma.');
+      case 'Erreur lors de la crÃ©ation du sujet.':
+        return this.msg('An error occurred while creating the subject.', 'Erreur lors de la creation du sujet.', 'Fout bij het aanmaken van het onderwerp.', 'Errore durante la creazione dell argomento.', 'Error al crear el tema.');
+      default:
+        return detail;
+    }
+  }
+
+  private msg(en: string, fr: string, nl: string, it: string, es: string): string {
+    switch (this.userService.currentLang) {
+      case LanguageEnumDto.Nl:
+        return nl;
+      case LanguageEnumDto.It:
+        return it;
+      case LanguageEnumDto.Es:
+        return es;
+      case LanguageEnumDto.En:
+        return en;
+      case LanguageEnumDto.Fr:
+      default:
+        return fr;
+    }
   }
 
 }

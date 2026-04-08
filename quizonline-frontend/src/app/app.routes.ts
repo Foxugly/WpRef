@@ -83,6 +83,11 @@ export const routes: Routes = [
     canActivate: [authGuard, staffGuard],
   },
   {
+    path: 'question/import',
+    loadComponent: () => import('./pages/question/import/question-import').then((m) => m.QuestionImport),
+    canActivate: [authGuard, staffGuard],
+  },
+  {
     path: 'question/:questionId/edit',
     loadComponent: () => import('./pages/question/edit/question-edit').then((m) => m.QuestionEdit),
     canActivate: [authGuard, staffGuard],

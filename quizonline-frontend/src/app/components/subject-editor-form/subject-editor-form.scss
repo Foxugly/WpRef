@@ -1,3 +1,19 @@
 :host {
   display: block;
 }
+
+.tabs--tight {
+  margin-top: 0.25rem;
+}
+
+.tablist-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 0.75rem;
+}
+
+.tabpanels-tight {
+  padding: 0;
+}

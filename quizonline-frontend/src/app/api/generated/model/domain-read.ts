@@ -17,6 +17,8 @@ export interface DomainReadDto {
     readonly translations: { [key: string]: LocalizedNameDescriptionTranslationDto; };
     readonly allowed_languages: Array<LanguageReadDto>;
     readonly active: boolean;
+    readonly subjects_count: number;
+    readonly questions_count: number;
     readonly owner: UserSummaryDto;
     readonly staff: Array<UserSummaryDto>;
     readonly members: Array<UserSummaryDto>;

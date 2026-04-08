@@ -1,36 +1,62 @@
 <div class="page">
-  <!-- HEADER -->
   <div class="header-line header-line--grid">
     <div class="header-spacer"></div>
 
     <div class="header-center">
-      <h1 class="title">Questions</h1>
-      <p class="subtitle muted">Recherche, liste et actions</p>
+      <h1 class="title">{{ text().title }}</h1>
+      <p class="subtitle muted">{{ text().subtitle }}</p>
     </div>
 
-    <div class="header-actions">
-    </div>
+    <div class="header-actions"></div>
   </div>
 
-  <!-- TABLE CARD -->
   <div class="card">
     <div class="card-head">
       <h2 class="card-title"></h2>
 
-      <!-- actions dans le card-head -->
-      <div class="card-actions">
+      <div class="card-actions card-actions--filters">
         <input
-          (ngModelChange)="q.set($event); load()"
+          (ngModelChange)="onSearchChange($event)"
           [ngModel]="q()"
           pInputText
-          placeholder="Rechercher…"
+          [placeholder]="text().searchPlaceholder"
         />
+
+        <p-multiselect
+          (ngModelChange)="onSubjectsChange($event)"
+          [ngModel]="selectedSubjectIds()"
+          [options]="subjectOptions()"
+          [placeholder]="text().subjectsPlaceholder"
+          appendTo="body"
+          display="chip"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="subjects-filter">
+        </p-multiselect>
+
+        <p-button
+          (onClick)="exportRows()"
+          icon="pi pi-download"
+          id="btn_export_question"
+          [label]="text().exportQuestions"
+          severity="secondary"
+          type="button">
+        </p-button>
+
+        <p-button
+          (onClick)="goImport()"
+          icon="pi pi-upload"
+          id="btn_import_question"
+          [label]="text().importQuestions"
+          severity="secondary"
+          type="button">
+        </p-button>
 
         <p-button
           (onClick)="goNew()"
           icon="pi pi-plus"
           id="btn_add_question"
-          label="Nouveau"
+          [label]="text().newQuestion"
           severity="primary"
           type="button">
         </p-button>
@@ -38,38 +64,49 @@
     </div>
 
     <p-table
-      [value]="pagedQuestions"
+      [dataKey]="'id'"
+      (onPage)="onPageChange($event)"
+      [first]="first()"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="rows()"
+      [rowsPerPageOptions]="[10, 20, 50]"
+      [totalRecords]="totalRecords()"
+      [value]="filteredRows()"
+      currentPageReportTemplate="{first} - {last} / {totalRecords}"
+      responsiveLayout="scroll"
       showGridlines
       size="small"
+      sortMode="single"
       stripedRows
       styleClass="table"
     >
       <ng-template #header>
         <tr>
-          <th>Titre</th>
-          <th class="col-active">Actif</th>
-          <th>Modes</th>
-          <th>Domaines</th>
-          <th>Subjects</th>
-          <th class="col-actions">Actions</th>
+          <th pSortableColumn="title">{{ text().titleCol }} <p-sortIcon field="title"></p-sortIcon></th>
+          <th class="col-active" pSortableColumn="active">{{ text().activeCol }} <p-sortIcon field="active"></p-sortIcon></th>
+          <th pSortableColumn="modesText">{{ text().modesCol }} <p-sortIcon field="modesText"></p-sortIcon></th>
+          <th pSortableColumn="domainName">{{ text().domainsCol }} <p-sortIcon field="domainName"></p-sortIcon></th>
+          <th pSortableColumn="subjectsText">{{ text().subjectsCol }} <p-sortIcon field="subjectsText"></p-sortIcon></th>
+          <th class="col-actions">{{ text().actionsCol }}</th>
         </tr>
       </ng-template>
 
-      <ng-template #body let-q>
+      <ng-template #body let-row>
         <tr>
-          <td>{{ getTitle(q) }}</td>
+          <td>{{ row.title }}</td>
 
           <td class="center-cell col-active">
             <i
-              [ngClass]="q.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
+              [ngClass]="row.active ? 'pi-check-circle active-icon' : 'pi-times-circle inactive-icon'"
               class="pi">
             </i>
           </td>
 
           <td class="subjects-cell">
-            @if (getModes(q).length) {
+            @if (getModes(row.question).length) {
               <div class="quiz-question__subjects">
-                @for (mode of getModes(q); track mode) {
+                @for (mode of getModes(row.question); track mode) {
                   <p-button
                     [label]="mode"
                     severity="secondary"
@@ -83,20 +120,20 @@
           </td>
 
           <td class="subjects-cell">
-                  <p-button
-                    (onClick)="goDomain(q.domain.id)"
-                    [label]="getDomain(q.domain)"
-                    severity="secondary"
-                    size="small"
-                    type="button"
-                    variant="outlined">
-                  </p-button>
+            <p-button
+              (onClick)="goDomain(row.question.domain.id)"
+              [label]="row.domainName"
+              severity="secondary"
+              size="small"
+              type="button"
+              variant="outlined">
+            </p-button>
           </td>
 
           <td class="subjects-cell">
-            @if (q.subjects?.length) {
+            @if (row.question.subjects?.length) {
               <div class="quiz-question__subjects">
-                @for (s of q.subjects; track s.id) {
+                @for (s of row.question.subjects; track s.id) {
                   <p-button
                     (onClick)="goSubject(s.id)"
                     [label]="getSubjectTitle(s)"
@@ -113,7 +150,7 @@
           <td class="col-actions">
             <div class="row-actions">
               <p-button
-                (click)="goView(q.id)"
+                (click)="goView(row.question.id)"
                 icon="pi pi-eye"
                 id="btn_view_question"
                 severity="secondary"
@@ -122,7 +159,7 @@
               </p-button>
 
               <p-button
-                (click)="goEdit(q.id)"
+                (click)="goEdit(row.question.id)"
                 icon="pi pi-pencil"
                 id="btn_edit_question"
                 severity="info"
@@ -131,7 +168,7 @@
               </p-button>
 
               <p-button
-                (click)="goDelete(q.id)"
+                (click)="goDelete(row.question.id)"
                 icon="pi pi-trash"
                 id="btn_delete_question"
                 severity="danger"
@@ -143,18 +180,6 @@
         </tr>
       </ng-template>
     </p-table>
-
-    @if (questions().length > rows) {
-      <div class="table-paginator">
-        <p-paginator
-          (onPageChange)="onPageChange($event)"
-          [first]="first"
-          [rowsPerPageOptions]="[5, 10, 20, 50]"
-          [rows]="rows"
-          [totalRecords]="questions().length">
-        </p-paginator>
-      </div>
-    }
   </div>
 </div>
 

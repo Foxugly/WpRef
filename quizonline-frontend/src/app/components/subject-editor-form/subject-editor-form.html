@@ -36,57 +36,59 @@
     <p-tabs
       (valueChange)="onTabChange($event)"
       [value]="activeLang() ?? undefined"
-      class="tabs">
+      class="tabs tabs--tight">
 
       <p-tablist>
         @for (lang of tabCodes(); track lang) {
           <p-tab [value]="lang">{{ lang.toUpperCase() }}</p-tab>
         }
+        <div class="tablist-actions">
+          <p-button
+            (click)="onTranslateActive()"
+            [disabled]="translating()"
+            [loading]="translating()"
+            icon="pi pi-language"
+            [label]="ui().common.translateOthers"
+            severity="info"
+            size="small"
+            type="button">
+          </p-button>
+        </div>
       </p-tablist>
 
-      <p-tabpanels>
+      <p-tabpanels class="tabpanels-tight">
         @for (lang of tabCodes(); track lang) {
           <p-tabpanel [value]="lang">
-            <div class="lang-panel" formGroupName="translations">
-              <div class="lang-toolbar">
-                <p-button
-                  (click)="onTranslateActive()"
-                  [disabled]="translating()"
-                  [loading]="translating()"
-                  icon="pi pi-language"
-                  [label]="ui().common.translateOthers"
-                  severity="info"
-                  type="button">
-                </p-button>
-              </div>
+            @if (langGroup(lang); as group) {
+              <div class="lang-panel">
+                <div [formGroup]="group" class="meta-grid">
+                  <div class="meta-item meta-item--full">
+                    <label class="meta-label">{{ ui().subjectForm.name }} ({{ lang.toUpperCase() }})</label>
+                    <div class="meta-value">
+                      <input formControlName="name" pInputText [placeholder]="ui().subjectForm.namePlaceholder" />
+                    </div>
 
-              <div [formGroupName]="lang" class="meta-grid">
-                <div class="meta-item meta-item--full">
-                  <label class="meta-label">{{ ui().subjectForm.name }} ({{ lang.toUpperCase() }})</label>
-                  <div class="meta-value">
-                    <input formControlName="name" pInputText [placeholder]="ui().subjectForm.namePlaceholder" />
+                    @if (group.get('name')?.invalid && group.get('name')?.touched) {
+                      <div class="meta-hint meta-hint--error">{{ ui().subjectForm.required }}</div>
+                    }
                   </div>
 
-                  @if (langGroup(lang).get('name')?.invalid && langGroup(lang).get('name')?.touched) {
-                    <div class="meta-hint meta-hint--error">{{ ui().subjectForm.required }}</div>
-                  }
-                </div>
-
-                <div class="meta-item meta-item--full">
-                  <label class="meta-label">{{ ui().subjectForm.description }} ({{ lang.toUpperCase() }})</label>
-                  <div class="meta-value">
-                    <p-editor class="editor-compact" formControlName="description"></p-editor>
+                  <div class="meta-item meta-item--full">
+                    <label class="meta-label">{{ ui().subjectForm.description }} ({{ lang.toUpperCase() }})</label>
+                    <div class="meta-value">
+                      <p-editor class="editor-compact" formControlName="description"></p-editor>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              @if (translating()) {
-                <div class="inline-status">
-                  <i class="pi pi-spin pi-spinner"></i>
-                  <span>{{ ui().common.translating }}</span>
-                </div>
-              }
-            </div>
+                @if (translating()) {
+                  <div class="inline-status">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span>{{ ui().common.translating }}</span>
+                  </div>
+                }
+              </div>
+            }
           </p-tabpanel>
         }
       </p-tabpanels>

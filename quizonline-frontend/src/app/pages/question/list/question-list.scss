@@ -86,6 +86,14 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   gap: 0.35rem;
 }
 
+.card-actions--filters {
+  flex-wrap: wrap;
+}
+
+.subjects-filter {
+  min-width: 18rem;
+}
+
 .active-icon {
   color: #2e7d32;
 }
@@ -100,4 +108,10 @@ $shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
 .center-cell {
   text-align: center;
+}
+
+.quiz-question__subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }

@@ -1,14 +1,22 @@
 <section class="list-section">
-  <p-table [value]="templates()" showGridlines size="small" stripedRows>
+  <p-table
+    [paginator]="templates().length > 10"
+    [rows]="10"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [value]="templates()"
+    showGridlines
+    size="small"
+    sortMode="single"
+    stripedRows>
     <ng-template #header>
       <tr>
-        <th>{{ uiText().templates.headers.title }}</th>
-        <th>{{ uiText().templates.headers.mode }}</th>
-        <th>{{ uiText().templates.headers.questions }}</th>
-        <th>{{ uiText().templates.headers.owner }}</th>
-        <th>{{ uiText().templates.headers.public }}</th>
-        <th>{{ uiText().templates.headers.active }}</th>
-        <th>{{ uiText().templates.headers.available }}</th>
+        <th pSortableColumn="title">{{ uiText().templates.headers.title }} <p-sortIcon field="title"></p-sortIcon></th>
+        <th pSortableColumn="mode">{{ uiText().templates.headers.mode }} <p-sortIcon field="mode"></p-sortIcon></th>
+        <th pSortableColumn="questions_count">{{ uiText().templates.headers.questions }} <p-sortIcon field="questions_count"></p-sortIcon></th>
+        <th pSortableColumn="ownerLabel">{{ uiText().templates.headers.owner }} <p-sortIcon field="ownerLabel"></p-sortIcon></th>
+        <th pSortableColumn="is_public">{{ uiText().templates.headers.public }} <p-sortIcon field="is_public"></p-sortIcon></th>
+        <th pSortableColumn="active">{{ uiText().templates.headers.active }} <p-sortIcon field="active"></p-sortIcon></th>
+        <th pSortableColumn="can_answer">{{ uiText().templates.headers.available }} <p-sortIcon field="can_answer"></p-sortIcon></th>
         <th>{{ uiText().templates.headers.availabilityWindow }}</th>
         <th style="width: 280px;">{{ uiText().templates.headers.actions }}</th>
       </tr>

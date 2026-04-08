@@ -1,5 +1,4 @@
 <div class="page">
-  <!-- HEADER -->
   <div class="header-line header-line--grid">
     <div class="header-spacer"></div>
 
@@ -8,11 +7,9 @@
       <p class="subtitle muted">Recherche, liste et actions</p>
     </div>
 
-    <div class="header-actions">
-    </div>
+    <div class="header-actions"></div>
   </div>
 
-  <!-- TABLE CARD -->
   <div class="card">
     <div class="card-head">
       <h2 class="card-title"></h2>
@@ -20,7 +17,7 @@
       <div class="card-actions">
         <input
           pInputText
-          placeholder="Rechercher…"
+          placeholder="Rechercher..."
           [ngModel]="q()"
           (ngModelChange)="q.set($event); load()"
         />
@@ -37,27 +34,40 @@
     </div>
 
     <p-table
-      [value]="pagedDomains"
+      [paginator]="rowsData().length > rows"
+      [rows]="rows"
+      [rowsPerPageOptions]="[5, 10, 20, 50]"
+      [value]="rowsData()"
       showGridlines
       size="small"
+      sortMode="single"
       stripedRows
       styleClass="table"
     >
       <ng-template #header>
         <tr>
-          <th>Nom</th>
-          <th>Description</th>
+          <th pSortableColumn="id">ID <p-sortIcon field="id"></p-sortIcon></th>
+          <th pSortableColumn="name">Nom <p-sortIcon field="name"></p-sortIcon></th>
+          <th pSortableColumn="description">Description <p-sortIcon field="description"></p-sortIcon></th>
+          <th pSortableColumn="subjectsCount">Sujets <p-sortIcon field="subjectsCount"></p-sortIcon></th>
+          <th pSortableColumn="questionsCount">Questions <p-sortIcon field="questionsCount"></p-sortIcon></th>
           <th class="col-actions">Actions</th>
         </tr>
       </ng-template>
 
       <ng-template #body let-d>
         <tr>
-          <td class="truncate">{{ getName(d) }}</td>
+          <td class="center-cell">{{ d.id }}</td>
+
+          <td class="truncate">{{ d.name }}</td>
 
           <td class="muted desc-cell">
-            <div class="desc" [innerHTML]="getDescription(d) | stripP"></div>
+            <div class="desc" [innerHTML]="d.description | stripP"></div>
           </td>
+
+          <td class="center-cell">{{ d.subjectsCount }}</td>
+
+          <td class="center-cell">{{ d.questionsCount }}</td>
 
           <td class="col-actions">
             <div class="row-actions">
@@ -84,17 +94,5 @@
       </ng-template>
     </p-table>
 
-    @if (domains().length > rows) {
-      <div class="table-paginator">
-        <p-paginator
-          (onPageChange)="onPageChange($event)"
-          [first]="first"
-          [rowsPerPageOptions]="[5, 10, 20, 50]"
-          [rows]="rows"
-          [totalRecords]="domains().length">
-        </p-paginator>
-      </div>
-    }
   </div>
 </div>
-

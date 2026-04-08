@@ -15,6 +15,7 @@ from drf_spectacular.utils import (
 from rest_framework import status, serializers
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from config.tools import ErrorDetailSerializer
 from config.tools import MyModelViewSet
@@ -31,6 +32,11 @@ from .serializers import QuestionReadSerializer, QuestionWriteSerializer, MediaA
     MediaAssetUploadSerializer, _infer_kind_from_upload, _sha256_file
 
 logger = logging.getLogger(__name__)
+
+
+class QuestionListPagination(PageNumberPagination):
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 @extend_schema_serializer(component_name="QuestionAnswerOptionWritePayload")
@@ -106,6 +112,15 @@ class QuestionPartialRequestSerializer(QuestionWriteSerializer):
                 location=OpenApiParameter.QUERY,
                 required=False,
                 description="Recherche simple (title__icontains).",
+            ),
+            OpenApiParameter(
+                name="subject_ids",
+                type={"type": "array", "items": {"type": "integer"}},
+                location=OpenApiParameter.QUERY,
+                required=False,
+                style="form",
+                explode=False,
+                description="Liste d'IDs de sujets pour filtrer les questions.",
             ),
         ],
         responses={
@@ -241,6 +256,7 @@ class QuestionPartialRequestSerializer(QuestionWriteSerializer):
 class QuestionViewSet(MyModelViewSet):
     queryset = Question.objects.none()
     permission_classes = [IsQuestionDomainManager]
+    pagination_class = QuestionListPagination
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["domain", "active", "is_mode_practice", "is_mode_exam"]
     lookup_field = "pk"
@@ -311,8 +327,21 @@ class QuestionViewSet(MyModelViewSet):
         )
         qs = self.filter_queryset(self.get_queryset())
         search = (request.query_params.get("search") or "")[:200]
+        subject_ids_raw = request.query_params.getlist("subject_ids")
+        if not subject_ids_raw:
+            csv_subjects = request.query_params.get("subject_ids")
+            if csv_subjects:
+                subject_ids_raw = [part.strip() for part in csv_subjects.split(",") if part.strip()]
         if search:
             qs = qs.filter(translations__title__icontains=search).distinct()
+        if subject_ids_raw:
+            try:
+                subject_ids = [int(value) for value in subject_ids_raw]
+            except ValueError:
+                raise ValidationError({"subject_ids": "Expected a list of integers."})
+            for subject_id in subject_ids:
+                qs = qs.filter(subjects__id=subject_id)
+            qs = qs.distinct()
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)

@@ -1,12 +1,13 @@
 import {Injectable} from '@angular/core';
 import {FormArray, FormControl, FormGroup} from '@angular/forms';
 import {Router} from '@angular/router';
-import {map, Observable} from 'rxjs';
+import {EMPTY, expand, map, Observable, reduce} from 'rxjs';
 
 import {ROUTES} from '../../app.routes-paths';
 import {
   LanguageEnumDto,
   MediaAssetDto,
+  PaginatedQuestionReadListDto,
   QuestionApi,
   QuestionCreateRequestParams,
   QuestionDestroyRequestParams,
@@ -81,6 +82,7 @@ export type QuestionDuplicateDraft = {
 
 @Injectable({providedIn: 'root'})
 export class QuestionService {
+  private static readonly DUPLICATE_DRAFT_STORAGE_KEY = 'question.duplicateDraft';
   private duplicateDraft: QuestionDuplicateDraft | null = null;
 
   constructor(private api: QuestionApi, private router: Router) {
@@ -89,20 +91,55 @@ export class QuestionService {
   list(params?: {
     search?: string;
     subjectId?: number;
+    subjectIds?: number[];
     domainId?: number;
     active?: boolean;
     isModePractice?: boolean;
     isModeExam?: boolean;
   }): Observable<QuestionReadDto[]> {
+    return this.listPage({
+      ...params,
+      page: 1,
+      pageSize: 100,
+    }).pipe(
+      expand((response, index) => {
+        if (!response.next) {
+          return EMPTY;
+        }
+        return this.listPage({
+          ...params,
+          page: index + 2,
+          pageSize: 100,
+        });
+      }),
+      map((response) => response.results ?? []),
+      reduce((all, page) => [...all, ...page], [] as QuestionReadDto[]),
+    );
+  }
+
+  listPage(params?: {
+    search?: string;
+    subjectId?: number;
+    subjectIds?: number[];
+    domainId?: number;
+    active?: boolean;
+    isModePractice?: boolean;
+    isModeExam?: boolean;
+    page?: number;
+    pageSize?: number;
+  }): Observable<PaginatedQuestionReadListDto> {
     const requestParams: QuestionListRequestParams = {
       active: params?.active,
       search: params?.search,
       domain: params?.domainId,
       isModePractice: params?.isModePractice,
       isModeExam: params?.isModeExam,
+      page: params?.page,
+      pageSize: params?.pageSize,
+      subjectIds: params?.subjectIds ?? (params?.subjectId ? [params.subjectId] : undefined),
     };
 
-    return this.api.questionList(requestParams).pipe(map((response) => response.results ?? []));
+    return this.api.questionList(requestParams);
   }
 
   retrieve(questionId: number): Observable<QuestionReadDto> {
@@ -144,8 +181,12 @@ export class QuestionService {
     });
   }
 
+  goImport(): void {
+    this.router.navigate(ROUTES.question.import());
+  }
+
   duplicateToNew(question: QuestionReadDto): void {
-    this.duplicateDraft = {
+    const draft: QuestionDuplicateDraft = {
       domainId: question.domain.id,
       subjectIds: question.subjects.map((subject) => subject.id),
       active: !!question.active,
@@ -182,12 +223,16 @@ export class QuestionService {
       })),
     };
 
+    this.duplicateDraft = draft;
+    this.persistDuplicateDraft(draft);
+
     this.goNew(question.domain.id);
   }
 
   consumeDuplicateDraft(): QuestionDuplicateDraft | null {
-    const draft = this.duplicateDraft;
+    const draft = this.duplicateDraft ?? this.readPersistedDuplicateDraft();
     this.duplicateDraft = null;
+    this.clearPersistedDuplicateDraft();
     return draft;
   }
 
@@ -221,5 +266,42 @@ export class QuestionService {
 
   questionMediaCreate(param: QuestionMediaCreateRequestParams): Observable<MediaAssetDto> {
     return this.api.questionMediaCreate(param);
+  }
+
+  private persistDuplicateDraft(draft: QuestionDuplicateDraft): void {
+    if (typeof sessionStorage === 'undefined') {
+      return;
+    }
+
+    sessionStorage.setItem(
+      QuestionService.DUPLICATE_DRAFT_STORAGE_KEY,
+      JSON.stringify(draft),
+    );
+  }
+
+  private readPersistedDuplicateDraft(): QuestionDuplicateDraft | null {
+    if (typeof sessionStorage === 'undefined') {
+      return null;
+    }
+
+    const raw = sessionStorage.getItem(QuestionService.DUPLICATE_DRAFT_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw) as QuestionDuplicateDraft;
+    } catch {
+      this.clearPersistedDuplicateDraft();
+      return null;
+    }
+  }
+
+  private clearPersistedDuplicateDraft(): void {
+    if (typeof sessionStorage === 'undefined') {
+      return;
+    }
+
+    sessionStorage.removeItem(QuestionService.DUPLICATE_DRAFT_STORAGE_KEY);
   }
 }

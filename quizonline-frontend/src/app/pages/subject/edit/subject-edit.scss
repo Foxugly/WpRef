@@ -2,3 +2,52 @@
 .empty-state {
   padding: 0.25rem 0.1rem;
 }
+
+.center-cell {
+  text-align: center;
+}
+
+.active-icon {
+  color: #2e7d32;
+}
+
+.inactive-icon {
+  color: #b71c1c;
+}
+
+.quiz-question__subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+:host ::ng-deep .table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+:host ::ng-deep .table .col-title {
+  width: auto;
+}
+
+:host ::ng-deep .table .col-active {
+  width: 5.5rem;
+  white-space: nowrap;
+  text-align: center;
+}
+
+:host ::ng-deep .table .col-mode {
+  width: 12rem;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .table .col-actions {
+  width: 9rem;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .table td.col-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

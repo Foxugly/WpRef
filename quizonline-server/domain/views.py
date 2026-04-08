@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Count, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import status
@@ -191,8 +191,13 @@ class DomainViewSet(MyModelViewSet):
 
         qs = (
             Domain.objects.all()
+            .annotate(
+                subjects_count=Count("subjects", filter=Q(subjects__active=True), distinct=True),
+                questions_count=Count("questions", filter=Q(questions__active=True), distinct=True),
+            )
             .select_related("owner")
             .prefetch_related("staff", "members", "allowed_languages", "translations")
+            .order_by("id")
         )
         user = self.request.user
         if not user or user.is_anonymous:

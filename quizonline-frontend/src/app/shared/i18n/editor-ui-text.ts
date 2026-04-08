@@ -17,6 +17,7 @@ export type EditorUiText = {
     domainEdit: {title: string; subtitle: string;};
     subjectCreate: {title: string; subtitle: string;};
     subjectEdit: {title: string; subtitle: string; questionsTitle: string; addQuestion: string; noQuestions: string; titleCol: string; actionsCol: string;};
+    questionList?: {title: string; subtitle: string; searchPlaceholder: string; newQuestion: string; titleCol: string; activeCol: string; modesCol: string; domainsCol: string; subjectsCol: string; actionsCol: string; practice: string; exam: string;};
     questionCreate: {title: string; subtitle: string;};
     questionEdit: {title: string; subtitle: string;};
     quizQuick: {title: string; subtitle: string; submit: string;};

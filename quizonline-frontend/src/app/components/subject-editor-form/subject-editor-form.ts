@@ -52,8 +52,8 @@ export class SubjectEditorFormComponent {
   readonly submitForm = output<void>();
   readonly cancel = output<void>();
 
-  langGroup(code: string): FormGroup {
-    return this.form().get(['translations', code]) as FormGroup;
+  langGroup(code: string): FormGroup | null {
+    return this.form().get(['translations', code]) as FormGroup | null;
   }
 
   submit(): void {

@@ -1,0 +1,67 @@
+.import-card {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.import-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.import-section h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.section-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.selected-file {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.validation-section {
+  min-height: 10rem;
+}
+
+.validation-box {
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.validation-box strong {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.validation-box p,
+.validation-box ul {
+  margin: 0;
+}
+
+.validation-box ul {
+  padding-left: 1.25rem;
+}
+
+.validation-box--success {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.validation-box--error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

@@ -17,6 +17,7 @@ export let ROUTES = {
   },
   question: {
     add: () => ['/question/add'] as const,
+    import: () => ['/question/import'] as const,
     edit: (question_id: number) => ['/question', question_id, 'edit' ] as const,
     view: (question_id: number) => ['/question', question_id, 'view' ] as const,
     delete: (question_id: number) => ['/question', question_id, 'delete'] as const,

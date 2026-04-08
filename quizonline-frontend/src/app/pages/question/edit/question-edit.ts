@@ -11,6 +11,7 @@ import {DomainReadDto, LanguageEnumDto, QuestionReadDto, SubjectReadDto} from '.
 import {QuestionEditorFormComponent} from '../../../components/question-editor-form/question-editor-form';
 import {
   addQuestionAnswerOption,
+  buildQuestionCreatePayload,
   buildQuestionPatchPayload,
   clearQuestionTranslationTab,
   createQuestionEditorForm,
@@ -98,18 +99,23 @@ export class QuestionEdit implements OnInit {
   ngOnInit(): void {
     this.currentLang.set(this.userService.currentLang ?? LanguageEnumDto.Fr);
 
-    this.id = Number(
-      this.route.snapshot.paramMap.get('questionId') ??
-      this.route.snapshot.paramMap.get('id'),
-    );
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const nextId = Number(
+          params.get('questionId') ??
+          params.get('id'),
+        );
 
-    if (!this.id || Number.isNaN(this.id)) {
-      this.loading.set(false);
-      this.error.set('Identifiant de question invalide.');
-      return;
-    }
+        if (!nextId || Number.isNaN(nextId)) {
+          this.loading.set(false);
+          this.error.set('Identifiant de question invalide.');
+          return;
+        }
 
-    this.loadData();
+        this.id = nextId;
+        this.loadData();
+      });
   }
 
   tabCodes(): LangCode[] {
@@ -144,11 +150,11 @@ export class QuestionEdit implements OnInit {
   }
 
   duplicateQuestion(): void {
-    const question = this.question();
-    if (!question) {
+    if (this.saving() || this.deleting() || this.translating()) {
       return;
     }
-    this.questionService.duplicateToNew(question);
+
+    void this.createDuplicateQuestion();
   }
 
   clearActiveTab(): void {
@@ -337,6 +343,11 @@ export class QuestionEdit implements OnInit {
   private loadData(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.submitError.set(null);
+    this.success.set(null);
+    this.question.set(null);
+    this.domainLangs.set([]);
+    this.activeLang.set(null);
 
     forkJoin({
       subjects: this.subjectService.list(),
@@ -363,5 +374,61 @@ export class QuestionEdit implements OnInit {
           this.error.set('Impossible de charger la question.');
         },
       });
+  }
+
+  private async createDuplicateQuestion(): Promise<void> {
+    this.error.set(null);
+    this.submitError.set(null);
+    this.success.set(null);
+
+    if (!isQuestionEditorFormValid(this.form, this.domainLangs())) {
+      this.submitError.set(
+        'Merci de completer le titre et toutes les reponses dans chaque langue du domaine.',
+      );
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    if (getQuestionCorrectCount(this.form) === 0) {
+      this.submitError.set('Il faut cocher au moins une reponse correcte.');
+      return;
+    }
+
+    this.saving.set(true);
+
+    try {
+      const mediaAssetIds = await uploadQuestionEditorMediaAssets(
+        this.form.controls.media.value ?? [],
+        (params) => this.questionService.questionMediaCreate(params),
+      );
+      const payload = buildQuestionCreatePayload(this.form, this.domainLangs(), mediaAssetIds);
+
+      payload.answer_options = (payload.answer_options ?? []).map((answer) => ({
+        is_correct: answer.is_correct,
+        sort_order: answer.sort_order,
+        translations: answer.translations,
+      }));
+
+      payload.translations = Object.fromEntries(
+        Object.entries(payload.translations ?? {}).map(([lang, value]) => [
+          lang,
+          {
+            ...value,
+            title: value?.title?.trim() ? `${value.title} (copy)` : '(copy)',
+          },
+        ]),
+      );
+
+      const created = await firstValueFrom(this.questionService.create(payload));
+      this.questionService.goEdit(created.id);
+    } catch (err: any) {
+      if (err?.error && typeof err.error === 'object') {
+        this.submitError.set(JSON.stringify(err.error));
+      } else {
+        this.submitError.set('Erreur lors de la duplication de la question.');
+      }
+    } finally {
+      this.saving.set(false);
+    }
   }
 }
