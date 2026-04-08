@@ -167,17 +167,20 @@ class QuizTemplate(AuditMixin, models.Model):
 
     def _make_unique_title(self):
         """Rend self.title unique en ajoutant un suffixe ' (n)' si nécessaire."""
+        max_len = QuizTemplate._meta.get_field("title").max_length
         base = (self.title or "").strip() or "Quiz"
-        title = base
-        counter = 1
 
-        # exclure self.pk (update)
         qs = QuizTemplate.objects.all()
         if self.pk:
             qs = qs.exclude(pk=self.pk)
 
-        while qs.filter(title=title).exists():
-            title = f"{base} ({counter})"
+        existing_titles = set(qs.values_list("title", flat=True))
+
+        title = base
+        counter = 1
+        while title in existing_titles:
+            suffix = f" ({counter})"
+            title = base[: max_len - len(suffix)] + suffix
             counter += 1
 
         self.title = title
@@ -198,11 +201,12 @@ class QuizTemplate(AuditMixin, models.Model):
                 self.translations = translations
         if not self.slug:
             base_slug = slugify(self.title) or "quiz"
+            existing_slugs = set(
+                QuizTemplate.objects.exclude(pk=self.pk).values_list("slug", flat=True)
+            )
             slug = base_slug
             counter = 1
-
-            # Boucle tant qu'un quiz avec ce slug existe déjà
-            while QuizTemplate.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            while slug in existing_slugs:
                 slug = f"{base_slug}-{counter}"
                 counter += 1
             self.slug = slug

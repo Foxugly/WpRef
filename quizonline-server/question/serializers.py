@@ -27,23 +27,14 @@ from domain.serializers import DomainReadSerializer
 
 def _translated_value(obj, field: str) -> str:
     language_code = translation.get_language() or settings.LANGUAGE_CODE
-    translation_model = obj._parler_meta.root_model
-    current_value = (
-        translation_model.objects
-        .filter(master_id=obj.pk, language_code=language_code)
-        .values_list(field, flat=True)
-        .first()
-    )
-    if current_value:
-        return current_value
-
-    fallback_value = (
-        translation_model.objects
-        .filter(master_id=obj.pk)
-        .values_list(field, flat=True)
-        .first()
-    )
-    return fallback_value or ""
+    fallback = None
+    for t in obj.translations.all():  # uses prefetch cache when available
+        val = getattr(t, field, None) or ""
+        if t.language_code == language_code and val:
+            return val
+        if fallback is None and val:
+            fallback = val
+    return fallback or ""
 
 
 def _serialized_translations(obj, fields: list[str]) -> dict:

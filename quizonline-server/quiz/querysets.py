@@ -8,6 +8,7 @@ from .models import Quiz, QuizQuestionAnswer, QuizTemplate
 def quiz_template_queryset():
     return (
         QuizTemplate.objects
+        .select_related("domain")
         .annotate(_questions_count=Count("questions", distinct=True))
         .prefetch_related("quiz_questions__question")
         .order_by("title", "pk")

@@ -45,10 +45,6 @@ export class QuizNav {
     if (reviewState === 'wrong') {
       return '#fee2e2';
     }
-    /*if (item.flagged) {
-      // Question marquée : fond clair
-      return '#fff7f7';
-    }*/
     if (item.answered) {
       // Question répondue : bleu très léger
       return '#e3f2fd';

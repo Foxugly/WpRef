@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Quiz, QuizQuestionAnswer
+from .scoring import compute_answer_score
 from .notifications import (
     notify_quiz_assigned_on_commit,
     notify_quiz_completed_on_commit,
@@ -64,21 +65,10 @@ def close_quiz_session(*, quiz) -> Quiz:
 
     to_update = []
     for answer in answers:
-        correct_ids = {
-            option.id for option in answer.quizquestion.question.answer_options.all()
-            if option.is_correct
-        }
-        selected_ids = {option.id for option in answer.selected_options.all()}
-        weight = float(answer.quizquestion.weight or 0)
-        answer.max_score = weight
-
-        if correct_ids and selected_ids == correct_ids:
-            answer.earned_score = weight
-            answer.is_correct = True
-        else:
-            answer.earned_score = 0.0
-            answer.is_correct = False
-
+        earned_score, max_score, is_correct = compute_answer_score(answer)
+        answer.earned_score = earned_score
+        answer.max_score = max_score
+        answer.is_correct = is_correct
         to_update.append(answer)
 
     if to_update:

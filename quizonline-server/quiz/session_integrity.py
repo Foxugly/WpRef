@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from quiz.models import Quiz, QuizQuestionAnswer
+from quiz.scoring import compute_answer_score
 
 
 def synchronize_closed_quiz_answers(quiz: Quiz) -> Quiz:
@@ -46,21 +47,13 @@ def synchronize_closed_quiz_answers(quiz: Quiz) -> Quiz:
 
     to_update = []
     for answer in existing_answers:
-        correct_ids = {
-            opt.id for opt in answer.quizquestion.question.answer_options.all()
-            if opt.is_correct
-        }
-        selected_ids = {opt.id for opt in answer.selected_options.all()}
-        weight = float(answer.quizquestion.weight or 0)
-        earned_score = weight if correct_ids and selected_ids == correct_ids else 0.0
-        is_correct = bool(correct_ids and selected_ids == correct_ids)
-
+        earned_score, max_score, is_correct = compute_answer_score(answer)
         if (
-            float(answer.max_score or 0) != weight
+            float(answer.max_score or 0) != max_score
             or float(answer.earned_score or 0) != earned_score
             or answer.is_correct != is_correct
         ):
-            answer.max_score = weight
+            answer.max_score = max_score
             answer.earned_score = earned_score
             answer.is_correct = is_correct
             to_update.append(answer)

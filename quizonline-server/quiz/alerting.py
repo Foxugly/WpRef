@@ -145,7 +145,19 @@ def alert_thread_queryset_for_user(user):
 
 
 def unread_total_for_queryset(queryset, user) -> int:
-    return sum(unread_count_for_alert(thread, user) for thread in queryset)
+    total = 0
+    for thread in queryset:
+        prefetch_cache = getattr(thread, "_prefetched_objects_cache", {})
+        if "messages" in prefetch_cache:
+            last_read_at = participant_last_read_at(thread, user)
+            total += sum(
+                1 for msg in thread.messages.all()
+                if msg.author_id != user.id
+                and (last_read_at is None or msg.created_at > last_read_at)
+            )
+        else:
+            total += unread_count_for_alert(thread, user)
+    return total
 
 
 def require_alert_owner(thread: "QuizAlertThread", user, action_label: str) -> None:

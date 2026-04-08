@@ -1,24 +1,6 @@
 import {Component} from '@angular/core';
 import {ButtonModule} from 'primeng/button';
 import {QuizNav, QuizNavItem} from '../quiz-nav/quiz-nav';
-import {QuestionReadDto} from '../../api/generated';
-
-
-/*function createEmptyQuestion(id: number, title: string = ""): QuestionReadDto {
-  return {
-    domain: 0,
-    id: id,
-    translations: {"fr":{"title":title, "description":title, "explanation":"explanation"}},
-    allow_multiple_correct: true,
-    active: true,
-    is_mode_practice: true,
-    is_mode_exam: false,
-    subjects: [],
-    media: [],
-    answer_options: [],
-    created_at: new Date().toISOString()
-  }
-}*/
 
 @Component({
   selector: 'app-quiz-play',
@@ -28,57 +10,24 @@ import {QuestionReadDto} from '../../api/generated';
   styleUrl: './quiz-play.scss',
 })
 export class QuizPlayComponent {
-  /*questionNavItems: QuizNavItem[] = Array.from({length: 23}).map(
-    (_, i): QuizNavItem => ({
-      index: i + 1,
-      id: i + 1,                // ← identifiant interne fictif
-      answered: false,
-      flagged: false,
-      question: createEmptyQuestion(i + 1, `Question ${i + 1}`)
-    })
-  );*/
   questionNavItems: QuizNavItem[] = [];
-
   currentQuestionIndex = 1;
 
   onQuestionSelected(index: number): void {
     this.currentQuestionIndex = index;
-    // charger la question, etc.
   }
 
   markAnswered(index: number): void {
     const i = this.questionNavItems.findIndex((q) => q.index === index);
     if (i === -1) return;
-
-    const old = this.questionNavItems[i];
-    const updated: QuizNavItem = {
-      ...old,
-      answered: true,
-      flagged: old.flagged, // si tu veux enlever le flag quand répondu
-    };
-
-    // ⚠️ recréer un nouveau tableau pour déclencher le change detection
-    this.questionNavItems = [
-      ...this.questionNavItems.slice(0, i),
-      updated,
-      ...this.questionNavItems.slice(i + 1),
-    ];
+    this.questionNavItems[i] = {...this.questionNavItems[i], answered: true};
+    this.questionNavItems = [...this.questionNavItems];
   }
 
   toggleFlag(index: number): void {
     const i = this.questionNavItems.findIndex((q) => q.index === index);
     if (i === -1) return;
-    const old = this.questionNavItems[i];
-    const updated: QuizNavItem = {
-      ...old,
-      flagged: !old.flagged,
-      // éventuel comportement : une question flaggée peut être non répondue
-      answered: old.answered,
-    };
-    this.questionNavItems = [
-      ...this.questionNavItems.slice(0, i),
-      updated,
-      ...this.questionNavItems.slice(i + 1),
-    ];
+    this.questionNavItems[i] = {...this.questionNavItems[i], flagged: !this.questionNavItems[i].flagged};
+    this.questionNavItems = [...this.questionNavItems];
   }
 }
