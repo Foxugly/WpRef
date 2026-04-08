@@ -111,7 +111,10 @@ export class QuizView implements OnInit {
   }
 
   goStart(): void {
-    this.quizService.goStart(this.id);
+    this.quizService.goStart(this.id, (err: unknown) => {
+      logApiError('quiz.view.start', err);
+      this.error.set(userFacingApiMessage(err, 'Impossible de démarrer ce quiz.'));
+    });
   }
 
   goQuestion(): void {

@@ -339,9 +339,7 @@ class QuestionViewSet(MyModelViewSet):
                 subject_ids = [int(value) for value in subject_ids_raw]
             except ValueError:
                 raise ValidationError({"subject_ids": "Expected a list of integers."})
-            for subject_id in subject_ids:
-                qs = qs.filter(subjects__id=subject_id)
-            qs = qs.distinct()
+            qs = qs.filter(subjects__id__in=subject_ids).distinct()
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)

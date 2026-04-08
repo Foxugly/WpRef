@@ -66,13 +66,17 @@ export class QuizService {
     return this.quizApi.quizCloseCreate({quizId: id});
   }
 
-  goStart(id: number): void {
+  goStart(id: number, onError?: (err: unknown) => void): void {
     this.startQuiz(id).subscribe({
       next: (session: QuizDto): void => {
         this.goQuestion(session.id);
       },
       error: (err: unknown): void => {
-        console.error('Erreur startQuizSession', err);
+        if (onError) {
+          onError(err);
+        } else {
+          console.error('Erreur startQuizSession', err);
+        }
       },
     });
   }
@@ -94,14 +98,13 @@ export class QuizService {
       return of({count: 0});
     }
 
-    const selected = new Set(subjectIds);
-    return this.questionApi.questionList({active: true, isModePractice: true}).pipe(
-      map((response) => response.results ?? []),
-      map((questions) => ({
-        count: questions.filter((question) =>
-          question.subjects.some((subject) => selected.has(subject.id)),
-        ).length,
-      })),
+    return this.questionApi.questionList({
+      active: true,
+      isModePractice: true,
+      subjectIds,
+      pageSize: 1,
+    }).pipe(
+      map((response) => ({count: response.count})),
     );
   }
 
