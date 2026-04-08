@@ -20,7 +20,6 @@ env = environ.Env(
     EMAIL_USE_TLS=(bool, True),
     FRONTEND_BASE_URL=(str, "http://127.0.0.1:4200"),
     PASSWORD_RESET_FRONTEND_PATH_PREFIX=(str, "/user/reset-password"),
-    SQLITE_NAME=(str, "db.sqlite3"),
     MEDIA_ROOT_DIR=(str, "media"),
     USE_DEEPL=(bool, False),
     DEEPL_IS_FREE=(bool, False),
@@ -100,16 +99,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-database_url = env("DATABASE_URL", default="").strip()
-if database_url:
-    DATABASES = {"default": env.db("DATABASE_URL")}
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / env("SQLITE_NAME"),
-        }
-    }
+DATABASES = {"default": env.db("DATABASE_URL", default="sqlite:///db.sqlite3")}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
