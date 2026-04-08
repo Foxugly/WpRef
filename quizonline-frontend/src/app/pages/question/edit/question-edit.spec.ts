@@ -19,9 +19,7 @@ describe('QuestionEdit', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: {
-              paramMap: convertToParamMap({questionId: '1'}),
-            },
+            paramMap: of(convertToParamMap({questionId: '1'})),
           },
         },
         {
@@ -34,6 +32,8 @@ describe('QuestionEdit', () => {
                 translations: {},
                 allowed_languages: [],
                 active: true,
+                subjects_count: 0,
+                questions_count: 0,
                 owner: {id: 1, username: 'owner'},
                 staff: [],
                 members: [],

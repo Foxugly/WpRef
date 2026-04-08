@@ -17,6 +17,8 @@ describe('quiz session state helpers', () => {
     },
     allowed_languages: [],
     active: true,
+    subjects_count: 0,
+    questions_count: 0,
     owner: {
       id: 1,
       username: 'owner',

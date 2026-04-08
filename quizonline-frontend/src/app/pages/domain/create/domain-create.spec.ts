@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {MessageService} from 'primeng/api';
 
 import { DomainCreate } from './domain-create';
 
@@ -8,7 +9,8 @@ describe('DomainCreate', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DomainCreate]
+      imports: [DomainCreate],
+      providers: [MessageService],
     })
     .compileComponents();
 

@@ -1,6 +1,7 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {ActivatedRoute, convertToParamMap} from '@angular/router';
 import {of} from 'rxjs';
+import {MessageService} from 'primeng/api';
 
 import {MediaAssetDto, MediaAssetKindEnumDto, MediaAssetUploadKindEnumDto} from '../../../api/generated';
 import {MediaSelectorValue} from '../../../components/media-selector/media-selector';
@@ -23,7 +24,9 @@ describe('QuestionCreate media uploads', () => {
       'create',
       'goList',
       'goBack',
+      'consumeDuplicateDraft',
     ]);
+    questionService.consumeDuplicateDraft.and.returnValue(null);
 
     await TestBed.configureTestingModule({
       imports: [QuestionCreate],
@@ -67,6 +70,7 @@ describe('QuestionCreate media uploads', () => {
             },
           },
         },
+        MessageService,
       ],
     }).compileComponents();
 

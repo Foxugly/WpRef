@@ -1,6 +1,7 @@
 import {TestBed} from '@angular/core/testing';
 import {provideRouter} from '@angular/router';
 import {signal} from '@angular/core';
+import {MessageService} from 'primeng/api';
 import {App} from './app';
 import {BackendStatusService} from './services/status/status';
 import {AuthService} from './services/auth/auth';
@@ -38,6 +39,7 @@ describe('App', () => {
             updateMeLanguage: () => ({subscribe: () => ({})}),
           },
         },
+        MessageService,
       ],
     }).compileComponents();
   });
