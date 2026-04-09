@@ -65,6 +65,20 @@ class QuestionViewSetTests(APITestCase):
         s.save()
         return s
 
+    def _set_question_translation(self, question: Question, language_code: str, *, title: str, description: str = "", explanation: str = "") -> Question:
+        translation_model = question._parler_meta.root_model
+        translation_model.objects.update_or_create(
+            master_id=question.pk,
+            language_code=language_code,
+            defaults={
+                "title": title,
+                "description": description,
+                "explanation": explanation,
+            },
+        )
+        question.refresh_from_db()
+        return question
+
     def _payload_create(self, domain: Domain, *, subject_ids=None, media_asset_ids=None):
         subject_ids = subject_ids or []
         media_asset_ids = media_asset_ids or []
@@ -343,14 +357,10 @@ class QuestionViewSetTests(APITestCase):
     # =========================================================
     def test_list_search_filters_by_title_translation_icontains(self):
         q1 = Question.objects.create(domain=self.domain, active=True, is_mode_practice=True, is_mode_exam=True)
-        q1.set_current_language("fr")
-        q1.title = "UniqueFoo"
-        q1.save()
+        self._set_question_translation(q1, "fr", title="UniqueFoo")
 
         q2 = Question.objects.create(domain=self.domain, active=True, is_mode_practice=True, is_mode_exam=True)
-        q2.set_current_language("fr")
-        q2.title = "Bar"
-        q2.save()
+        self._set_question_translation(q2, "fr", title="Bar")
 
         self.client.force_authenticate(self.domain_owner)
         resp = self.client.get(self._list_url(), {"search": "foo"})
@@ -366,14 +376,10 @@ class QuestionViewSetTests(APITestCase):
 
     def test_list_search_truncates_oversized_query_param(self):
         q1 = Question.objects.create(domain=self.domain, active=True, is_mode_practice=True, is_mode_exam=True)
-        q1.set_current_language("fr")
-        q1.title = "A" * 200
-        q1.save()
+        self._set_question_translation(q1, "fr", title="A" * 200)
 
         q2 = Question.objects.create(domain=self.domain, active=True, is_mode_practice=True, is_mode_exam=True)
-        q2.set_current_language("fr")
-        q2.title = "B" * 200
-        q2.save()
+        self._set_question_translation(q2, "fr", title="B" * 200)
 
         self.client.force_authenticate(self.domain_owner)
         resp = self.client.get(self._list_url(), {"search": ("A" * 200) + ("B" * 5000)})
