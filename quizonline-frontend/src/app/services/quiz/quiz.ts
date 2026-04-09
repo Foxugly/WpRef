@@ -7,6 +7,7 @@ import {
   GenerateFromSubjectsInputRequestDto,
   QuestionApi,
   QuizAnswerApi,
+  QuizAssignmentListDto,
   QuizApi,
   QuizDto,
   QuizListDto,
@@ -26,12 +27,7 @@ export interface QuizSubjectCreatePayload {
   duration: number | null;
 }
 
-export interface QuizTemplateAssignmentSessionDto extends QuizListDto {
-  earned_score: number | null;
-  max_score: number | null;
-  total_answers: number | null;
-  correct_answers: number | null;
-}
+export type QuizTemplateAssignmentSessionDto = QuizAssignmentListDto;
 
 @Injectable({
   providedIn: 'root',
@@ -134,9 +130,9 @@ export class QuizService {
     });
   }
 
-  listTemplateSessions(quizTemplateId: number): Observable<QuizTemplateAssignmentSessionDto[]> {
-    return this.http.get<QuizTemplateAssignmentSessionDto[]>(
-      `${this.apiBaseUrl}/quiz/template/${quizTemplateId}/sessions/`,
+  listTemplateSessions(quizTemplateId: number): Observable<QuizAssignmentListDto[]> {
+    return this.qtApi.quizTemplateSessionsList({qtId: quizTemplateId}).pipe(
+      map((response) => response.results ?? []),
     );
   }
 
