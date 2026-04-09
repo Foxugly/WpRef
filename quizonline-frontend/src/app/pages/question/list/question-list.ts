@@ -1,7 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {forkJoin} from 'rxjs';
 
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
@@ -16,6 +15,7 @@ import {SubjectService} from '../../../services/subject/subject';
 import {UserService} from '../../../services/user/user';
 import {logApiError} from '../../../shared/api/api-errors';
 import {selectTranslation} from '../../../shared/i18n/select-translation';
+import {getQuestionListUiText, QuestionListUiText} from './question-list.i18n';
 
 type QuestionListRow = {
   id: number;
@@ -44,7 +44,7 @@ type QuestionListRow = {
   styleUrl: './question-list.scss'
 })
 export class QuestionList implements OnInit {
-  readonly text = computed(() => this.getText());
+  readonly text = computed<QuestionListUiText>(() => getQuestionListUiText(this.userService.currentLang));
   totalRecords = signal(0);
   rows = signal(10);
   first = signal(0);
@@ -81,9 +81,6 @@ export class QuestionList implements OnInit {
     }));
   });
 
-  readonly filteredRows = computed<QuestionListRow[]>(() => {
-    return this.rowsData();
-  });
 
   ngOnInit() {
     this.currentLang.set(this.userService.currentLang ?? LanguageEnumDto.En);
@@ -157,7 +154,7 @@ export class QuestionList implements OnInit {
       'domain',
       'subjects',
     ];
-    const lines = this.filteredRows().map((row) => [
+    const lines = this.rowsData().map((row) => [
       row.id,
       row.title,
       row.active ? 'true' : 'false',
@@ -247,99 +244,4 @@ export class QuestionList implements OnInit {
     return `"${escaped}"`;
   }
 
-  private getText() {
-    switch (this.userService.currentLang) {
-      case LanguageEnumDto.Fr:
-        return {
-          title: 'Questions',
-          subtitle: 'Recherche, liste et actions',
-          searchPlaceholder: 'Rechercher...',
-          subjectsPlaceholder: 'Filtrer par sujets',
-          newQuestion: 'Nouveau',
-          importQuestions: 'Importer',
-          exportQuestions: 'Exporter',
-          titleCol: 'Titre',
-          activeCol: 'Actif',
-          modesCol: 'Modes',
-          domainsCol: 'Domaines',
-          subjectsCol: 'Sujets',
-          actionsCol: 'Actions',
-          practice: 'Pratique',
-          exam: 'Examen',
-        };
-      case LanguageEnumDto.Nl:
-        return {
-          title: 'Vragen',
-          subtitle: 'Zoeken, lijst en acties',
-          searchPlaceholder: 'Zoeken...',
-          subjectsPlaceholder: 'Filter op onderwerpen',
-          newQuestion: 'Nieuw',
-          importQuestions: 'Importeren',
-          exportQuestions: 'Exporteren',
-          titleCol: 'Titel',
-          activeCol: 'Actief',
-          modesCol: 'Modi',
-          domainsCol: 'Domeinen',
-          subjectsCol: 'Onderwerpen',
-          actionsCol: 'Acties',
-          practice: 'Oefening',
-          exam: 'Examen',
-        };
-      case LanguageEnumDto.It:
-        return {
-          title: 'Domande',
-          subtitle: 'Ricerca, elenco e azioni',
-          searchPlaceholder: 'Cerca...',
-          subjectsPlaceholder: 'Filtra per argomenti',
-          newQuestion: 'Nuovo',
-          importQuestions: 'Importa',
-          exportQuestions: 'Esporta',
-          titleCol: 'Titolo',
-          activeCol: 'Attiva',
-          modesCol: 'Modalita',
-          domainsCol: 'Domini',
-          subjectsCol: 'Argomenti',
-          actionsCol: 'Azioni',
-          practice: 'Pratica',
-          exam: 'Esame',
-        };
-      case LanguageEnumDto.Es:
-        return {
-          title: 'Preguntas',
-          subtitle: 'Busqueda, lista y acciones',
-          searchPlaceholder: 'Buscar...',
-          subjectsPlaceholder: 'Filtrar por temas',
-          newQuestion: 'Nuevo',
-          importQuestions: 'Importar',
-          exportQuestions: 'Exportar',
-          titleCol: 'Titulo',
-          activeCol: 'Activo',
-          modesCol: 'Modos',
-          domainsCol: 'Dominios',
-          subjectsCol: 'Temas',
-          actionsCol: 'Acciones',
-          practice: 'Practica',
-          exam: 'Examen',
-        };
-      case LanguageEnumDto.En:
-      default:
-        return {
-          title: 'Questions',
-          subtitle: 'Search, list and actions',
-          searchPlaceholder: 'Search...',
-          subjectsPlaceholder: 'Filter by subjects',
-          newQuestion: 'New',
-          importQuestions: 'Import',
-          exportQuestions: 'Export',
-          titleCol: 'Title',
-          activeCol: 'Active',
-          modesCol: 'Modes',
-          domainsCol: 'Domains',
-          subjectsCol: 'Subjects',
-          actionsCol: 'Actions',
-          practice: 'Practice',
-          exam: 'Exam',
-        };
-    }
-  }
 }

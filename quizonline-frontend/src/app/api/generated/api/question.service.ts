@@ -11,10 +11,10 @@
 
 import { Inject, Injectable, Optional }                      from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams,
-         HttpResponse, HttpEvent, HttpParameterCodec, HttpContext 
+         HttpResponse, HttpEvent, HttpContext 
         }       from '@angular/common/http';
-import { CustomHttpParameterCodec }                          from '../encoder';
 import { Observable }                                        from 'rxjs';
+import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
 import { ErrorDetailDto } from '../model/error-detail';
@@ -52,6 +52,21 @@ export interface QuestionCreateRequestParams {
 export interface QuestionDestroyRequestParams {
     /** ID de la question (question_id). */
     questionId: number;
+}
+
+export interface QuestionImportStructuredCreateRequestParams {
+    domain: number;
+    /** Object or JSON string (multipart). Dict keyed by language code. */
+    translations?: { [key: string]: LocalizedQuestionTranslationRequestDto; };
+    allowMultipleCorrect?: boolean;
+    active?: boolean;
+    isModePractice?: boolean;
+    isModeExam?: boolean;
+    subjectIds?: Array<number>;
+    /** List or JSON string (multipart). Each item: {is_correct, sort_order, translations{lang:{content}}} */
+    answerOptions?: Array<QuestionAnswerOptionWriteRequestDto>;
+    /** IDs des MediaAsset uploadés au préalable. L\\\&#39;ordre dans la liste définit l\\\&#39;ordre d\\\&#39;affichage des médias. */
+    mediaAssetIds?: Array<number>;
 }
 
 export interface QuestionListRequestParams {
@@ -128,6 +143,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionCreate(requestParameters: QuestionCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionReadDto>;
     public questionCreate(requestParameters: QuestionCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionReadDto>>;
@@ -197,6 +213,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionDestroy(requestParameters: QuestionDestroyRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any>;
     public questionDestroy(requestParameters: QuestionDestroyRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
@@ -251,12 +268,200 @@ export class QuestionApi extends BaseService {
     }
 
     /**
+     * Export les questions accessibles (filtrées par domain&#x3D; si fourni) en JSON structuré.
+     * @endpoint get /api/question/export-structured/
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public questionExportStructuredRetrieve(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionWriteDto>;
+    public questionExportStructuredRetrieve(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionWriteDto>>;
+    public questionExportStructuredRetrieve(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<QuestionWriteDto>>;
+    public questionExportStructuredRetrieve(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (jwtAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('jwtAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api/question/export-structured/`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<QuestionWriteDto>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Importe des questions depuis le format JSON structuré. Accepte un fichier multipart (json_file) ou un body JSON direct.
+     * @endpoint post /api/question/import-structured/
+     * @param requestParameters
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public questionImportStructuredCreate(requestParameters: QuestionImportStructuredCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionWriteDto>;
+    public questionImportStructuredCreate(requestParameters: QuestionImportStructuredCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionWriteDto>>;
+    public questionImportStructuredCreate(requestParameters: QuestionImportStructuredCreateRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<QuestionWriteDto>>;
+    public questionImportStructuredCreate(requestParameters: QuestionImportStructuredCreateRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        const domain = requestParameters?.domain;
+        if (domain === null || domain === undefined) {
+            throw new Error('Required parameter domain was null or undefined when calling questionImportStructuredCreate.');
+        }
+        const translations = requestParameters?.translations;
+        const allowMultipleCorrect = requestParameters?.allowMultipleCorrect;
+        const active = requestParameters?.active;
+        const isModePractice = requestParameters?.isModePractice;
+        const isModeExam = requestParameters?.isModeExam;
+        const subjectIds = requestParameters?.subjectIds;
+        const answerOptions = requestParameters?.answerOptions;
+        const mediaAssetIds = requestParameters?.mediaAssetIds;
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (jwtAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('jwtAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'multipart/form-data',
+            'application/x-www-form-urlencoded',
+            'application/json'
+        ];
+
+        const canConsumeForm = this.canConsumeForm(consumes);
+
+        let localVarFormParams: { append(param: string, value: any): any; };
+        let localVarUseForm = false;
+        let localVarConvertFormParamsToString = false;
+        if (localVarUseForm) {
+            localVarFormParams = new FormData();
+        } else {
+            localVarFormParams = new HttpParams({encoder: this.encoder});
+        }
+
+        if (domain !== undefined) {
+            localVarFormParams = localVarFormParams.append('domain', <any>domain) as any || localVarFormParams;
+        }
+        if (translations !== undefined) {
+            localVarFormParams = localVarFormParams.append('translations', <any>translations) as any || localVarFormParams;
+        }
+        if (allowMultipleCorrect !== undefined) {
+            localVarFormParams = localVarFormParams.append('allow_multiple_correct', <any>allowMultipleCorrect) as any || localVarFormParams;
+        }
+        if (active !== undefined) {
+            localVarFormParams = localVarFormParams.append('active', <any>active) as any || localVarFormParams;
+        }
+        if (isModePractice !== undefined) {
+            localVarFormParams = localVarFormParams.append('is_mode_practice', <any>isModePractice) as any || localVarFormParams;
+        }
+        if (isModeExam !== undefined) {
+            localVarFormParams = localVarFormParams.append('is_mode_exam', <any>isModeExam) as any || localVarFormParams;
+        }
+        if (subjectIds) {
+            if (localVarUseForm) {
+                subjectIds.forEach((element) => {
+                    localVarFormParams = localVarFormParams.append('subject_ids', <any>element) as any || localVarFormParams;
+            })
+            } else {
+                localVarFormParams = localVarFormParams.append('subject_ids', [...subjectIds].join(COLLECTION_FORMATS['csv'])) as any || localVarFormParams;
+            }
+        }
+        if (answerOptions) {
+            if (localVarUseForm) {
+                answerOptions.forEach((element) => {
+                    localVarFormParams = localVarFormParams.append('answer_options', <any>element) as any || localVarFormParams;
+            })
+            } else {
+                localVarFormParams = localVarFormParams.append('answer_options', [...answerOptions].join(COLLECTION_FORMATS['csv'])) as any || localVarFormParams;
+            }
+        }
+        if (mediaAssetIds) {
+            if (localVarUseForm) {
+                mediaAssetIds.forEach((element) => {
+                    localVarFormParams = localVarFormParams.append('media_asset_ids', <any>element) as any || localVarFormParams;
+            })
+            } else {
+                localVarFormParams = localVarFormParams.append('media_asset_ids', [...mediaAssetIds].join(COLLECTION_FORMATS['csv'])) as any || localVarFormParams;
+            }
+        }
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/api/question/import-structured/`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<QuestionWriteDto>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                body: localVarConvertFormParamsToString ? localVarFormParams.toString() : localVarFormParams,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
      * Lister les questions
      * Liste paginée des questions.  Supporte : - &#x60;search&#x60; (filtre title__icontains) 
      * @endpoint get /api/question/
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionList(requestParameters?: QuestionListRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PaginatedQuestionReadListDto>;
     public questionList(requestParameters?: QuestionListRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PaginatedQuestionReadListDto>>;
@@ -271,25 +476,79 @@ export class QuestionApi extends BaseService {
         const search = requestParameters?.search;
         const subjectIds = requestParameters?.subjectIds;
 
-        let localVarQueryParameters = new HttpParams({encoder: this.encoder});
-        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-          <any>active, 'active');
-        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-          <any>domain, 'domain');
-        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-          <any>isModeExam, 'is_mode_exam');
-        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-          <any>isModePractice, 'is_mode_practice');
-        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-          <any>page, 'page');
-        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-          <any>pageSize, 'page_size');
-        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-          <any>search, 'search');
-        if (subjectIds) {
-            localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
-                [...subjectIds].join(COLLECTION_FORMATS['csv']), 'subject_ids');
-        }
+        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'active',
+            <any>active,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'domain',
+            <any>domain,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'is_mode_exam',
+            <any>isModeExam,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'is_mode_practice',
+            <any>isModePractice,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'page',
+            <any>page,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'page_size',
+            <any>pageSize,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'search',
+            <any>search,
+            QueryParamStyle.Form,
+            true,
+        );
+
+
+        localVarQueryParameters = this.addToHttpParams(
+            localVarQueryParameters,
+            'subject_ids',
+            <any>subjectIds,
+            QueryParamStyle.Form,
+            false,
+        );
+
 
         let localVarHeaders = this.defaultHeaders;
 
@@ -324,7 +583,7 @@ export class QuestionApi extends BaseService {
         return this.httpClient.request<PaginatedQuestionReadListDto>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
-                params: localVarQueryParameters,
+                params: localVarQueryParameters.toHttpParams(),
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,
@@ -342,6 +601,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionMediaCreate(requestParameters?: QuestionMediaCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<MediaAssetDto>;
     public questionMediaCreate(requestParameters?: QuestionMediaCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<MediaAssetDto>>;
@@ -430,6 +690,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionMediaExternalCreate(requestParameters: QuestionMediaExternalCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionWriteDto>;
     public questionMediaExternalCreate(requestParameters: QuestionMediaExternalCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionWriteDto>>;
@@ -498,6 +759,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionMediaUploadCreate(requestParameters: QuestionMediaUploadCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionWriteDto>;
     public questionMediaUploadCreate(requestParameters: QuestionMediaUploadCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionWriteDto>>;
@@ -629,6 +891,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionPartialUpdate(requestParameters: QuestionPartialUpdateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionReadDto>;
     public questionPartialUpdate(requestParameters: QuestionPartialUpdateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionReadDto>>;
@@ -701,6 +964,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionRetrieve(requestParameters: QuestionRetrieveRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionReadDto>;
     public questionRetrieve(requestParameters: QuestionRetrieveRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionReadDto>>;
@@ -761,6 +1025,7 @@ export class QuestionApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
+     * @param options additional options
      */
     public questionUpdate(requestParameters: QuestionUpdateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuestionReadDto>;
     public questionUpdate(requestParameters: QuestionUpdateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuestionReadDto>>;

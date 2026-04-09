@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 import hashlib
 
-from django.conf import settings
 from django.db import transaction
-from django.utils import translation as django_translation
+from django.db.models import Count
 
 from domain.models import Domain
 from subject.models import Subject
@@ -124,12 +123,26 @@ def _resolve_subject(subject_data: dict, domain: Domain, user) -> tuple[Subject,
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _sync_answer_options(question: Question, options_data: list[dict]) -> None:
-    existing = {opt.pk: opt for opt in question.answer_options.all()}
-    referenced_ids = set(
-        question.answer_options.filter(quiz_answers__isnull=False)
-        .values_list("pk", flat=True)
-        .distinct()
+    # Fix 6: validate answer options before applying changes
+    active_options = [o for o in options_data if not o.get("DELETE", False)]
+    if len(active_options) < 2:
+        raise StructuredImportError(
+            f"La question {question.pk} doit avoir au moins 2 réponses "
+            f"(reçu : {len(active_options)})."
+        )
+    correct_count = sum(1 for o in active_options if o.get("is_correct", False))
+    if correct_count == 0:
+        raise StructuredImportError(
+            f"La question {question.pk} doit avoir au moins une réponse correcte."
+        )
+
+    # Single query: load all options + flag which are referenced by existing answers
+    all_opts = list(
+        question.answer_options
+        .annotate(_answer_count=Count("quiz_answers", distinct=True))
     )
+    existing = {opt.pk: opt for opt in all_opts}
+    referenced_ids = {opt.pk for opt in all_opts if opt._answer_count > 0}
     kept_ids: set[int] = set()
 
     for opt_data in options_data:
@@ -205,9 +218,15 @@ def import_questions(data: dict, user) -> dict:
 
     for q_data in questions_data:
         real_domain_id = domain_id_map.get(q_data["domain_id"], q_data["domain_id"])
-        real_subject_ids = [
-            subject_id_map.get(sid, sid) for sid in q_data.get("subject_ids", [])
-        ]
+        # Fix 5: reject subject_ids not covered by the file's subjects section
+        raw_subject_ids = q_data.get("subject_ids", [])
+        uncovered = [sid for sid in raw_subject_ids if sid not in subject_id_map]
+        if uncovered:
+            raise StructuredImportError(
+                f"La question {q_data.get('id', '?')} référence des subject_ids {uncovered} "
+                "absents de la section 'subjects' du fichier."
+            )
+        real_subject_ids = [subject_id_map[sid] for sid in raw_subject_ids]
         q_translations = q_data.get("translations", {})
         answer_options_data = q_data.get("answer_options", [])
         export_q_id = q_data.get("id")

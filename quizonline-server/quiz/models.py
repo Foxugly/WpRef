@@ -375,7 +375,7 @@ class Quiz(models.Model):
     def start(self):
         self.active = True
         self.started_at = timezone.now()
-        self.save()
+        self.save(update_fields=["active", "started_at", "ended_at"])
 
     def save(self, *args, **kwargs):
         if self.started_at and not self.ended_at and self.quiz_template.with_duration:

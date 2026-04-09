@@ -813,6 +813,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
           description: Forbidden (admin only)
+  /api/question/export-structured/:
+    get:
+      operationId: question_export_structured_retrieve
+      description: Export les questions accessibles (filtrées par domain= si fourni)
+        en JSON structuré.
+      tags:
+      - question
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionWrite'
+          description: ''
+  /api/question/import-structured/:
+    post:
+      operationId: question_import_structured_create
+      description: |-
+        Importe des questions depuis le format JSON structuré.
+        Accepte un fichier multipart (json_file) ou un body JSON direct.
+      tags:
+      - question
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuestionWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QuestionWriteRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionWriteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionWrite'
+          description: ''
   /api/question/media/:
     post:
       operationId: question_media_create

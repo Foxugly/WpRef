@@ -22,11 +22,15 @@ def accessible_quiz_template_queryset(user):
     if user.is_superuser:
         return queryset
 
+    # Use a subquery instead of a JOIN on the (potentially large) Quiz table
+    assigned_template_ids = (
+        Quiz.objects.filter(user=user).values("quiz_template_id").distinct()
+    )
     return queryset.filter(
         Q(domain__owner=user)
         | Q(domain__staff=user)
         | Q(created_by_id=user.id)
-        | Q(quiz__user=user)
+        | Q(pk__in=assigned_template_ids)
         | Q(is_public=True, domain__isnull=True)
         | Q(is_public=True, domain__owner=user)
         | Q(is_public=True, domain__staff=user)

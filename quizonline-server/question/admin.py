@@ -6,9 +6,9 @@ import json
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms import BaseInlineFormSet
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
 from django.template.response import TemplateResponse
-from django.urls import path, reverse
+from django.urls import path
 from django.utils.translation import gettext_lazy as _
 from import_export.admin import ImportExportMixin
 

@@ -78,6 +78,14 @@ def export_questions(queryset) -> dict:
             "questions": [],
         }
 
+    # Fix 2: validate all questions belong to the same domain
+    domain_ids = {q.domain_id for q in questions}
+    if len(domain_ids) > 1:
+        raise ValueError(
+            "Toutes les questions exportées doivent appartenir au même domaine "
+            f"(domaines trouvés : {sorted(domain_ids)})."
+        )
+
     domain = questions[0].domain
     domain_trans = _domain_translations(domain)
 
@@ -86,14 +94,15 @@ def export_questions(queryset) -> dict:
         for s in q.subjects.all():
             subject_map[s.pk] = s
 
-    subjects_data = [
-        {
+    # Fix 1: compute _subject_translations once per subject
+    subjects_data = []
+    for s in subject_map.values():
+        s_trans = _subject_translations(s)
+        subjects_data.append({
             "id": s.pk,
-            "hash": translations_hash(_subject_translations(s)),
-            "translations": _subject_translations(s),
-        }
-        for s in subject_map.values()
-    ]
+            "hash": translations_hash(s_trans),
+            "translations": s_trans,
+        })
 
     questions_data = []
     for q in questions:
@@ -109,7 +118,8 @@ def export_questions(queryset) -> dict:
         questions_data.append({
             "id": q.pk,
             "domain_id": domain.pk,
-            "subject_ids": sorted(q.subjects.values_list("pk", flat=True)),
+            # Fix 3: use prefetch cache via .all() instead of values_list()
+            "subject_ids": sorted(s.pk for s in q.subjects.all()),
             "active": q.active,
             "allow_multiple_correct": q.allow_multiple_correct,
             "is_mode_practice": q.is_mode_practice,

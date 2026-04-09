@@ -136,7 +136,7 @@ def build_question_resource():
                 raise ValueError(
                     f"Import annulé. Domaine(s) introuvable(s) : {', '.join(sorted(missing))}"
                 )
-        super(type(self), self).before_import(dataset, **kwargs)
+        resources.ModelResource.before_import(self, dataset, **kwargs)
 
     attrs["before_import"] = before_import
 

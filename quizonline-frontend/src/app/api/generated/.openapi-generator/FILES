@@ -125,4 +125,5 @@ model/user-summary.ts
 model/visibility-enum.ts
 param.ts
 provide-api.ts
+query.params.ts
 variables.ts
