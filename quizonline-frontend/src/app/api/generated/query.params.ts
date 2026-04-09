@@ -1,5 +1,5 @@
 import { HttpParams, HttpParameterCodec } from '@angular/common/http';
-import { CustomHttpParameterCodec, IdentityHttpParameterCodec } from './encoder';
+import { CustomHttpParameterCodec } from './encoder';
 
 export enum QueryParamStyle {
     Json,
@@ -21,6 +21,24 @@ export interface ParamOptions {
 interface ParamEntry {
     values: string[];
     options: Required<ParamOptions>;
+}
+
+class IdentityHttpParameterCodec implements HttpParameterCodec {
+    encodeKey(k: string): string {
+        return k;
+    }
+
+    encodeValue(v: string): string {
+        return v;
+    }
+
+    decodeKey(k: string): string {
+        return k;
+    }
+
+    decodeValue(v: string): string {
+        return v;
+    }
 }
 
 export class OpenApiHttpParams {
