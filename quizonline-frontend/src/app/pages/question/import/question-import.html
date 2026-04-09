@@ -62,7 +62,7 @@
       @if (selectedFileName() && hasValidFile()) {
         <div class="validation-box validation-box--success">
           <strong>{{ text().formatValid }}</strong>
-          <p>{{ text().fileValidated(questions().length) }}</p>
+          <p>{{ text().fileValidated(importFile()?.questions?.length ?? 0) }}</p>
         </div>
       } @else if (validationErrors().length) {
         <div class="validation-box validation-box--error">
