@@ -23,12 +23,15 @@ export class IdentityHttpParameterCodec implements HttpParameterCodec {
     encodeKey(k: string): string {
         return k;
     }
+
     encodeValue(v: string): string {
         return v;
     }
+
     decodeKey(k: string): string {
         return k;
     }
+
     decodeValue(v: string): string {
         return v;
     }

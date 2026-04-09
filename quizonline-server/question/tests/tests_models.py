@@ -73,8 +73,9 @@ class QuestionModelsTestCase(TestCase):
 
     def test_question_str_without_translation(self):
         q = Question.objects.create(domain=self.domain)
-        q.translations.all().delete()
-        self.assertIn(str(q), [f"Question#{q.pk}", 'Question FR'])
+        q._parler_meta.root_model.objects.filter(master=q).delete()
+        q = Question.objects.get(pk=q.pk)
+        self.assertEqual(str(q), f"Question#{q.pk}")
 
     # ==========================================================
     # QuestionSubject
