@@ -1,8 +1,9 @@
+import json
 import logging
 
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
-from django.http import QueryDict
+from django.http import HttpResponse, QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
@@ -28,6 +29,8 @@ from config.serializers import (
 from .models import Question, MediaAsset
 from .permissions import IsQuestionDomainManager
 from .querysets import accessible_question_queryset
+from .structured_export import export_questions
+from .structured_import import import_questions, StructuredImportError, StructuredImportPermissionError
 from .serializers import QuestionReadSerializer, QuestionWriteSerializer, MediaAssetSerializer, \
     MediaAssetUploadSerializer, _infer_kind_from_upload, _sha256_file
 
@@ -494,3 +497,63 @@ class QuestionViewSet(MyModelViewSet):
             parser_classes=[JSONParser])
     def media_external(self, request, *args, **kwargs):
         return self.media(request, *args, **kwargs)
+
+    # ── Export / Import structuré ──────────────────────────────────────────────
+
+    @action(detail=False, methods=["get"], url_path="export-structured",
+            permission_classes=[IsQuestionDomainManager])
+    def export_structured(self, request, *args, **kwargs):
+        """
+        Export les questions accessibles (filtrées par domain= si fourni) en JSON structuré.
+        """
+        qs = self.filter_queryset(self.get_queryset())
+        domain_id = request.query_params.get("domain")
+        if domain_id:
+            qs = qs.filter(domain_id=domain_id)
+
+        data = export_questions(qs)
+
+        if data["domain"] is None:
+            return Response({"detail": "Aucune question à exporter."}, status=status.HTTP_204_NO_CONTENT)
+
+        filename = f"questions_export_{data['domain']['id']}.json"
+        content = json.dumps(data, ensure_ascii=False, indent=2)
+        return HttpResponse(
+            content,
+            content_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    @action(detail=False, methods=["post"], url_path="import-structured",
+            parser_classes=[MultiPartParser, FormParser, JSONParser],
+            permission_classes=[IsQuestionDomainManager])
+    def import_structured(self, request, *args, **kwargs):
+        """
+        Importe des questions depuis le format JSON structuré.
+        Accepte un fichier multipart (json_file) ou un body JSON direct.
+        """
+        uploaded = request.FILES.get("json_file")
+        if uploaded:
+            try:
+                data = json.loads(uploaded.read().decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                return Response({"detail": f"Fichier JSON invalide : {exc}"}, status=status.HTTP_400_BAD_REQUEST)
+        elif isinstance(request.data, dict) and "version" in request.data:
+            data = request.data
+        else:
+            return Response(
+                {"detail": "Fournir un fichier 'json_file' ou un body JSON structuré."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = import_questions(data, request.user)
+        except StructuredImportPermissionError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except StructuredImportError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.exception("import_structured: unexpected error")
+            return Response({"detail": f"Erreur inattendue : {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(result, status=status.HTTP_200_OK)

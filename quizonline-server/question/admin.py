@@ -1,13 +1,21 @@
 # question/admin.py
 from __future__ import annotations
 
+import json
+
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms import BaseInlineFormSet
+from django.http import HttpResponse, HttpResponseRedirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils.translation import gettext_lazy as _
 from import_export.admin import ImportExportMixin
 
 from parler.admin import TranslatableAdmin, TranslatableTabularInline
+
+from .structured_export import export_questions
+from .structured_import import import_questions, StructuredImportError, StructuredImportPermissionError
 
 from .models import (
     Question,
@@ -87,6 +95,62 @@ class QuestionSubjectInline(admin.TabularInline):
 @admin.register(Question)
 class QuestionAdmin(ImportExportMixin, TranslatableAdmin):
     resource_classes = [QuestionResource]
+    actions = ["export_structured_json"]
+
+    # ── Export / Import structuré JSON ────────────────────────────────────────
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "structured-import/",
+                self.admin_site.admin_view(self.structured_import_view),
+                name="question_question_structured_import",
+            ),
+        ]
+        return custom + urls
+
+    @admin.action(description="Exporter la sélection (JSON structuré)")
+    def export_structured_json(self, request, queryset):
+        data = export_questions(queryset)
+        if data["domain"] is None:
+            self.message_user(request, "Aucune question sélectionnée.", level=messages.WARNING)
+            return
+        filename = f"questions_export_{data['domain']['id']}.json"
+        content = json.dumps(data, ensure_ascii=False, indent=2)
+        return HttpResponse(
+            content,
+            content_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    def structured_import_view(self, request):
+        context = {
+            **self.admin_site.each_context(request),
+            "result": None,
+            "error": None,
+        }
+        if request.method == "POST":
+            uploaded = request.FILES.get("json_file")
+            if not uploaded:
+                context["error"] = "Aucun fichier fourni."
+            else:
+                try:
+                    data = json.loads(uploaded.read().decode("utf-8"))
+                    result = import_questions(data, request.user)
+                    context["result"] = result
+                except StructuredImportPermissionError as exc:
+                    context["error"] = str(exc)
+                except StructuredImportError as exc:
+                    context["error"] = str(exc)
+                except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                    context["error"] = f"Fichier JSON invalide : {exc}"
+                except Exception as exc:
+                    context["error"] = f"Erreur inattendue : {exc}"
+
+        return TemplateResponse(
+            request, "admin/question/structured_import.html", context
+        )
     list_display = (
         "id",
         "title_any",
