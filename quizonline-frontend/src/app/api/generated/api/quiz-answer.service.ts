@@ -11,10 +11,10 @@
 
 import { Inject, Injectable, Optional }                      from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams,
-         HttpResponse, HttpEvent, HttpContext 
+         HttpResponse, HttpEvent, HttpParameterCodec, HttpContext 
         }       from '@angular/common/http';
+import { CustomHttpParameterCodec }                          from '../encoder';
 import { Observable }                                        from 'rxjs';
-import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
 import { PaginatedQuizQuestionAnswerListDto } from '../model/paginated-quiz-question-answer-list';
@@ -80,7 +80,6 @@ export class QuizAnswerApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public quizAnswerCreate(requestParameters: QuizAnswerCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuizQuestionAnswerDto>;
     public quizAnswerCreate(requestParameters: QuizAnswerCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuizQuestionAnswerDto>>;
@@ -153,7 +152,6 @@ export class QuizAnswerApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public quizAnswerDestroy(requestParameters: QuizAnswerDestroyRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined, context?: HttpContext, transferCache?: boolean}): Observable<any>;
     public quizAnswerDestroy(requestParameters: QuizAnswerDestroyRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined, context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
@@ -216,7 +214,6 @@ export class QuizAnswerApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public quizAnswerList(requestParameters: QuizAnswerListRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PaginatedQuizQuestionAnswerListDto>;
     public quizAnswerList(requestParameters: QuizAnswerListRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PaginatedQuizQuestionAnswerListDto>>;
@@ -228,16 +225,9 @@ export class QuizAnswerApi extends BaseService {
         }
         const page = requestParameters?.page;
 
-        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
-
-        localVarQueryParameters = this.addToHttpParams(
-            localVarQueryParameters,
-            'page',
-            <any>page,
-            QueryParamStyle.Form,
-            true,
-        );
-
+        let localVarQueryParameters = new HttpParams({encoder: this.encoder});
+        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
+          <any>page, 'page');
 
         let localVarHeaders = this.defaultHeaders;
 
@@ -272,7 +262,7 @@ export class QuizAnswerApi extends BaseService {
         return this.httpClient.request<PaginatedQuizQuestionAnswerListDto>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
-                params: localVarQueryParameters.toHttpParams(),
+                params: localVarQueryParameters,
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,
@@ -289,7 +279,6 @@ export class QuizAnswerApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public quizAnswerPartialUpdate(requestParameters: QuizAnswerPartialUpdateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuizQuestionAnswerDto>;
     public quizAnswerPartialUpdate(requestParameters: QuizAnswerPartialUpdateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuizQuestionAnswerDto>>;
@@ -366,7 +355,6 @@ export class QuizAnswerApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public quizAnswerRetrieve(requestParameters: QuizAnswerRetrieveRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuizQuestionAnswerDto>;
     public quizAnswerRetrieve(requestParameters: QuizAnswerRetrieveRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuizQuestionAnswerDto>>;
@@ -430,7 +418,6 @@ export class QuizAnswerApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public quizAnswerUpdate(requestParameters: QuizAnswerUpdateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuizQuestionAnswerDto>;
     public quizAnswerUpdate(requestParameters: QuizAnswerUpdateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuizQuestionAnswerDto>>;

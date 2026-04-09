@@ -11,10 +11,10 @@
 
 import { Inject, Injectable, Optional }                      from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams,
-         HttpResponse, HttpEvent, HttpContext 
+         HttpResponse, HttpEvent, HttpParameterCodec, HttpContext 
         }       from '@angular/common/http';
+import { CustomHttpParameterCodec }                          from '../encoder';
 import { Observable }                                        from 'rxjs';
-import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
 import { CustomUserAdminUpdateRequestDto } from '../model/custom-user-admin-update-request';
@@ -96,7 +96,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userCreate(requestParameters: UserCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<CustomUserReadDto>;
     public userCreate(requestParameters: UserCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<CustomUserReadDto>>;
@@ -169,7 +168,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userList(requestParameters?: UserListRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PaginatedCustomUserReadListDto>;
     public userList(requestParameters?: UserListRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PaginatedCustomUserReadListDto>>;
@@ -177,16 +175,9 @@ export class UserApi extends BaseService {
     public userList(requestParameters?: UserListRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         const page = requestParameters?.page;
 
-        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
-
-        localVarQueryParameters = this.addToHttpParams(
-            localVarQueryParameters,
-            'page',
-            <any>page,
-            QueryParamStyle.Form,
-            true,
-        );
-
+        let localVarQueryParameters = new HttpParams({encoder: this.encoder});
+        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
+          <any>page, 'page');
 
         let localVarHeaders = this.defaultHeaders;
 
@@ -221,7 +212,7 @@ export class UserApi extends BaseService {
         return this.httpClient.request<PaginatedCustomUserReadListDto>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
-                params: localVarQueryParameters.toHttpParams(),
+                params: localVarQueryParameters,
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,
@@ -239,7 +230,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userMeCurrentDomainCreate(requestParameters?: UserMeCurrentDomainCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<CustomUserReadDto>;
     public userMeCurrentDomainCreate(requestParameters?: UserMeCurrentDomainCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<CustomUserReadDto>>;
@@ -309,7 +299,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userMePartialUpdate(requestParameters?: UserMePartialUpdateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<CustomUserReadDto>;
     public userMePartialUpdate(requestParameters?: UserMePartialUpdateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<CustomUserReadDto>>;
@@ -378,7 +367,6 @@ export class UserApi extends BaseService {
      * @endpoint get /api/user/me/
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userMeRetrieve(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<CustomUserReadDto>;
     public userMeRetrieve(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<CustomUserReadDto>>;
@@ -434,7 +422,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userPartialUpdate(requestParameters: UserPartialUpdateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<CustomUserReadDto>;
     public userPartialUpdate(requestParameters: UserPartialUpdateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<CustomUserReadDto>>;
@@ -508,7 +495,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userQuizList(requestParameters: UserQuizListRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PaginatedQuizSimpleListDto>;
     public userQuizList(requestParameters: UserQuizListRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PaginatedQuizSimpleListDto>>;
@@ -520,16 +506,9 @@ export class UserApi extends BaseService {
         }
         const page = requestParameters?.page;
 
-        let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
-
-        localVarQueryParameters = this.addToHttpParams(
-            localVarQueryParameters,
-            'page',
-            <any>page,
-            QueryParamStyle.Form,
-            true,
-        );
-
+        let localVarQueryParameters = new HttpParams({encoder: this.encoder});
+        localVarQueryParameters = this.addToHttpParams(localVarQueryParameters,
+          <any>page, 'page');
 
         let localVarHeaders = this.defaultHeaders;
 
@@ -564,7 +543,7 @@ export class UserApi extends BaseService {
         return this.httpClient.request<PaginatedQuizSimpleListDto>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
-                params: localVarQueryParameters.toHttpParams(),
+                params: localVarQueryParameters,
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,
@@ -581,7 +560,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userRetrieve(requestParameters: UserRetrieveRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<CustomUserReadDto>;
     public userRetrieve(requestParameters: UserRetrieveRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<CustomUserReadDto>>;
@@ -641,7 +619,6 @@ export class UserApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public userUpdate(requestParameters: UserUpdateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<CustomUserReadDto>;
     public userUpdate(requestParameters: UserUpdateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<CustomUserReadDto>>;

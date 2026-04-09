@@ -178,6 +178,21 @@ class QuestionViewSetTests(APITestCase):
         resp = self.client.get(self._list_url())
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
+    def test_list_ignores_empty_subject_ids_query_param(self):
+        visible = Question.objects.create(domain=self.domain, active=True, is_mode_practice=True, is_mode_exam=True)
+        visible.set_current_language("fr")
+        visible.title = "Visible"
+        visible.save()
+
+        self.client.force_authenticate(self.domain_staff)
+        resp = self.client.get(f"{self._list_url()}?domain={self.domain.id}&subject_ids=")
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        items = data["results"] if isinstance(data, dict) and "results" in data else data
+        returned_ids = {item["id"] for item in items}
+        self.assertIn(visible.id, returned_ids)
+
     def test_permissions_list_returns_empty_for_staff_without_linked_domain(self):
         self.client.force_authenticate(self.staff)
         resp = self.client.get(self._list_url())

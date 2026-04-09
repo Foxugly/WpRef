@@ -11,10 +11,10 @@
 
 import { Inject, Injectable, Optional }                      from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams,
-         HttpResponse, HttpEvent, HttpContext 
+         HttpResponse, HttpEvent, HttpParameterCodec, HttpContext 
         }       from '@angular/common/http';
+import { CustomHttpParameterCodec }                          from '../encoder';
 import { Observable }                                        from 'rxjs';
-import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
 import { TranslateBatchRequestRequestDto } from '../model/translate-batch-request-request';
@@ -48,7 +48,6 @@ export class TranslationApi extends BaseService {
      * @param requestParameters
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
-     * @param options additional options
      */
     public translateBatchCreate(requestParameters: TranslateBatchCreateRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<TranslateBatchResponseDto>;
     public translateBatchCreate(requestParameters: TranslateBatchCreateRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<TranslateBatchResponseDto>>;

@@ -330,7 +330,11 @@ class QuestionViewSet(MyModelViewSet):
         )
         qs = self.filter_queryset(self.get_queryset())
         search = (request.query_params.get("search") or "")[:200]
-        subject_ids_raw = request.query_params.getlist("subject_ids")
+        subject_ids_raw = [
+            value.strip()
+            for value in request.query_params.getlist("subject_ids")
+            if str(value).strip()
+        ]
         if not subject_ids_raw:
             csv_subjects = request.query_params.get("subject_ids")
             if csv_subjects:
@@ -341,7 +345,7 @@ class QuestionViewSet(MyModelViewSet):
             try:
                 subject_ids = [int(value) for value in subject_ids_raw]
             except ValueError:
-                raise ValidationError({"subject_ids": "Expected a list of integers."})
+                raise serializers.ValidationError({"subject_ids": "Expected a list of integers."})
             qs = qs.filter(subjects__id__in=subject_ids).distinct()
         page = self.paginate_queryset(qs)
         if page is not None:

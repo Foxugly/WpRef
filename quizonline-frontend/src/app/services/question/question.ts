@@ -128,6 +128,10 @@ export class QuestionService {
     page?: number;
     pageSize?: number;
   }): Observable<PaginatedQuestionReadListDto> {
+    const subjectIds = params?.subjectIds?.length
+      ? params.subjectIds
+      : (params?.subjectId ? [params.subjectId] : undefined);
+
     const requestParams: QuestionListRequestParams = {
       active: params?.active,
       search: params?.search,
@@ -136,7 +140,7 @@ export class QuestionService {
       isModeExam: params?.isModeExam,
       page: params?.page,
       pageSize: params?.pageSize,
-      subjectIds: params?.subjectIds ?? (params?.subjectId ? [params.subjectId] : undefined),
+      subjectIds,
     };
 
     return this.api.questionList(requestParams);
