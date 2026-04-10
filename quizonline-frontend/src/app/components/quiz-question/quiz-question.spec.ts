@@ -41,7 +41,7 @@ describe('QuizQuestion', () => {
           subjects_count: 0,
           questions_count: 0,
           owner: {id: 1, username: 'owner'},
-          staff: [],
+          managers: [],
           members: [],
           created_at: '',
           updated_at: '',
