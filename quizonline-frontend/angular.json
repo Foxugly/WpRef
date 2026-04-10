@@ -88,6 +88,9 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
+            "browsers": [
+              "chromium"
+            ],
             "runner": "vitest",
             "tsConfig": "tsconfig.spec.json",
             "buildTarget": "quizonline-frontend:build:development",
