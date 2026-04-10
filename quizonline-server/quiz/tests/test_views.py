@@ -577,6 +577,24 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("question_id", res.data)
 
+    def test_nested_quizquestion_delete_allows_domain_staff_without_superuser(self):
+        qq = QuizQuestion.objects.create(quiz=self.qt_ok, question=self._make_question("Q_STAFF", [self.subj1]), sort_order=9, weight=1)
+        detail_url = self._rev(
+            "api:quiz-api:quiz-template-question-detail",
+            "quiz-api:quiz-template-question-detail",
+            qt_id=self.qt_ok.id,
+            qq_id=qq.id,
+        )
+
+        self.domain.staff.add(self.staff)
+        self.domain.members.add(self.staff)
+        self._auth(self.staff)
+
+        res = self.client.delete(detail_url)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(QuizQuestion.objects.filter(pk=qq.id).exists())
+
     # ---------------------------------------------------------------------
     # QuizTemplateQuizQuestionViewSet: get_queryset -> 2 retours .none()
     # ---------------------------------------------------------------------

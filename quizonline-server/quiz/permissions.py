@@ -2,7 +2,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 from config.permissions import is_authenticated_user, is_staff_user
 
-from .models import Quiz, QuizAlertThread, QuizQuestionAnswer
+from .models import Quiz, QuizAlertThread, QuizQuestion, QuizQuestionAnswer
 from .access import user_can_edit_template
 
 
@@ -59,4 +59,7 @@ class CanManageQuizTemplate(BasePermission):
         return is_authenticated_user(request.user)
 
     def has_object_permission(self, request, view, obj):
-        return user_can_edit_template(request.user, obj)
+        quiz_template = obj
+        if isinstance(obj, QuizQuestion):
+            quiz_template = obj.quiz
+        return user_can_edit_template(request.user, quiz_template)
