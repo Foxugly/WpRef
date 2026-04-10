@@ -11,10 +11,10 @@ def user_matches_template_domain(user, quiz_template) -> bool:
 
 
 def user_manages_template_domain(user, quiz_template) -> bool:
-    if quiz_template.domain_id is None:
-        return True
     if not user or not getattr(user, "is_authenticated", False):
         return False
+    if quiz_template.domain_id is None:
+        return True
     if getattr(user, "is_superuser", False):
         return True
     return quiz_template.domain_id in manageable_domain_ids(user)

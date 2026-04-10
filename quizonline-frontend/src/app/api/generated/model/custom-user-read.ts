@@ -34,6 +34,7 @@ export interface CustomUserReadDto {
      * Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
      */
     readonly is_active: boolean;
+    readonly nb_domain_max: number;
     current_domain?: number | null;
     readonly current_domain_title: string;
     readonly owned_domain_ids: Array<number>;

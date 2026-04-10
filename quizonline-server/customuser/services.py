@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 
 from core.mailers import send_password_reset_email, send_registration_confirmation_email
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 from .tokens import resolve_user_from_uid, token_is_valid
 
@@ -23,14 +25,22 @@ def request_password_reset(email: str, request) -> None:
     send_password_reset_email(user)
 
 
+def revoke_user_refresh_tokens(user) -> None:
+    outstanding_tokens = OutstandingToken.objects.filter(user=user)
+    for token in outstanding_tokens:
+        BlacklistedToken.objects.get_or_create(token=token)
+
+
 def confirm_password_reset(uid: str, token: str, new_password: str):
     user = resolve_user_from_uid(uid)
     if not token_is_valid(user, token):
         return None
 
-    user.set_password(new_password)
-    user.must_change_password = False
-    user.save(update_fields=["password", "must_change_password"])
+    with transaction.atomic():
+        user.set_password(new_password)
+        user.must_change_password = False
+        user.save(update_fields=["password", "must_change_password"])
+        revoke_user_refresh_tokens(user)
     return user
 
 
@@ -49,7 +59,9 @@ def change_password(user, old_password: str, new_password: str) -> bool:
     if not user.check_password(old_password):
         return False
 
-    user.set_password(new_password)
-    user.must_change_password = False
-    user.save(update_fields=["password", "must_change_password"])
+    with transaction.atomic():
+        user.set_password(new_password)
+        user.must_change_password = False
+        user.save(update_fields=["password", "must_change_password"])
+        revoke_user_refresh_tokens(user)
     return True

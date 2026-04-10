@@ -21,6 +21,7 @@ export interface CustomUserAdminUpdateRequestDto {
      */
     is_active?: boolean;
     password_change_required?: boolean;
+    nb_domain_max?: number;
 }
 
 

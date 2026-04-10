@@ -23,6 +23,7 @@ from quiz.serializers import (
     QuizQuestionReadSerializer,
     QuizSerializer,
     QuizQuestionAnswerWriteSerializer,
+    QuizQuestionAnswerPartialSerializer,
 )
 from rest_framework import serializers
 from rest_framework.test import APIRequestFactory
@@ -787,6 +788,14 @@ class QuizQuestionAnswerWriteSerializerTests(LocalizedTestCase):
         self.assertEqual(a1.id, a2.id)
         self.assertEqual(list(a2.selected_options.values_list("id", flat=True)), [self.o12.id])
 
+    def test_create_rejects_selected_options_from_another_question(self):
+        s = QuizQuestionAnswerWriteSerializer(
+            data={"question_id": self.q1.id, "selected_options": [self.o21.id]},
+            context={"quiz": self.quiz},
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("selected_options", s.errors)
+
     # ---- update()
     def test_update_updates_selected_options_and_ignores_attempt_to_change_question(self):
         ans = QuizQuestionAnswer.objects.create(quiz=self.quiz, quizquestion=self.qq1, question_order=1)
@@ -822,3 +831,27 @@ class QuizQuestionAnswerWriteSerializerTests(LocalizedTestCase):
         self.assertTrue(s.is_valid(), s.errors)
         updated = s.save()
         self.assertEqual(list(updated.selected_options.values_list("id", flat=True)), [self.o11.id])
+
+    def test_update_rejects_selected_options_from_another_question(self):
+        ans = QuizQuestionAnswer.objects.create(quiz=self.quiz, quizquestion=self.qq1, question_order=1)
+
+        s = QuizQuestionAnswerWriteSerializer(
+            instance=ans,
+            data={"selected_options": [self.o21.id]},
+            context={"quiz": self.quiz},
+            partial=True,
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("selected_options", s.errors)
+
+    def test_partial_serializer_rejects_selected_options_from_another_question(self):
+        ans = QuizQuestionAnswer.objects.create(quiz=self.quiz, quizquestion=self.qq1, question_order=1)
+
+        s = QuizQuestionAnswerPartialSerializer(
+            instance=ans,
+            data={"selected_options": [self.o22.id]},
+            context={"quiz": self.quiz},
+            partial=True,
+        )
+        self.assertFalse(s.is_valid())
+        self.assertIn("selected_options", s.errors)

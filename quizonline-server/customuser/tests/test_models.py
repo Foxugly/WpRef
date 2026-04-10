@@ -45,7 +45,7 @@ class CustomUserModelTests(TestCase):
         cls.d_active_staffed.name = "Beta"
         cls.d_active_staffed.description = ""
         cls.d_active_staffed.save()
-        cls.d_active_staffed.staff.add(cls.owner)  # owner user est aussi staff de ce domain
+        cls.d_active_staffed.managers.add(cls.owner)  # owner user est aussi staff de ce domain
 
         cls.d_inactive_owned = Domain.objects.create(owner=cls.owner, active=False)
         cls.d_inactive_owned.allowed_languages.set([cls.lang_fr])
@@ -209,7 +209,7 @@ class CustomUserModelTests(TestCase):
 
     def test_set_current_domain_save_false_does_not_persist(self):
         u = User.objects.create_user(username="u5", password="pass")
-        self.d_active_owned.staff.add(u)
+        self.d_active_owned.managers.add(u)
         u.set_current_domain(None, save=False)
         self.assertIsNone(u.current_domain_id)
         u.set_current_domain(self.d_active_owned, save=False)

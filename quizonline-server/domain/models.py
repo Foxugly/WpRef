@@ -36,7 +36,7 @@ class Domain(AuditMixin, TranslatableModel):
         related_name="owned_domains",
     )
 
-    staff = models.ManyToManyField(
+    managers = models.ManyToManyField(
         User,
         blank=True,
         related_name="managed_domains",
@@ -73,11 +73,11 @@ class Domain(AuditMixin, TranslatableModel):
         self.full_clean()
         super().save(*args, **kwargs)
 
-    def ensure_staff_are_members(self) -> None:
+    def ensure_managers_are_members(self) -> None:
         """
         Business rule:
-        - a domain staff user must always remain linked as a domain member
-        - removing staff status must not remove membership
+        - a domain manager (Domain.managers M2M) must always remain a domain member
+        - removing manager status does not remove membership
         """
-        staff_ids = self.staff.values_list("id", flat=True)
-        self.members.add(*staff_ids)
+        manager_ids = self.managers.values_list("id", flat=True)
+        self.members.add(*manager_ids)

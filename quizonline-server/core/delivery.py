@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from celery.exceptions import Retry as CeleryRetry
 from kombu.exceptions import KombuError
@@ -42,7 +43,8 @@ def process_pending_outbound_emails(*, limit: int = 100) -> int:
                     )
                 except Exception as exc:  # pragma: no cover
                     email.last_error = str(exc)
-                    email.save(update_fields=["last_error"])
+                    email.available_at = timezone.now() + timedelta(minutes=1)
+                    email.save(update_fields=["last_error", "available_at"])
                     logger.warning("email.delivery_failed", extra={"email_id": email.id, "error": str(exc)})
                     continue
 

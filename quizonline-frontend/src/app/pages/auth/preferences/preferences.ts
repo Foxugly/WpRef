@@ -92,14 +92,14 @@ export class Preferences implements OnInit {
 
     return this.visibleDomains().map((domain) => {
       const isOwner = domain.owner?.id === me.id;
-      const isStaff = !isOwner && (domain.staff ?? []).some((user) => user.id === me.id);
-      const isLinkedOnly = !isOwner && !isStaff;
+      const isDomainManager = !isOwner && (domain.managers ?? []).some((user) => user.id === me.id);
+      const isLinkedOnly = !isOwner && !isDomainManager;
       return {
         id: domain.id,
         name: this.getDomainLabel(domain),
         role: isOwner
           ? this.ui.preferences.roleOwner
-          : (isStaff ? this.ui.preferences.roleStaff : this.ui.preferences.roleMember),
+          : (isDomainManager ? this.ui.preferences.roleStaff : this.ui.preferences.roleMember),
         ownerName: domain.owner?.username || '-',
         isCurrent: me.current_domain === domain.id,
         canSetCurrent: me.current_domain !== domain.id,

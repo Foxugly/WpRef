@@ -109,7 +109,7 @@ class Command(BaseCommand):
         upsert_translation(domain, "nl", name="Wetenschappen", description="Seedomein voor Playwright.")
         upsert_translation(domain, "en", name="Science", description="Playwright seed domain.")
         domain.allowed_languages.set(Language.objects.filter(code__in=["fr", "nl"]))
-        domain.staff.set([admin])
+        domain.managers.set([admin])
         domain.members.add(testuser)
 
         admin.current_domain = domain

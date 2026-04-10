@@ -1,0 +1,32 @@
+<div class="page">
+  <div class="card form-card">
+    <div class="card-head">
+      <h2 class="card-title">Delete user</h2>
+      <span class="badge badge--danger">Irreversible</span>
+    </div>
+
+    <p>Delete <strong>{{ username() || ('User #' + userId()) }}</strong>?</p>
+
+    @if (submitError()) {
+      <p-message [text]="submitError()!" severity="error"></p-message>
+    }
+
+    <div class="footer-actions">
+      <p-button
+        (onClick)="cancel()"
+        icon="pi pi-times"
+        label="Cancel"
+        severity="secondary"
+        variant="outlined"
+        type="button">
+      </p-button>
+      <p-button
+        (onClick)="confirmDelete()"
+        icon="pi pi-trash"
+        label="Delete"
+        severity="danger"
+        type="button">
+      </p-button>
+    </div>
+  </div>
+</div>

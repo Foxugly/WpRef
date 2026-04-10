@@ -5,13 +5,13 @@ from types import SimpleNamespace
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from domain.models import Domain
-from domain.permissions import IsDomainOwnerOrStaff
+from domain.permissions import IsDomainOwnerOrManager
 from rest_framework.test import APITestCase, APIRequestFactory
 
 User = get_user_model()
 
 
-class IsDomainOwnerOrStaffTests(APITestCase):
+class IsDomainOwnerOrManagerTests(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.owner = User.objects.create_user(username="owner", password="pass")
@@ -25,11 +25,11 @@ class IsDomainOwnerOrStaffTests(APITestCase):
         cls.other = User.objects.create_user(username="other", password="pass")
 
         cls.domain = Domain.objects.create(owner=cls.owner, active=True)
-        cls.domain.staff.add(cls.staff_member)
+        cls.domain.managers.add(cls.staff_member)
 
     def setUp(self):
         self.factory = APIRequestFactory()
-        self.perm = IsDomainOwnerOrStaff()
+        self.perm = IsDomainOwnerOrManager()
         self.view = SimpleNamespace()  # view factice (non utilisé ici)
 
     def _req_with_user(self, user):

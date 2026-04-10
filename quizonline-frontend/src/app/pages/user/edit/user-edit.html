@@ -1,0 +1,11 @@
+<div class="page">
+  <app-user-admin-form
+    [form]="form"
+    [languageOptions]="languageOptions"
+    [submitError]="submitError()"
+    submitLabel="Save"
+    title="Edit user"
+    (cancel)="cancel()"
+    (submitForm)="save()">
+  </app-user-admin-form>
+</div>

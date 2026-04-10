@@ -1,8 +1,8 @@
 import logging
 
 from drf_spectacular.utils import extend_schema_field
-from django.db import IntegrityError
-from question.models import Question
+from django.db import IntegrityError, transaction
+from question.models import Question, AnswerOption
 from question.serializers import QuestionInQuizQuestionSerializer, QuestionReadSerializer
 from rest_framework import serializers
 from config.serializers import UserSummarySerializer
@@ -673,10 +673,31 @@ class QuizQuestionAnswerWriteSerializer(serializers.ModelSerializer):
         required=False,
         help_text="Ordre de la question dans le template (optionnel)",
     )
+    selected_options = serializers.PrimaryKeyRelatedField(
+        queryset=AnswerOption.objects.all(),
+        many=True,
+        required=False,
+    )
 
     class Meta:
         model = QuizQuestionAnswer
         fields = ["question_id", "question_order", "selected_options"]
+
+    def _validate_selected_options_for_quizquestion(self, selected_options, quizquestion):
+        if selected_options is None:
+            return
+        allowed_option_ids = set(
+            quizquestion.question.answer_options.values_list("id", flat=True)
+        )
+        selected_option_ids = {option.id for option in selected_options}
+        if not selected_option_ids.issubset(allowed_option_ids):
+            raise serializers.ValidationError(
+                {
+                    "selected_options": (
+                        "Toutes les options sélectionnées doivent appartenir à la question répondue."
+                    )
+                }
+            )
 
     def validate(self, attrs):
         quiz = self.context.get("quiz")
@@ -689,6 +710,11 @@ class QuizQuestionAnswerWriteSerializer(serializers.ModelSerializer):
         if self.instance:
             if self.instance.quiz_id != quiz.id:
                 raise serializers.ValidationError("RÃ©ponse hors du quiz courant.")
+            if "selected_options" in attrs:
+                self._validate_selected_options_for_quizquestion(
+                    attrs.get("selected_options"),
+                    self.instance.quizquestion,
+                )
             return attrs
 
         has_qid = attrs.get("question_id") is not None
@@ -738,6 +764,10 @@ class QuizQuestionAnswerWriteSerializer(serializers.ModelSerializer):
             )
 
         qq = qq_by_id or qq_by_order
+        self._validate_selected_options_for_quizquestion(
+            attrs.get("selected_options", []),
+            qq,
+        )
         attrs["quizquestion"] = qq
         attrs["question_order"] = qq.sort_order
         return attrs
@@ -749,17 +779,29 @@ class QuizQuestionAnswerWriteSerializer(serializers.ModelSerializer):
         validated_data.pop("question_id", None)
         qq = validated_data.pop("quizquestion")
 
-        try:
-            instance, _ = QuizQuestionAnswer.objects.update_or_create(
-                quiz=quiz,
-                quizquestion=qq,
-                defaults={
-                    "question_order": qq.sort_order,
-                },
-            )
-        except IntegrityError:
-            instance = QuizQuestionAnswer.objects.get(quiz=quiz, quizquestion=qq)
-        instance.selected_options.set(selected)
+        with transaction.atomic():
+            type(quiz).objects.select_for_update().filter(pk=quiz.pk).exists()
+            try:
+                instance = (
+                    QuizQuestionAnswer.objects.select_for_update()
+                    .get(quiz=quiz, quizquestion=qq)
+                )
+                if instance.question_order != qq.sort_order:
+                    instance.question_order = qq.sort_order
+                    instance.save(update_fields=["question_order"])
+            except QuizQuestionAnswer.DoesNotExist:
+                try:
+                    instance = QuizQuestionAnswer.objects.create(
+                        quiz=quiz,
+                        quizquestion=qq,
+                        question_order=qq.sort_order,
+                    )
+                except IntegrityError:
+                    instance = (
+                        QuizQuestionAnswer.objects.select_for_update()
+                        .get(quiz=quiz, quizquestion=qq)
+                    )
+            instance.selected_options.set(selected)
         return instance
 
     def update(self, instance, validated_data):
@@ -768,23 +810,22 @@ class QuizQuestionAnswerWriteSerializer(serializers.ModelSerializer):
         validated_data.pop("question_order", None)
         validated_data.pop("quizquestion", None)
 
-        if validated_data:
-            for attr, value in validated_data.items():
-                setattr(instance, attr, value)
-            instance.save(update_fields=list(validated_data.keys()))
+        with transaction.atomic():
+            locked_instance = QuizQuestionAnswer.objects.select_for_update().get(pk=instance.pk)
 
-        if selected is not None:
-            instance.selected_options.set(selected)
+            if validated_data:
+                for attr, value in validated_data.items():
+                    setattr(locked_instance, attr, value)
+                locked_instance.save(update_fields=list(validated_data.keys()))
 
-        return instance
+            if selected is not None:
+                locked_instance.selected_options.set(selected)
+
+        return locked_instance
 
 
 class QuizQuestionAnswerPartialSerializer(QuizQuestionAnswerWriteSerializer):
-    selected_options = serializers.PrimaryKeyRelatedField(
-        queryset=QuizQuestionAnswer._meta.get_field("selected_options").remote_field.model.objects.all(),
-        many=True,
-        required=False,
-    )
+    pass
 
 
 class QuizAlertMessageSerializer(RequestUserMixin, serializers.ModelSerializer):

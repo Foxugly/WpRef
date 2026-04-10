@@ -19,7 +19,7 @@ export interface DomainDetailDto {
     readonly allowed_languages: Array<LanguageReadDto>;
     readonly active: boolean;
     readonly owner: UserSummaryDto;
-    readonly staff: Array<UserSummaryDto>;
+    readonly managers: Array<UserSummaryDto>;
     readonly created_at: string;
     readonly updated_at: string;
     readonly subjects: Array<SubjectReadDto>;

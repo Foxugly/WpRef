@@ -23,7 +23,7 @@ class DomainReadSerializer(serializers.ModelSerializer):
     translations = serializers.SerializerMethodField()
     allowed_languages = serializers.SerializerMethodField()
     owner = serializers.SerializerMethodField()
-    staff = serializers.SerializerMethodField()
+    managers = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
     subjects_count = serializers.IntegerField(read_only=True)
     questions_count = serializers.IntegerField(read_only=True)
@@ -38,7 +38,7 @@ class DomainReadSerializer(serializers.ModelSerializer):
             "subjects_count",
             "questions_count",
             "owner",
-            "staff",
+            "managers",
             "members",
             "created_at",
             "updated_at",
@@ -51,8 +51,8 @@ class DomainReadSerializer(serializers.ModelSerializer):
         return {"id": obj.owner_id, "username": obj.owner.username}
 
     @extend_schema_field(UserSummarySerializer(many=True))
-    def get_staff(self, obj: Domain) -> list[dict[str, int | str]]:
-        return [{"id": u.id, "username": u.username} for u in obj.staff.all()]
+    def get_managers(self, obj: Domain) -> list[dict[str, int | str]]:
+        return [{"id": u.id, "username": u.username} for u in obj.managers.all()]
 
     @extend_schema_field(UserSummarySerializer(many=True))
     def get_members(self, obj: Domain) -> list[dict[str, int | str]]:
@@ -86,7 +86,8 @@ class DomainWriteSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True,
     )
-    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=True)
+    managers = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=True)
+    owner = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
 
     class Meta:
         model = Domain
@@ -94,7 +95,8 @@ class DomainWriteSerializer(serializers.ModelSerializer):
             "translations",
             "allowed_languages",
             "active",
-            "staff",
+            "owner",
+            "managers",
         ]
         # read_only_fields = ["id"]
 
@@ -134,6 +136,20 @@ class DomainWriteSerializer(serializers.ModelSerializer):
 
         return unique_languages
 
+    def _validate_owner_change(self, attrs: dict) -> None:
+        request = self.context.get("request")
+        instance = getattr(self, "instance", None)
+        new_owner = attrs.get("owner")
+
+        if instance is None or new_owner is None or new_owner.pk == instance.owner_id:
+            return
+
+        user = getattr(request, "user", None)
+        if not user or user.is_anonymous:
+            raise serializers.ValidationError({"owner": "Authentication is required."})
+        if not user.is_superuser and instance.owner_id != user.id:
+            raise serializers.ValidationError({"owner": "Only the superuser or the current owner can change the owner."})
+
     def validate(self, attrs):
         translations = attrs.get("translations")
         if not translations:
@@ -155,6 +171,8 @@ class DomainWriteSerializer(serializers.ModelSerializer):
                     {"translations": f"Traductions manquantes pour: {sorted(missing)}"}
                 )
 
+        self._validate_owner_change(attrs)
+
         return attrs
 
     # ---------------------------
@@ -166,11 +184,12 @@ class DomainWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"owner": "Owner is required."})
         translations = validated_data.pop("translations")
         langs = validated_data.pop("allowed_languages", [])
-        staff = validated_data.pop("staff", [])
+        validated_data.pop("owner", None)
+        managers = validated_data.pop("managers", [])
         with transaction.atomic():
             domain = Domain.objects.create(owner=request.user, **validated_data)
-            if staff:
-                domain.staff.set(staff)
+            if managers:
+                domain.managers.set(managers)
             if langs:
                 domain.allowed_languages.set(langs)
             self._apply_translations(domain, translations)
@@ -179,15 +198,19 @@ class DomainWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         translations = validated_data.pop("translations", None)
         langs = validated_data.pop("allowed_languages", None)
-        staff = validated_data.pop("staff", None)
+        new_owner = validated_data.pop("owner", None)
+        managers = validated_data.pop("managers", None)
 
         with transaction.atomic():
+            if new_owner is not None:
+                instance.owner = new_owner
+                instance.members.add(new_owner)
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()
 
-            if staff is not None:
-                instance.staff.set(staff)
+            if managers is not None:
+                instance.managers.set(managers)
 
             if langs is not None:
                 instance.allowed_languages.set(langs)
@@ -205,10 +228,13 @@ class DomainPartialSerializer(DomainWriteSerializer):
         write_only=True,
         required=False,
     )
-    staff = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
+    managers = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
+    owner = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     active = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
+        self._validate_owner_change(attrs)
+
         # Si on touche aux translations => règles complètes
         if "translations" in attrs:
             return super().validate(attrs)
@@ -232,7 +258,7 @@ class DomainDetailSerializer(DomainReadSerializer):
             "allowed_languages",
             "active",
             "owner",
-            "staff",
+            "managers",
             "created_at",
             "updated_at",
             "subjects"
@@ -251,10 +277,10 @@ class DomainDetailSerializer(DomainReadSerializer):
 
 class DomainMemberRoleSerializer(serializers.Serializer):
     user_id = serializers.IntegerField(min_value=1)
-    domain_staff = serializers.BooleanField(required=False)
+    is_domain_manager = serializers.BooleanField(required=False)
     is_active = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
-        if "domain_staff" not in attrs and "is_active" not in attrs:
+        if "is_domain_manager" not in attrs and "is_active" not in attrs:
             raise serializers.ValidationError("At least one field must be provided.")
         return attrs

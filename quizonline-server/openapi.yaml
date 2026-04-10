@@ -2626,6 +2626,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/CustomUserRead'
           description: ''
+    delete:
+      operationId: user_destroy
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - user
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/user/{user_id}/quizzes/:
     get:
       operationId: user_quiz_list
@@ -2998,6 +3014,9 @@ components:
             this instead of deleting accounts.
         password_change_required:
           type: boolean
+        nb_domain_max:
+          type: integer
+          minimum: 0
     CustomUserCreateRequest:
       type: object
       properties:
@@ -3025,6 +3044,9 @@ components:
           minLength: 1
         language:
           $ref: '#/components/schemas/LanguageEnum'
+        nb_domain_max:
+          type: integer
+          minimum: 0
         managed_domain_ids:
           type: array
           items:
@@ -3081,6 +3103,9 @@ components:
           title: Active
           description: Designates whether this user should be treated as active. Unselect
             this instead of deleting accounts.
+        nb_domain_max:
+          type: integer
+          readOnly: true
         current_domain:
           type: integer
           nullable: true
@@ -3105,6 +3130,7 @@ components:
       - is_staff
       - is_superuser
       - managed_domain_ids
+      - nb_domain_max
       - owned_domain_ids
       - password_change_required
       - username
@@ -3130,7 +3156,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/UserSummary'
           readOnly: true
-        staff:
+        managers:
           type: array
           items:
             $ref: '#/components/schemas/UserSummary'
@@ -3153,8 +3179,8 @@ components:
       - allowed_languages
       - created_at
       - id
+      - managers
       - owner
-      - staff
       - subjects
       - translations
       - updated_at
@@ -3196,7 +3222,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/UserSummary'
           readOnly: true
-        staff:
+        managers:
           type: array
           items:
             $ref: '#/components/schemas/UserSummary'
@@ -3219,10 +3245,10 @@ components:
       - allowed_languages
       - created_at
       - id
+      - managers
       - members
       - owner
       - questions_count
-      - staff
       - subjects_count
       - translations
       - updated_at
@@ -3235,13 +3261,15 @@ components:
             type: integer
         active:
           type: boolean
-        staff:
+        owner:
+          type: integer
+        managers:
           type: array
           items:
             type: integer
       required:
       - allowed_languages
-      - staff
+      - managers
     DomainWriteRequest:
       type: object
       properties:
@@ -3256,13 +3284,15 @@ components:
             type: integer
         active:
           type: boolean
-        staff:
+        owner:
+          type: integer
+        managers:
           type: array
           items:
             type: integer
       required:
       - allowed_languages
-      - staff
+      - managers
       - translations
     EmailConfirmationRequest:
       type: object
@@ -3961,6 +3991,9 @@ components:
             this instead of deleting accounts.
         password_change_required:
           type: boolean
+        nb_domain_max:
+          type: integer
+          minimum: 0
     PatchedCustomUserProfileUpdateRequest:
       type: object
       properties:
@@ -3996,7 +4029,9 @@ components:
             type: integer
         active:
           type: boolean
-        staff:
+        owner:
+          type: integer
+        managers:
           type: array
           items:
             type: integer

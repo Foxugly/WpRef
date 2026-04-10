@@ -33,7 +33,7 @@ export const staffGuard: CanActivateFn = (_route, state) => {
       }
 
       return domains.some(
-        (domain) => domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id),
+        (domain) => domain.owner?.id === me.id || (domain.managers ?? []).some((user) => user.id === me.id),
       )
         ? true
         : router.createUrlTree(['/quiz/list']);

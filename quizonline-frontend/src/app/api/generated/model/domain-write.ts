@@ -12,6 +12,7 @@
 export interface DomainWriteDto { 
     allowed_languages: Array<number>;
     active?: boolean;
-    staff: Array<number>;
+    owner?: number;
+    managers: Array<number>;
 }
 

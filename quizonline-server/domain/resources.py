@@ -31,9 +31,9 @@ def build_domain_resource():
             column_name="allowed_languages",
             widget=ManyToManyWidget(Language, field="code", separator="|"),
         ),
-        "staff": fields.Field(
-            attribute="staff",
-            column_name="staff",
+        "managers": fields.Field(
+            attribute="managers",
+            column_name="managers",
             widget=ManyToManyWidget(User, field="username", separator="|"),
         ),
         "members": fields.Field(
@@ -60,7 +60,7 @@ def build_domain_resource():
             "active",
             "owner",
             "allowed_languages",
-            "staff",
+            "managers",
             "members",
             "created_at",
             "updated_at",

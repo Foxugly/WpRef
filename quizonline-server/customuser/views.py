@@ -17,7 +17,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from config.tools import ErrorDetailSerializer
 
-from .permissions import IsSelf, IsSelfOrStaffOrSuperuser
+from .permissions import IsSelf, IsSelfOrStaffOrSuperuser, IsSuperuserOnly
 from .services import (
     change_password,
     confirm_email,
@@ -39,6 +39,7 @@ from .serializers import (
     SetCurrentDomainSerializer,
 )
 from .throttling import PasswordResetRateThrottle
+from .throttling import PasswordResetConfirmRateThrottle, EmailConfirmRateThrottle
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -117,6 +118,7 @@ class CustomUserViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     lookup_field = "pk"
@@ -141,6 +143,8 @@ class CustomUserViewSet(
             return [AllowAny()]
         if self.action == "list":
             return [IsAdminUser()]
+        if self.action == "destroy":
+            return [IsAuthenticated(), IsSuperuserOnly()]
         if self.action in ("me", "set_current_domain"):
             return [IsSelf()]
         return [IsSelfOrStaffOrSuperuser()]
@@ -287,6 +291,7 @@ class PasswordResetRequestView(GenericAPIView):
 class PasswordResetConfirmView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = PasswordResetConfirmSerializer
+    throttle_classes = [PasswordResetConfirmRateThrottle]
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -358,6 +363,7 @@ class PasswordChangeView(GenericAPIView):
 class EmailConfirmView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = EmailConfirmationSerializer
+    throttle_classes = [EmailConfirmRateThrottle]
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)

@@ -93,7 +93,7 @@ export class TopMenuComponent implements OnInit {
       return false;
     }
 
-    return currentDomain.owner?.id === me.id || (currentDomain.staff ?? []).some((user) => user.id === me.id);
+    return currentDomain.owner?.id === me.id || (currentDomain.managers ?? []).some((user) => user.id === me.id);
   }
 
   get canAccessDomainsMenu(): boolean {
@@ -106,7 +106,7 @@ export class TopMenuComponent implements OnInit {
     }
 
     return this.visibleDomains().some(
-      (domain) => domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id),
+      (domain) => domain.owner?.id === me.id || (domain.managers ?? []).some((user) => user.id === me.id),
     );
   }
 
@@ -144,6 +144,13 @@ export class TopMenuComponent implements OnInit {
       );
     }
 
+    if (this.currentUser?.is_superuser) {
+      items.unshift({
+        label: 'Users',
+        link: ROUTES.user.list(),
+      });
+    }
+
     items.push({
       label: this.ui.topmenu.about,
       link: ['/about'],
@@ -160,10 +167,10 @@ export class TopMenuComponent implements OnInit {
 
     const owned = this.visibleDomains().filter((domain) => domain.owner?.id === me.id);
     const staffed = this.visibleDomains().filter(
-      (domain) => domain.owner?.id !== me.id && (domain.staff ?? []).some((user) => user.id === me.id),
+      (domain) => domain.owner?.id !== me.id && (domain.managers ?? []).some((user) => user.id === me.id),
     );
     const linked = this.visibleDomains().filter(
-      (domain) => domain.owner?.id !== me.id && !(domain.staff ?? []).some((user) => user.id === me.id),
+      (domain) => domain.owner?.id !== me.id && !(domain.managers ?? []).some((user) => user.id === me.id),
     );
 
     return [

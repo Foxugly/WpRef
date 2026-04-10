@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-from config.permissions import is_authenticated_user, is_staff_user
+from config.permissions import is_authenticated_user, is_django_admin
 
 from .models import Quiz, QuizAlertThread, QuizQuestion, QuizQuestionAnswer
 from .access import user_can_delete_template, user_can_edit_template, user_can_manage_template_assignments
@@ -10,12 +10,12 @@ class IsStaffOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
-        return is_staff_user(request.user)
+        return is_django_admin(request.user)
 
 
 class IsStaffOrSuperuser(BasePermission):
     def has_permission(self, request, view):
-        return is_staff_user(request.user)
+        return is_django_admin(request.user)
 
 
 class IsOwnerOrStaff(BasePermission):
@@ -26,7 +26,7 @@ class IsOwnerOrStaff(BasePermission):
         user = request.user
         if not is_authenticated_user(user):
             return False
-        if is_staff_user(user):
+        if is_django_admin(user):
             return True
         if isinstance(obj, Quiz):
             if user_can_manage_template_assignments(user, obj.quiz_template):
@@ -48,7 +48,7 @@ class IsQuizAlertParticipant(BasePermission):
         user = request.user
         if not is_authenticated_user(user):
             return False
-        if is_staff_user(user):
+        if is_django_admin(user):
             return True
         if isinstance(obj, QuizAlertThread):
             return obj.is_participant(user)

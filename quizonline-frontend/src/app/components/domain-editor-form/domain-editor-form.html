@@ -97,6 +97,7 @@
       <label class="meta-label" for="owner">{{ ui().domainForm.owner }}</label>
       <div class="meta-value widget-center">
         <p-select
+          [disabled]="ownerReadonly()"
           [filter]="true"
           [options]="ownerOptions()"
           [showClear]="!ownerReadonly()"
@@ -113,7 +114,7 @@
     </div>
 
     <div class="meta-item meta-item--full">
-      <label class="meta-label" for="staff">{{ ui().domainForm.staff }}</label>
+      <label class="meta-label" for="managers">{{ ui().domainForm.staff }}</label>
       <div class="meta-value widget-center">
         <p-picklist
           (onMoveAllToSource)="onStaffChange()"

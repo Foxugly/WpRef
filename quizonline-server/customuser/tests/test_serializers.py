@@ -49,6 +49,7 @@ class CustomUserReadSerializerTests(TestCase):
                 "is_staff",
                 "is_superuser",
                 "is_active",
+                "nb_domain_max",
                 "current_domain",
                 "current_domain_title",
                 "owned_domain_ids",
@@ -69,6 +70,7 @@ class CustomUserReadSerializerTests(TestCase):
         self.assertTrue(serializer.get_fields()["is_staff"].read_only)
         self.assertTrue(serializer.get_fields()["is_superuser"].read_only)
         self.assertTrue(serializer.get_fields()["is_active"].read_only)
+        self.assertTrue(serializer.get_fields()["nb_domain_max"].read_only)
 
 
 class CustomUserCreateSerializerTests(TestCase):

@@ -35,7 +35,7 @@ import {
 type UserOption = { label: string; value: number };
 type DomainUserRef = UserSummaryDto;
 type DomainWritePayload = DomainWriteRequestDto & {
-  owner: number | null;
+  owner?: number;
   translations: DomainTranslations;
 };
 
@@ -74,9 +74,10 @@ export class DomainEdit implements OnInit {
 
   // users for owner/staff
   ownerOptions = signal<UserOption[]>([]);
-  staffOptions = signal<UserOption[]>([]);
+  managersOptions = signal<UserOption[]>([]);
   availableStaff = signal<UserOption[]>([]);
   selectedStaff = signal<UserOption[]>([]);
+  canEditOwner = signal(false);
 
   // tabs (code-based)
   tabCodes = signal<LangCode[]>([]);
@@ -109,7 +110,7 @@ export class DomainEdit implements OnInit {
   form = this.fb.group({
     active: new FormControl<boolean>(true, {nonNullable: true}),
     owner: new FormControl<number | null>(null),
-    staff: new FormControl<number[]>([], {nonNullable: true}),
+    managers: new FormControl<number[]>([], {nonNullable: true}),
 
     allowed_language_codes: new FormControl<LangCode[]>([], {
       nonNullable: true,
@@ -171,6 +172,10 @@ export class DomainEdit implements OnInit {
         }
 
         this.domain.set(domain);
+        const me = this.userService.currentUser();
+        this.canEditOwner.set(
+          !!me && (me.is_superuser || domain.owner?.id === me.id),
+        );
 
         // 2) Set global active languages
         const activeLangs = (languages ?? []).filter(l => l.active);
@@ -182,7 +187,7 @@ export class DomainEdit implements OnInit {
           .map(u => ({label: u.username, value: u.id}));
 
         this.ownerOptions.set(opts);
-        this.staffOptions.set(opts);
+        this.managersOptions.set(opts);
 
         this.patchMetaFromDto(domain);
         this.recomputePickList();
@@ -234,7 +239,7 @@ export class DomainEdit implements OnInit {
       });
 
     // Staff -> sync picklist if form.staff changes
-    this.form.controls.staff.valueChanges
+    this.form.controls.managers.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.recomputePickList());
   }
@@ -254,7 +259,7 @@ export class DomainEdit implements OnInit {
     const fixedIds =
       typeof meId === 'number' && !ids.includes(meId) ? [...ids, meId] : ids;
 
-    const current = this.form.controls.staff.value ?? [];
+    const current = this.form.controls.managers.value ?? [];
     const currentSet = new Set(current);
     const fixedSet = new Set(fixedIds);
 
@@ -263,8 +268,8 @@ export class DomainEdit implements OnInit {
       [...currentSet].every(v => fixedSet.has(v));
 
     if (!same) {
-      this.form.controls.staff.setValue(fixedIds);
-      this.form.controls.staff.markAsDirty();
+      this.form.controls.managers.setValue(fixedIds);
+      this.form.controls.managers.markAsDirty();
     }
   }
 
@@ -348,14 +353,14 @@ export class DomainEdit implements OnInit {
   private patchMetaFromDto(dto: DomainDetailDto): void {
     const ownerId = getUserId(dto.owner);
 
-    const staffIds = (dto.staff ?? [])
+    const managerIds = (dto.managers ?? [])
       .map((userRef) => getUserId(userRef))
       .filter((id): id is number => id !== null);
 
     this.form.patchValue({
       active: dto.active ?? true,
       owner: ownerId,
-      staff: staffIds,
+      managers: managerIds,
     });
   }
 
@@ -374,6 +379,7 @@ export class DomainEdit implements OnInit {
   private buildPayload(): DomainWritePayload {
     const codes = this.form.controls.allowed_language_codes.value ?? [];
     const idMap = this.langIdByCode();
+    const owner = this.form.controls.owner.value;
 
     const allowed_languages = codes
       .map(c => idMap[String(c)])
@@ -383,10 +389,10 @@ export class DomainEdit implements OnInit {
 
     return {
       active: this.form.controls.active.value,
-      owner: this.form.controls.owner.value,
-      staff: this.form.controls.staff.value,
+      managers: this.form.controls.managers.value,
       allowed_languages,
       translations,
+      ...(typeof owner === 'number' ? { owner } : {}),
     };
   }
 
@@ -394,9 +400,9 @@ export class DomainEdit implements OnInit {
     const meId = this.userService.currentUser()?.id;
     if (typeof meId !== 'number') return null;
 
-    const current = this.form.controls.staff.value ?? [];
+    const current = this.form.controls.managers.value ?? [];
     if (!current.includes(meId)) {
-      this.form.controls.staff.setValue([...current, meId], {emitEvent});
+      this.form.controls.managers.setValue([...current, meId], {emitEvent});
     }
     return meId;
   }
@@ -404,8 +410,8 @@ export class DomainEdit implements OnInit {
   private recomputePickList(): void {
     this.ensureMeInStaff(false);
 
-    const all = this.staffOptions();
-    const selectedIds = new Set(this.form.controls.staff.value ?? []);
+    const all = this.managersOptions();
+    const selectedIds = new Set(this.form.controls.managers.value ?? []);
 
     this.selectedStaff.set(all.filter(o => selectedIds.has(o.value)));
     this.availableStaff.set(all.filter(o => !selectedIds.has(o.value)));

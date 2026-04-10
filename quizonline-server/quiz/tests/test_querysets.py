@@ -57,7 +57,7 @@ class QuizQuerysetsTests(TestCase):
         )
         Quiz.objects.create(quiz_template=self.private_assigned, user=self.user, active=False)
         self.domain.members.add(self.user)
-        self.domain.staff.add(self.domain_staff)
+        self.domain.managers.add(self.domain_staff)
 
     def tearDown(self):
         translation.deactivate_all()

@@ -33,7 +33,7 @@ import {getEditorUiText} from '../../../shared/i18n/editor-ui-text';
 
 type UserOption = { label: string; value: number };
 type DomainWritePayload = DomainWriteRequestDto & {
-  owner: number | null;
+  owner?: number;
   translations: DomainTranslations;
 };
 
@@ -57,7 +57,7 @@ export class DomainCreate implements OnInit {
   translating = signal(false);
 
   languages = signal<LanguageReadDto[]>([]);
-  staffOptions = signal<UserOption[]>([]);
+  managersOptions = signal<UserOption[]>([]);
 
   availableStaff = signal<UserOption[]>([]);
   selectedStaff = signal<UserOption[]>([]);
@@ -87,7 +87,7 @@ export class DomainCreate implements OnInit {
   form = this.fb.group({
     active: new FormControl<boolean>(true, {nonNullable: true}),
     owner: new FormControl<number | null>(null),
-    staff: new FormControl<number[]>([], {nonNullable: true}),
+    managers: new FormControl<number[]>([], {nonNullable: true}),
 
     allowed_language_codes: new FormControl<LangCode[]>([], {
       nonNullable: true,
@@ -141,7 +141,7 @@ export class DomainCreate implements OnInit {
             .filter(u => typeof u.id === 'number')
             .map(u => ({label: u.username, value: u.id}));
 
-          this.staffOptions.set(opts);
+          this.managersOptions.set(opts);
           this.ownerOptions.set(opts);
 
           //  3) Owner
@@ -201,7 +201,7 @@ export class DomainCreate implements OnInit {
       });
 
     // Staff -> recompute picklist
-    this.form.controls.staff.valueChanges
+    this.form.controls.managers.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.recomputePickList());
 
@@ -222,7 +222,7 @@ export class DomainCreate implements OnInit {
     const fixedIds =
       typeof meId === 'number' && !ids.includes(meId) ? [...ids, meId] : ids;
 
-    const current = this.form.controls.staff.value ?? [];
+    const current = this.form.controls.managers.value ?? [];
     const currentSet = new Set(current);
     const fixedSet = new Set(fixedIds);
 
@@ -231,8 +231,8 @@ export class DomainCreate implements OnInit {
       [...currentSet].every(v => fixedSet.has(v));
 
     if (!same) {
-      this.form.controls.staff.setValue(fixedIds);
-      this.form.controls.staff.markAsDirty();
+      this.form.controls.managers.setValue(fixedIds);
+      this.form.controls.managers.markAsDirty();
     }
   }
 
@@ -318,6 +318,7 @@ export class DomainCreate implements OnInit {
   private buildDto(): DomainWritePayload {
     const codes = this.form.controls.allowed_language_codes.value ?? [];
     const idMap = this.langIdByCode();
+    const owner = this.form.controls.owner.value;
 
     const allowed_languages = codes
       .map(c => idMap[String(c)])
@@ -326,10 +327,10 @@ export class DomainCreate implements OnInit {
     const translations = buildLocalizedTextRecord(this.translationsGroup()) as DomainTranslations;
     return {
       active: this.form.controls.active.value ?? true,
-      owner: this.form.controls.owner.value ?? null,
-      staff: this.form.controls.staff.value ?? [],
+      managers: this.form.controls.managers.value ?? [],
       allowed_languages,
       translations,
+      ...(typeof owner === 'number' ? { owner } : {}),
     };
   }
 
@@ -341,14 +342,14 @@ export class DomainCreate implements OnInit {
     // sécurité : ensure current user in staff
     const meId = this.userService.currentUser()?.id;
     if (typeof meId === 'number') {
-      const current = this.form.controls.staff.value ?? [];
+      const current = this.form.controls.managers.value ?? [];
       if (!current.includes(meId)) {
-        this.form.controls.staff.setValue([...current, meId], {emitEvent: false});
+        this.form.controls.managers.setValue([...current, meId], {emitEvent: false});
       }
     }
 
-    const all = this.staffOptions();
-    const selectedIds = new Set(this.form.controls.staff.value ?? []);
+    const all = this.managersOptions();
+    const selectedIds = new Set(this.form.controls.managers.value ?? []);
 
     this.selectedStaff.set(all.filter(o => selectedIds.has(o.value)));
     this.availableStaff.set(all.filter(o => !selectedIds.has(o.value)));
@@ -361,9 +362,9 @@ export class DomainCreate implements OnInit {
     if (typeof id === 'number') {
       this.form.controls.owner.setValue(id);
       this.form.controls.owner.disable({emitEvent: false}); // readonly
-      const current = this.form.controls.staff.value ?? [];
+      const current = this.form.controls.managers.value ?? [];
       if (!current.includes(id)) {
-        this.form.controls.staff.setValue([...current, id], {emitEvent: false});
+        this.form.controls.managers.setValue([...current, id], {emitEvent: false});
       }
     }
 

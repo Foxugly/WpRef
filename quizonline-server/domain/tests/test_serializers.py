@@ -36,7 +36,7 @@ class DomainSerializersTestCase(TestCase):
 
         cls.domain = Domain.objects.create(owner=cls.owner, active=True)
         cls.domain.allowed_languages.set([cls.lang_fr, cls.lang_nl, cls.lang_en_inactive])
-        cls.domain.staff.set([cls.staff1, cls.staff2])
+        cls.domain.managers.set([cls.staff1, cls.staff2])
         cls.domain.members.set([cls.staff1, cls.staff2, cls.member1])
 
         # Parler translations
@@ -65,7 +65,7 @@ class DomainSerializersTestCase(TestCase):
             "allowed_languages",
             "active",
             "owner",
-            "staff",
+            "managers",
             "members",
             "created_at",
             "updated_at",
@@ -82,7 +82,7 @@ class DomainSerializersTestCase(TestCase):
         self.assertEqual(data["owner"]["id"], self.owner.id)
         self.assertEqual(data["owner"]["username"], self.owner.username)
 
-        staff_usernames = {u["username"] for u in data["staff"]}
+        staff_usernames = {u["username"] for u in data["managers"]}
         self.assertSetEqual(staff_usernames, {self.staff1.username, self.staff2.username})
 
         member_usernames = {u["username"] for u in data["members"]}
@@ -110,7 +110,7 @@ class DomainSerializersTestCase(TestCase):
         payload = {
             "allowed_languages": [self.lang_fr.id],
             "active": True,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
         request = self.factory.post("/", payload, format="json")
         request.user = self.owner
@@ -124,7 +124,7 @@ class DomainSerializersTestCase(TestCase):
             "allowed_languages": [self.lang_fr.id],
             "translations": {"xx": {"name": "X", "description": ""}},
             "active": True,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
         request = self.factory.post("/", payload, format="json")
         request.user = self.owner
@@ -138,7 +138,7 @@ class DomainSerializersTestCase(TestCase):
             "allowed_languages": [self.lang_fr.id, self.lang_nl.id],
             "translations": {"fr": {"name": "FR", "description": ""}},  # missing nl
             "active": True,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
         request = self.factory.post("/", payload, format="json")
         request.user = self.owner
@@ -152,7 +152,7 @@ class DomainSerializersTestCase(TestCase):
             "allowed_languages": [],
             "translations": {"fr": {"name": "FR", "description": ""}},
             "active": True,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
         request = self.factory.post("/", payload, format="json")
         request.user = self.owner
@@ -169,7 +169,7 @@ class DomainSerializersTestCase(TestCase):
                 "nl": {"name": "NL", "description": ""},
             },
             "active": True,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
         request = self.factory.post("/", payload, format="json")
         request.user = self.owner
@@ -191,7 +191,7 @@ class DomainSerializersTestCase(TestCase):
                 "nl": {"name": "New NL", "description": "D NL"},
             },
             "active": True,
-            "staff": [self.staff1.id, self.staff2.id],
+            "managers": [self.staff1.id, self.staff2.id],
         }
         request = self.factory.post("/", payload, format="json")
         request.user = self.owner
@@ -202,7 +202,7 @@ class DomainSerializersTestCase(TestCase):
 
         self.assertEqual(obj.owner_id, self.owner.id)
         self.assertTrue(obj.active)
-        self.assertEqual(obj.staff.count(), 2)
+        self.assertEqual(obj.managers.count(), 2)
         self.assertEqual(obj.members.count(), 2)
         self.assertEqual(obj.allowed_languages.count(), 2)
 
@@ -219,7 +219,7 @@ class DomainSerializersTestCase(TestCase):
             "allowed_languages": [self.lang_fr.id],
             "translations": {"fr": {"name": "Updated FR", "description": "Updated"}},
             "active": False,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
         request = self.factory.put("/", payload, format="json")
         request.user = self.owner
@@ -230,7 +230,7 @@ class DomainSerializersTestCase(TestCase):
 
         self.assertFalse(obj.active)
         self.assertEqual(list(obj.allowed_languages.values_list("code", flat=True)), ["fr"])
-        self.assertEqual(list(obj.staff.values_list("username", flat=True)), ["staff1"])
+        self.assertEqual(list(obj.managers.values_list("username", flat=True)), ["staff1"])
         self.assertEqual(set(obj.members.values_list("username", flat=True)), {"staff1", "staff2", "member1"})
 
         obj.set_current_language("fr")
@@ -242,7 +242,7 @@ class DomainSerializersTestCase(TestCase):
             "allowed_languages": [self.lang_fr.id],
             "translations": {"fr": {"name": "Updated FR", "description": "Updated"}},
             "active": False,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
         request = self.factory.put("/", payload, format="json")
         request.user = self.owner
@@ -280,7 +280,7 @@ class DomainSerializersTestCase(TestCase):
             "allowed_languages": [self.lang_fr.id],
             "translations": {"fr": {"name": "FR", "description": ""}},
             "active": True,
-            "staff": [self.staff1.id],
+            "managers": [self.staff1.id],
         }
 
         request = self.factory.post("/", payload, format="json")
@@ -345,6 +345,26 @@ class DomainSerializersTestCase(TestCase):
         s = DomainPartialSerializer(instance=self.domain, data=payload, partial=True, context={"request": request})
         self.assertFalse(s.is_valid())
         self.assertIn("translations", s.errors)
+
+    def test_domain_partial_serializer_owner_can_change_owner(self):
+        payload = {"owner": self.staff1.id}
+        request = self.factory.patch("/", payload, format="json")
+        request.user = self.owner
+
+        s = DomainPartialSerializer(instance=self.domain, data=payload, partial=True, context={"request": request})
+        self.assertTrue(s.is_valid(), s.errors)
+        obj = s.save()
+
+        self.assertEqual(obj.owner_id, self.staff1.id)
+
+    def test_domain_partial_serializer_manager_cannot_change_owner(self):
+        payload = {"owner": self.staff2.id}
+        request = self.factory.patch("/", payload, format="json")
+        request.user = self.staff1
+
+        s = DomainPartialSerializer(instance=self.domain, data=payload, partial=True, context={"request": request})
+        self.assertFalse(s.is_valid())
+        self.assertIn("owner", s.errors)
 
     # -------------------------
     # DomainDetailSerializer

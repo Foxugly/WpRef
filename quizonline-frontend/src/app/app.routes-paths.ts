@@ -36,6 +36,12 @@ export let ROUTES = {
     delete: (domain_id: number) => ['/domain', domain_id, 'delete'] as const,
     list: () => ['/domain/list'] as const,
   },
+  user: {
+    add: () => ['/user/add'] as const,
+    edit: (userId: number) => ['/user', userId, 'edit'] as const,
+    delete: (userId: number) => ['/user', userId, 'delete'] as const,
+    list: () => ['/user/list'] as const,
+  },
   quiz: {
     add: () => ['/quiz/add'] as const,
     quick: () => ['/quiz/quick'] as const,

@@ -44,6 +44,7 @@ class CustomUserReadSerializer(serializers.ModelSerializer):
             "is_superuser",
             "is_staff",
             "is_active",
+            "nb_domain_max",
             "current_domain",
             "current_domain_title",
             "owned_domain_ids",
@@ -57,6 +58,7 @@ class CustomUserReadSerializer(serializers.ModelSerializer):
             "is_staff",
             "is_superuser",
             "is_active",
+            "nb_domain_max",
         ]
 
     def get_current_domain_title(self, obj) -> str:
@@ -76,11 +78,12 @@ class CustomUserReadSerializer(serializers.ModelSerializer):
         return self._related_ids(obj, "owned_domains")
 
     def get_managed_domain_ids(self, obj) -> List[int]:
-        return self._related_ids(obj, "linked_domains")
+        return self._related_ids(obj, "managed_domains")
 
 
 class CustomUserCreateSerializer(StrictFieldsModelSerializer):
     password = serializers.CharField(write_only=True)
+    nb_domain_max = serializers.IntegerField(min_value=0, required=False)
     managed_domain_ids = serializers.ListField(
         child=serializers.IntegerField(min_value=1),
         required=False,
@@ -90,7 +93,16 @@ class CustomUserCreateSerializer(StrictFieldsModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "email", "first_name", "last_name", "password", "language", "managed_domain_ids"]
+        fields = [
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "password",
+            "language",
+            "nb_domain_max",
+            "managed_domain_ids",
+        ]
 
     def validate_password(self, value: str) -> str:
         validate_password(value)
@@ -108,10 +120,16 @@ class CustomUserCreateSerializer(StrictFieldsModelSerializer):
         return domain_ids
 
     def create(self, validated_data):
+        request = self.context.get("request")
+        nb_domain_max = validated_data.pop("nb_domain_max", None)
         managed_domain_ids = validated_data.pop("managed_domain_ids", [])
         password = validated_data.pop("password")
         user = User(**validated_data)
         user.email_confirmed = False
+        if nb_domain_max is not None:
+            if not request or not getattr(getattr(request, "user", None), "is_superuser", False):
+                raise serializers.ValidationError({"nb_domain_max": "Only superusers can set this field."})
+            user.nb_domain_max = nb_domain_max
         user.set_password(password)
         user.save()
         if managed_domain_ids:
@@ -160,6 +178,7 @@ class CustomUserProfileUpdateSerializer(StrictFieldsModelSerializer):
 class CustomUserAdminUpdateSerializer(StrictFieldsModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     password_change_required = serializers.BooleanField(required=False, source="must_change_password")
+    nb_domain_max = serializers.IntegerField(min_value=0, required=False)
 
     class Meta:
         model = User
@@ -171,6 +190,7 @@ class CustomUserAdminUpdateSerializer(StrictFieldsModelSerializer):
             "password",
             "is_active",
             "password_change_required",
+            "nb_domain_max",
         ]
 
     def validate_password(self, value: str) -> str:
@@ -178,11 +198,18 @@ class CustomUserAdminUpdateSerializer(StrictFieldsModelSerializer):
         return value
 
     def update(self, instance, validated_data):
+        request = self.context.get("request")
         password = validated_data.pop("password", None)
+        nb_domain_max = validated_data.pop("nb_domain_max", None)
         update_fields = []
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
             update_fields.append(attr)
+        if nb_domain_max is not None:
+            if not request or not getattr(getattr(request, "user", None), "is_superuser", False):
+                raise serializers.ValidationError({"nb_domain_max": "Only superusers can modify this field."})
+            instance.nb_domain_max = nb_domain_max
+            update_fields.append("nb_domain_max")
         if password:
             instance.set_password(password)
             instance.must_change_password = True

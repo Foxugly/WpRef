@@ -13,7 +13,12 @@ from language.models import Language
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from customuser.throttling import PasswordResetRateThrottle, TokenObtainRateThrottle
+from customuser.throttling import (
+    EmailConfirmRateThrottle,
+    PasswordResetConfirmRateThrottle,
+    PasswordResetRateThrottle,
+    TokenObtainRateThrottle,
+)
 
 User = get_user_model()
 
@@ -168,6 +173,32 @@ class UserViewsTests(APITestCase):
         self.u1.refresh_from_db()
         self.assertTrue(self.u1.check_password("BrandNewPass123!"))
         self.assertFalse(self.u1.is_active)
+
+    def test_only_superuser_can_change_nb_domain_max(self):
+        url = self.USER_DETAIL_URL(self.u1.id)
+
+        self.client.force_authenticate(user=self.staff)
+        res = self.client.patch(url, {"nb_domain_max": 5}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.client.force_authenticate(user=self.superuser)
+        res = self.client.patch(url, {"nb_domain_max": 5}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        self.u1.refresh_from_db()
+        self.assertEqual(self.u1.nb_domain_max, 5)
+
+    def test_user_destroy_requires_superuser(self):
+        url = self.USER_DETAIL_URL(self.u2.id)
+
+        self.client.force_authenticate(user=self.staff)
+        res = self.client.delete(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(user=self.superuser)
+        res = self.client.delete(url)
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=self.u2.pk).exists())
 
     def test_user_quiz_list_forbidden_for_other_non_staff(self):
         self.client.force_authenticate(user=self.u2)
@@ -353,6 +384,45 @@ class UserViewsTests(APITestCase):
                 self.assertEqual(res.status_code, status.HTTP_200_OK)
 
             res = self.client.post(self.PASSWORD_RESET_REQUEST_URL, {"email": "u1@example.com"}, format="json")
+
+        self.assertEqual(res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_password_reset_confirm_is_rate_limited(self):
+        with patch.object(PasswordResetConfirmRateThrottle, "rate", "2/hour", create=True), patch(
+            "customuser.services.resolve_user_from_uid",
+            return_value=self.u1,
+        ), patch("customuser.services.token_is_valid", return_value=False):
+            for _ in range(2):
+                res = self.client.post(
+                    self.PASSWORD_RESET_CONFIRM_URL,
+                    {"uid": "encoded", "token": "bad", "new_password1": "NewPass123!Aa", "new_password2": "NewPass123!Aa"},
+                    format="json",
+                )
+                self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+            res = self.client.post(
+                self.PASSWORD_RESET_CONFIRM_URL,
+                {"uid": "encoded", "token": "bad", "new_password1": "NewPass123!Aa", "new_password2": "NewPass123!Aa"},
+                format="json",
+            )
+
+        self.assertEqual(res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_email_confirm_is_rate_limited(self):
+        with patch.object(EmailConfirmRateThrottle, "rate", "2/hour", create=True):
+            for _ in range(2):
+                res = self.client.post(
+                    self.EMAIL_CONFIRM_URL,
+                    {"uid": "bad", "token": "bad"},
+                    format="json",
+                )
+                self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+            res = self.client.post(
+                self.EMAIL_CONFIRM_URL,
+                {"uid": "bad", "token": "bad"},
+                format="json",
+            )
 
         self.assertEqual(res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 

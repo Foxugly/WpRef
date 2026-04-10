@@ -12,6 +12,7 @@ class CustomUser(AbstractUser):
                                 default=getattr(settings, "LANGUAGE_CODE", "en"))
     email_confirmed = models.BooleanField(default=False)
     must_change_password = models.BooleanField(default=False)
+    nb_domain_max = models.PositiveIntegerField(default=0)
 
     current_domain = models.ForeignKey(
         "domain.Domain",
@@ -56,10 +57,11 @@ class CustomUser(AbstractUser):
     def can_manage_domain(self, domain) -> bool:
         """
         Retourne True si l'utilisateur peut "gérer" un Domain:
-        - superuser => True
-        - staff global => True (optionnel mais souvent souhaité)
+        - superuser Django (is_superuser) => True
         - owner du domain => True
-        - membre de Domain.staff => True
+        - manager du domaine (Domain.managers M2M, related_name="managed_domains") => True
+
+        Note: is_staff Django seul ne suffit pas — seul is_superuser bypasse toutes les vérifications.
         """
         if domain is None:
             return False
@@ -71,7 +73,7 @@ class CustomUser(AbstractUser):
         if getattr(domain, "owner_id", None) == self.id:
             return True
 
-        # Grâce à Domain.staff.related_name="managed_domains"
+        # Grâce à Domain.managers.related_name="managed_domains"
         # => self.managed_domains est disponible
         prefetched = getattr(self, "_prefetched_objects_cache", {})
         if "managed_domains" in prefetched:
@@ -93,7 +95,7 @@ class CustomUser(AbstractUser):
 
         if self.is_superuser:
             return qs.distinct()
-        return qs.filter(Q(owner=self) | Q(staff=self)).distinct()
+        return qs.filter(Q(owner=self) | Q(managers=self)).distinct()
 
     def get_visible_domains(self, *, active_only: bool = True) -> QuerySet:
         """
@@ -108,7 +110,7 @@ class CustomUser(AbstractUser):
 
         if self.is_superuser:
             return qs.distinct()
-        return qs.filter(Q(owner=self) | Q(staff=self) | Q(members=self)).distinct()
+        return qs.filter(Q(owner=self) | Q(managers=self) | Q(members=self)).distinct()
 
     def set_current_domain(self, domain, *, allow_none: bool = True, save: bool = True) -> None:
         """

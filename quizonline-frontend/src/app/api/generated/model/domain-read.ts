@@ -20,7 +20,7 @@ export interface DomainReadDto {
     readonly subjects_count: number;
     readonly questions_count: number;
     readonly owner: UserSummaryDto;
-    readonly staff: Array<UserSummaryDto>;
+    readonly managers: Array<UserSummaryDto>;
     readonly members: Array<UserSummaryDto>;
     readonly created_at: string;
     readonly updated_at: string;

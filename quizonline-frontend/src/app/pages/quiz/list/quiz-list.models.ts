@@ -21,7 +21,7 @@ export type QuizTemplateListItem = QuizTemplateDto & {
 export interface AssignableRecipient {
   id: number;
   username: string;
-  role: 'owner' | 'staff' | 'member';
+  role: 'owner' | 'manager' | 'member';
 }
 
 export interface QuizListToolbarState {

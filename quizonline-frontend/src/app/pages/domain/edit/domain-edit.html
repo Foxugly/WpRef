@@ -32,7 +32,7 @@
       [langCodeOptions]="langCodeOptions()"
       [ownerOptions]="ownerOptions()"
       [ownerPlaceholder]="ui().domainForm.owner"
-      [ownerReadonly]="false"
+      [ownerReadonly]="!canEditOwner()"
       [selectedStaff]="selectedStaff()"
       [submitError]="submitError()"
       [submitLabel]="ui().common.save"
@@ -40,7 +40,7 @@
       [titleLabel]="ui().domainForm.titleLabel"
       [translating]="translating()"
       (cancel)="goList()"
-      (staffPickListChange)="onStaffPickListChange()"
+      (managersPickListChange)="onStaffPickListChange()"
       (submitForm)="save()"
       (tabValueChange)="onTabValueChange($event)"
       (translateClick)="translateFrom($event)">

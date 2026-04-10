@@ -813,27 +813,36 @@ class QuizViewSet(MyModelViewSet):
             validate_target_user_domain(qt, target_user)
 
         if qt.mode == QuizTemplate.MODE_EXAM:
-            existing_exam_quiz = (
-                Quiz.objects
-                .filter(quiz_template=qt, user=target_user)
-                .order_by("-created_at", "-id")
-                .first()
-            )
-            if existing_exam_quiz is not None:
-                if existing_exam_quiz.started_at or existing_exam_quiz.ended_at:
-                    return Response(
-                        {"detail": "Ce quiz a deja ete commence."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                serializer = self.get_serializer(existing_exam_quiz)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+            with transaction.atomic():
+                qt = QuizTemplate.objects.select_for_update().get(pk=qt.pk)
+                existing_exam_quiz = (
+                    Quiz.objects.select_for_update()
+                    .filter(quiz_template=qt, user=target_user)
+                    .order_by("-created_at", "-id")
+                    .first()
+                )
+                if existing_exam_quiz is not None:
+                    if existing_exam_quiz.started_at or existing_exam_quiz.ended_at:
+                        return Response(
+                            {"detail": "Ce quiz a deja ete commence."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    serializer = self.get_serializer(existing_exam_quiz)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
 
-        quiz = Quiz.objects.create(
-            domain_id=qt.domain_id,
-            quiz_template=qt,
-            user=target_user,
-            active=False,
-        )
+                quiz = Quiz.objects.create(
+                    domain_id=qt.domain_id,
+                    quiz_template=qt,
+                    user=target_user,
+                    active=False,
+                )
+        else:
+            quiz = Quiz.objects.create(
+                domain_id=qt.domain_id,
+                quiz_template=qt,
+                user=target_user,
+                active=False,
+            )
         if target_user.id != request.user.id:
             notify_quiz_assigned_on_commit(quiz, assigned_by=request.user)
         logger.debug("create: created quiz_id=%s user_id=%s qt_id=%s", quiz.id, request.user.id,

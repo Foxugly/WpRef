@@ -8,7 +8,9 @@ from django.conf import settings
 from django.db import OperationalError as DjangoOperationalError
 from django.test import TestCase
 from django.core import mail
+from django.utils import timezone
 
+from core.delivery import process_pending_outbound_emails
 from core.mailers import send_password_reset_email, send_quiz_assignment_email
 from core.models import OutboundEmail
 from customuser.models import CustomUser
@@ -157,3 +159,21 @@ class CoreMailerTests(TestCase):
         outbound = OutboundEmail.objects.get(recipients=["mail-user-retry-lock@example.com"])
         self.assertIsNone(outbound.sent_at)
         self.assertEqual(len(mail.outbox), 0)
+
+    @patch("core.delivery.send_mail", side_effect=RuntimeError("smtp down"))
+    def test_process_pending_outbound_emails_defers_failed_email_instead_of_retry_looping(self, send_mail_mock):
+        outbound = OutboundEmail.objects.create(
+            subject="Hello",
+            body="Body",
+            recipients=["fail@example.com"],
+        )
+
+        sent = process_pending_outbound_emails(limit=100)
+
+        self.assertEqual(sent, 0)
+        self.assertEqual(send_mail_mock.call_count, 1)
+        outbound.refresh_from_db()
+        self.assertEqual(outbound.attempts, 1)
+        self.assertIsNone(outbound.sent_at)
+        self.assertEqual(outbound.last_error, "smtp down")
+        self.assertGreater(outbound.available_at, timezone.now())

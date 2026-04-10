@@ -14,6 +14,7 @@ export interface DomainWriteRequestDto {
     translations: { [key: string]: LocalizedNameDescriptionTranslationRequestDto; };
     allowed_languages: Array<number>;
     active?: boolean;
-    staff: Array<number>;
+    owner?: number;
+    managers: Array<number>;
 }
 

@@ -285,8 +285,8 @@ export class QuizListPage implements OnInit {
     };
 
     addRecipient(domain.owner, 'owner');
-    for (const staffUser of domain.staff ?? []) {
-      addRecipient(staffUser, 'staff');
+    for (const managerUser of domain.managers ?? []) {
+      addRecipient(managerUser, 'manager');
     }
     for (const member of domain.members ?? []) {
       addRecipient(member, 'member');
@@ -303,7 +303,7 @@ export class QuizListPage implements OnInit {
     if (me.is_superuser) {
       return true;
     }
-    return domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id);
+    return domain.owner?.id === me.id || (domain.managers ?? []).some((user) => user.id === me.id);
   }
 
   private normalize(value: string | null | undefined): string {

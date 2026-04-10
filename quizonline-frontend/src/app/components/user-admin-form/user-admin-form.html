@@ -1,0 +1,97 @@
+<form (ngSubmit)="submit()" [formGroup]="form()" class="card form-card">
+  <div class="card-head">
+    <h2 class="card-title">{{ title() }}</h2>
+    <span class="badge">Superuser</span>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item">
+      <label class="meta-label" for="username">Username</label>
+      <div class="meta-value">
+        <input formControlName="username" id="username" pInputText />
+      </div>
+    </div>
+
+    <div class="meta-item">
+      <label class="meta-label" for="language">Language</label>
+      <div class="meta-value">
+        <p-select
+          [options]="languageOptions()"
+          formControlName="language"
+          id="language"
+          optionLabel="label"
+          optionValue="value">
+        </p-select>
+      </div>
+    </div>
+
+    <div class="meta-item">
+      <label class="meta-label" for="email">Email</label>
+      <div class="meta-value">
+        <input formControlName="email" id="email" pInputText type="email" />
+      </div>
+    </div>
+
+    <div class="meta-item">
+      <label class="meta-label" for="nb_domain_max">Nb domain max</label>
+      <div class="meta-value">
+        <p-inputnumber [min]="0" formControlName="nb_domain_max" inputId="nb_domain_max"></p-inputnumber>
+      </div>
+    </div>
+
+    <div class="meta-item">
+      <label class="meta-label" for="first_name">First name</label>
+      <div class="meta-value">
+        <input formControlName="first_name" id="first_name" pInputText />
+      </div>
+    </div>
+
+    <div class="meta-item">
+      <label class="meta-label" for="last_name">Last name</label>
+      <div class="meta-value">
+        <input formControlName="last_name" id="last_name" pInputText />
+      </div>
+    </div>
+
+    @if (showPassword()) {
+      <div class="meta-item meta-item--full">
+        <label class="meta-label" for="password">Password</label>
+        <div class="meta-value">
+          <p-password [feedback]="false" formControlName="password" inputId="password" styleClass="w-full"></p-password>
+        </div>
+      </div>
+    }
+
+    @if (showFlags()) {
+      <div class="meta-item">
+        <label class="meta-label" for="is_active">Active</label>
+        <div class="meta-value widget-center">
+          <p-toggleswitch formControlName="is_active" inputId="is_active"></p-toggleswitch>
+        </div>
+      </div>
+
+      <div class="meta-item">
+        <label class="meta-label" for="password_change_required">Password change required</label>
+        <div class="meta-value widget-center">
+          <p-toggleswitch formControlName="password_change_required" inputId="password_change_required"></p-toggleswitch>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (submitError()) {
+    <p-message [text]="submitError()!" severity="error"></p-message>
+  }
+
+  <div class="footer-actions">
+    <p-button
+      (onClick)="onCancel()"
+      icon="pi pi-times"
+      label="Cancel"
+      severity="secondary"
+      variant="outlined"
+      type="button">
+    </p-button>
+    <p-button icon="pi pi-save" [label]="submitLabel()" type="submit"></p-button>
+  </div>
+</form>

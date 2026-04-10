@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from config.tools import MyModelViewSet
 
 from .models import Domain
-from .permissions import IsDomainOwnerOrStaff
+from .permissions import IsDomainOwnerOrManager
 from .serializers import (
     DomainReadSerializer,
     DomainWriteSerializer,
@@ -175,7 +175,7 @@ class DomainViewSet(MyModelViewSet):
             return [AllowAny()]
         if self.action == "available_for_linking":
             return [AllowAny()]
-        return [IsAuthenticated(), IsDomainOwnerOrStaff()]
+        return [IsAuthenticated(), IsDomainOwnerOrManager()]
 
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
@@ -197,7 +197,7 @@ class DomainViewSet(MyModelViewSet):
                 questions_count=Count("questions", filter=Q(questions__active=True), distinct=True),
             )
             .select_related("owner")
-            .prefetch_related("staff", "members", "allowed_languages", "translations")
+            .prefetch_related("managers", "members", "allowed_languages", "translations")
             .order_by("id")
         )
         user = self.request.user
@@ -205,12 +205,12 @@ class DomainViewSet(MyModelViewSet):
             return qs.filter(active=True)
         if user.is_superuser:
             return qs
-        return qs.filter(Q(owner=user) | Q(staff=user) | Q(members=user)).distinct()
+        return qs.filter(Q(owner=user) | Q(managers=user) | Q(members=user)).distinct()
 
     def perform_create(self, serializer):
         domain = serializer.save(created_by=self.request.user, updated_by=self.request.user)
         if self.request.user and not self.request.user.is_anonymous:
-            domain.staff.add(self.request.user)
+            domain.managers.add(self.request.user)
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
@@ -258,7 +258,7 @@ class DomainViewSet(MyModelViewSet):
         queryset = (
             Domain.objects.filter(active=True)
             .select_related("owner")
-            .prefetch_related("staff", "members", "allowed_languages", "translations")
+            .prefetch_related("managers", "members", "allowed_languages", "translations")
             .order_by("id")
         )
         serializer = DomainReadSerializer(queryset, many=True, context=self.get_serializer_context())
@@ -285,16 +285,16 @@ class DomainViewSet(MyModelViewSet):
                 target.is_active = serializer.validated_data["is_active"]
                 update_fields.append("is_active")
 
-            if "domain_staff" in serializer.validated_data:
-                make_staff = serializer.validated_data["domain_staff"]
-                if make_staff:
-                    domain.staff.add(target)
+            if "is_domain_manager" in serializer.validated_data:
+                make_manager = serializer.validated_data["is_domain_manager"]
+                if make_manager:
+                    domain.managers.add(target)
                     domain.members.add(target)
                     if request.user.is_superuser and not target.is_staff:
                         target.is_staff = True
                         update_fields.append("is_staff")
                 else:
-                    domain.staff.remove(target)
+                    domain.managers.remove(target)
                     if (
                         request.user.is_superuser
                         and target.is_staff
@@ -307,17 +307,17 @@ class DomainViewSet(MyModelViewSet):
             if update_fields:
                 target.save(update_fields=update_fields)
 
-        if "domain_staff" in serializer.validated_data:
-            is_domain_staff = serializer.validated_data["domain_staff"]
+        if "is_domain_manager" in serializer.validated_data:
+            is_domain_manager = serializer.validated_data["is_domain_manager"]
         else:
-            is_domain_staff = domain.staff.filter(pk=target.pk).exists()
+            is_domain_manager = domain.managers.filter(pk=target.pk).exists()
         return Response(
             {
                 "id": target.id,
                 "username": target.username,
                 "is_active": target.is_active,
                 "is_staff": target.is_staff,
-                "domain_staff": is_domain_staff,
+                "is_domain_manager": is_domain_manager,
             },
             status=status.HTTP_200_OK,
         )

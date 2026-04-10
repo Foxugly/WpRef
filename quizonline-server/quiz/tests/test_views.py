@@ -214,7 +214,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertIn(res.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
 
     def test_quiztemplate_list_as_user_filters_can_answer(self):
-        self.domain.staff.add(self.u1)
+        self.domain.managers.add(self.u1)
         self._auth(self.u1)
         res = self.client.get(self.qt_list_url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -643,7 +643,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
             qq_id=qq.id,
         )
 
-        self.domain.staff.add(self.staff)
+        self.domain.managers.add(self.staff)
         self.domain.members.add(self.staff)
         self._auth(self.staff)
 
@@ -855,6 +855,61 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["id"], existing.id)
         self.assertEqual(Quiz.objects.filter(quiz_template=exam_qt, user=self.u1).count(), 1)
+
+    def test_quiz_create_exam_returns_400_when_existing_exam_started(self):
+        exam_qt = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_EXAM_STARTED",
+            mode=QuizTemplate.MODE_EXAM,
+            description="",
+            max_questions=10,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=True,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+        )
+        Quiz.objects.create(
+            domain=self.domain,
+            quiz_template=exam_qt,
+            user=self.u1,
+            active=True,
+            started_at=timezone.now(),
+        )
+        self.domain.members.add(self.u1)
+
+        self._auth(self.admin)
+        res = self.client.post(
+            self.quiz_list_url,
+            {"quiz_template_id": exam_qt.id, "user_id": self.u1.id},
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Quiz.objects.filter(quiz_template=exam_qt, user=self.u1).count(), 1)
+
+    def test_answer_create_rejects_option_from_another_question(self):
+        quiz = self._create_quiz(self.qt_ok, self.u1, active=True, started_at=timezone.now())
+        self._auth(self.u1)
+
+        foreign_option = self.qq2.question.answer_options.filter(is_correct=True).first()
+        self.assertIsNotNone(foreign_option)
+
+        res = self.client.post(
+            self._answers_list_url(quiz),
+            {
+                "question_order": 1,
+                "selected_options": [foreign_option.id],
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("selected_options", res.data)
 
     def test_quiztemplate_retrieve_private_template_forbidden_if_not_assigned(self):
         private_qt = QuizTemplate.objects.create(
@@ -1560,7 +1615,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
             quiz_id=quiz.id,
         )
 
-        self.domain.staff.add(self.staff)
+        self.domain.managers.add(self.staff)
         self.domain.members.add(self.staff)
         self._auth(self.staff)
 
@@ -1576,7 +1631,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
             quiz_id=quiz.id,
         )
 
-        self.domain.staff.add(self.staff)
+        self.domain.managers.add(self.staff)
         self.domain.members.add(self.staff)
         self._auth(self.staff)
 

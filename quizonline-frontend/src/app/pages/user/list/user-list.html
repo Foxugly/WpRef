@@ -1,0 +1,88 @@
+<div class="page">
+  <div class="header-line header-line--grid">
+    <div class="header-spacer"></div>
+
+    <div class="header-center">
+      <h1 class="title">Users</h1>
+      <p class="subtitle muted">Superuser CRUD</p>
+    </div>
+
+    <div class="header-actions"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title"></h2>
+
+      <div class="card-actions">
+        <input
+          pInputText
+          placeholder="Search..."
+          [ngModel]="q()"
+          (ngModelChange)="q.set($event)"
+        />
+
+        <p-button
+          (onClick)="goNew()"
+          icon="pi pi-plus"
+          label="New"
+          severity="primary"
+          type="button">
+        </p-button>
+      </div>
+    </div>
+
+    <p-table
+      [paginator]="rowsData().length > rows"
+      [rows]="rows"
+      [rowsPerPageOptions]="[5, 10, 20, 50]"
+      [value]="rowsData()"
+      showGridlines
+      size="small"
+      sortMode="single"
+      stripedRows
+      styleClass="table"
+    >
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="id">ID <p-sortIcon field="id"></p-sortIcon></th>
+          <th pSortableColumn="username">Username <p-sortIcon field="username"></p-sortIcon></th>
+          <th pSortableColumn="fullName">Name <p-sortIcon field="fullName"></p-sortIcon></th>
+          <th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th>
+          <th pSortableColumn="nb_domain_max">Nb domain max <p-sortIcon field="nb_domain_max"></p-sortIcon></th>
+          <th pSortableColumn="is_active">Active <p-sortIcon field="is_active"></p-sortIcon></th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-user>
+        <tr>
+          <td class="center-cell">{{ user.id }}</td>
+          <td>{{ user.username }}</td>
+          <td>{{ user.fullName || '-' }}</td>
+          <td>{{ user.email || '-' }}</td>
+          <td class="center-cell">{{ user.nb_domain_max ?? 0 }}</td>
+          <td class="center-cell">{{ user.is_active ? 'Yes' : 'No' }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <p-button
+                (click)="goEdit(user.id)"
+                icon="pi pi-pencil"
+                severity="info"
+                size="small"
+                type="button">
+              </p-button>
+              <p-button
+                (click)="goDelete(user.id)"
+                icon="pi pi-trash"
+                severity="danger"
+                size="small"
+                type="button">
+              </p-button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>

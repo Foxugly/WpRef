@@ -2,6 +2,7 @@ import {Routes} from '@angular/router';
 
 import {authGuard} from './guards/auth.guard';
 import {staffGuard} from './guards/staff.guard';
+import {superuserGuard} from './guards/superuser.guard';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'home', pathMatch: 'full'},
@@ -51,6 +52,26 @@ export const routes: Routes = [
     path: 'domain/:id/delete',
     loadComponent: () => import('./pages/domain/delete/domain-delete').then((m) => m.DomainDelete),
     canActivate: [authGuard, staffGuard],
+  },
+  {
+    path: 'user/list',
+    loadComponent: () => import('./pages/user/list/user-list').then((m) => m.UserListPage),
+    canActivate: [authGuard, superuserGuard],
+  },
+  {
+    path: 'user/add',
+    loadComponent: () => import('./pages/user/create/user-create').then((m) => m.UserCreatePage),
+    canActivate: [authGuard, superuserGuard],
+  },
+  {
+    path: 'user/:id/edit',
+    loadComponent: () => import('./pages/user/edit/user-edit').then((m) => m.UserEditPage),
+    canActivate: [authGuard, superuserGuard],
+  },
+  {
+    path: 'user/:id/delete',
+    loadComponent: () => import('./pages/user/delete/user-delete').then((m) => m.UserDeletePage),
+    canActivate: [authGuard, superuserGuard],
   },
   {
     path: 'subject/list',

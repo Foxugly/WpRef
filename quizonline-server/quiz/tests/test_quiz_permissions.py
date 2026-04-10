@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from quiz.access import user_manages_template_domain
 from quiz.models import Quiz, QuizTemplate
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -38,3 +39,6 @@ class QuizPermissionsTest(APITestCase):
         url = reverse("api:quiz-api:quiz-start", kwargs={"quiz_id": self.quiz_u1.id})
         res = self.client.post(url, format="json")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_user_manages_template_domain_rejects_anonymous_even_without_domain(self):
+        self.assertFalse(user_manages_template_domain(None, self.qt))

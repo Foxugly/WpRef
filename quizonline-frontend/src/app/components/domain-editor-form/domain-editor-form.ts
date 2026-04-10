@@ -58,7 +58,7 @@ export class DomainEditorFormComponent {
 
   readonly tabValueChange = output<string | number | undefined>();
   readonly translateClick = output<string>();
-  readonly staffPickListChange = output<void>();
+  readonly managersPickListChange = output<void>();
   readonly submitForm = output<void>();
   readonly cancel = output<void>();
 
@@ -79,7 +79,7 @@ export class DomainEditorFormComponent {
   }
 
   onStaffChange(): void {
-    this.staffPickListChange.emit();
+    this.managersPickListChange.emit();
   }
 
   langGroup(code: string): FormGroup {

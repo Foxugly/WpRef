@@ -10,5 +10,13 @@ class PasswordResetRateThrottle(AnonRateThrottle):
     scope = "password_reset"
 
 
+class PasswordResetConfirmRateThrottle(AnonRateThrottle):
+    scope = "password_reset_confirm"
+
+
+class EmailConfirmRateThrottle(AnonRateThrottle):
+    scope = "email_confirm"
+
+
 class QuizAnswerRateThrottle(UserRateThrottle):
     scope = "quiz_answer"

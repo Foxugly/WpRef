@@ -37,10 +37,10 @@
           ></p-button>
           <p-button
             [label]="texts().assignDialog.roleStaff"
-            [outlined]="roleFilter() !== 'staff'"
+            [outlined]="roleFilter() !== 'manager'"
             size="small"
             type="button"
-            (onClick)="setRoleFilter('staff')"
+            (onClick)="setRoleFilter('manager')"
           ></p-button>
           <p-button
             [label]="texts().assignDialog.roleMember"

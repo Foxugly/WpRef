@@ -145,19 +145,19 @@ class DomainModelTestCase(TestCase):
     # ---------------------------------------------------------------------
     def test_staff_m2m_can_be_set(self):
         d = self._mk_domain()
-        d.staff.set([self.staff1, self.staff2])
-        self.assertEqual(set(d.staff.values_list("username", flat=True)), {"staff1", "staff2"})
+        d.managers.set([self.staff1, self.staff2])
+        self.assertEqual(set(d.managers.values_list("username", flat=True)), {"staff1", "staff2"})
 
     def test_staff_added_becomes_member_automatically(self):
         d = self._mk_domain()
-        d.staff.add(self.staff1)
+        d.managers.add(self.staff1)
         self.assertTrue(d.members.filter(pk=self.staff1.pk).exists())
 
     def test_removing_staff_keeps_member_link(self):
         d = self._mk_domain()
-        d.staff.add(self.staff1)
-        d.staff.remove(self.staff1)
-        self.assertFalse(d.staff.filter(pk=self.staff1.pk).exists())
+        d.managers.add(self.staff1)
+        d.managers.remove(self.staff1)
+        self.assertFalse(d.managers.filter(pk=self.staff1.pk).exists())
         self.assertTrue(d.members.filter(pk=self.staff1.pk).exists())
 
     # ---------------------------------------------------------------------

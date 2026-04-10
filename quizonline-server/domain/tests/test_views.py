@@ -42,7 +42,7 @@ class DomainViewSetTests(TestCase):
         # Domains
         cls.domain_active = Domain.objects.create(owner=cls.owner, active=True)
         cls.domain_active.allowed_languages.set([cls.lang_fr, cls.lang_en])
-        cls.domain_active.staff.add(cls.other)
+        cls.domain_active.managers.add(cls.other)
         cls.domain_active.set_current_language("fr")
         cls.domain_active.name = "Domaine Actif"
         cls.domain_active.description = "desc"
@@ -223,7 +223,7 @@ class DomainViewSetTests(TestCase):
             "translations": {"fr": {"name": "Nouveau", "description": ""}},
             "allowed_languages": [self.lang_fr.id],
             "active": True,
-            "staff": [self.other.id],
+            "managers": [self.other.id],
         }
         request = self.factory.post("/api/domain/", payload, format="json")
         response = view(request)
@@ -236,7 +236,7 @@ class DomainViewSetTests(TestCase):
             "translations": {"fr": {"name": "Nouveau", "description": "X"}},
             "allowed_languages": [self.lang_fr.id],
             "active": True,
-            "staff": [self.other.id],  # volontairement sans owner
+            "managers": [self.other.id],  # volontairement sans owner
         }
         request = self.factory.post("/api/domain/", payload, format="json")
         force_authenticate(request, user=self.owner)
@@ -248,9 +248,9 @@ class DomainViewSetTests(TestCase):
         domain = Domain.objects.get(pk=created_id)
         self.assertEqual(domain.owner_id, self.owner.id)
 
-        staff_ids = set(domain.staff.values_list("id", flat=True))
-        self.assertIn(self.owner.id, staff_ids)  # ajouté par perform_create()
-        self.assertIn(self.other.id, staff_ids)
+        manager_ids = set(domain.managers.values_list("id", flat=True))
+        self.assertIn(self.owner.id, manager_ids)  # ajouté par perform_create()
+        self.assertIn(self.other.id, manager_ids)
         member_ids = set(domain.members.values_list("id", flat=True))
         self.assertIn(self.owner.id, member_ids)
         self.assertIn(self.other.id, member_ids)
@@ -269,7 +269,7 @@ class DomainViewSetTests(TestCase):
             "translations": {"fr": {"name": "Audit", "description": ""}},
             "allowed_languages": [self.lang_fr.id],
             "active": True,
-            "staff": [],
+            "managers": [],
         }
         request = self.factory.post("/api/domain/", payload, format="json")
         force_authenticate(request, user=self.owner)
@@ -300,7 +300,7 @@ class DomainViewSetTests(TestCase):
             "translations": {"fr": {"name": "Modifié", "description": "ZZ"}},
             "allowed_languages": [self.lang_fr.id],
             "active": False,
-            "staff": [self.other.id],
+            "managers": [self.other.id],
         }
         request = self.factory.put(f"/api/domain/{self.domain_active.id}/", payload, format="json")
         force_authenticate(request, user=self.owner)
@@ -326,6 +326,29 @@ class DomainViewSetTests(TestCase):
         self.domain_inactive.refresh_from_db()
         self.assertTrue(self.domain_inactive.active)
 
+    def test_partial_update_owner_can_change_owner(self):
+        view = DomainViewSet.as_view({"patch": "partial_update"})
+        payload = {"owner": self.other.id}
+        request = self.factory.patch(f"/api/domain/{self.domain_active.id}/", payload, format="json")
+        force_authenticate(request, user=self.owner)
+        response = view(request, domain_id=self.domain_active.id)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.domain_active.refresh_from_db()
+        self.assertEqual(self.domain_active.owner_id, self.other.id)
+
+    def test_partial_update_manager_cannot_change_owner(self):
+        self.domain_active.managers.add(self.other)
+        view = DomainViewSet.as_view({"patch": "partial_update"})
+        payload = {"owner": self.member.id}
+        request = self.factory.patch(f"/api/domain/{self.domain_active.id}/", payload, format="json")
+        force_authenticate(request, user=self.other)
+        response = view(request, domain_id=self.domain_active.id)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.domain_active.refresh_from_db()
+        self.assertEqual(self.domain_active.owner_id, self.owner.id)
+
     # ----------------------------
     # DESTROY
     # ----------------------------
@@ -347,7 +370,7 @@ class DomainViewSetTests(TestCase):
         view = DomainViewSet.as_view({"post": "member_role"})
         request = self.factory.post(
             f"/api/domain/{self.domain_active.id}/member-role/",
-            {"user_id": self.member.id, "domain_staff": True},
+            {"user_id": self.member.id, "is_domain_manager": True},
             format="json",
         )
         force_authenticate(request, user=self.owner)
@@ -356,7 +379,7 @@ class DomainViewSetTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.member.refresh_from_db()
         self.assertFalse(self.member.is_staff)
-        self.assertTrue(self.domain_active.staff.filter(pk=self.member.pk).exists())
+        self.assertTrue(self.domain_active.managers.filter(pk=self.member.pk).exists())
         self.assertTrue(self.domain_active.members.filter(pk=self.member.pk).exists())
 
     def test_member_role_superuser_can_promote_linked_user_to_global_staff(self):
@@ -364,7 +387,7 @@ class DomainViewSetTests(TestCase):
         view = DomainViewSet.as_view({"post": "member_role"})
         request = self.factory.post(
             f"/api/domain/{self.domain_active.id}/member-role/",
-            {"user_id": self.member.id, "domain_staff": True},
+            {"user_id": self.member.id, "is_domain_manager": True},
             format="json",
         )
         force_authenticate(request, user=root)
@@ -375,16 +398,16 @@ class DomainViewSetTests(TestCase):
         self.assertTrue(self.member.is_staff)
 
     def test_member_role_demote_staff_keeps_member_link(self):
-        self.domain_active.staff.add(self.member)
+        self.domain_active.managers.add(self.member)
         view = DomainViewSet.as_view({"post": "member_role"})
         request = self.factory.post(
             f"/api/domain/{self.domain_active.id}/member-role/",
-            {"user_id": self.member.id, "domain_staff": False},
+            {"user_id": self.member.id, "is_domain_manager": False},
             format="json",
         )
         force_authenticate(request, user=self.owner)
         response = view(request, domain_id=self.domain_active.id)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(self.domain_active.staff.filter(pk=self.member.pk).exists())
+        self.assertFalse(self.domain_active.managers.filter(pk=self.member.pk).exists())
         self.assertTrue(self.domain_active.members.filter(pk=self.member.pk).exists())

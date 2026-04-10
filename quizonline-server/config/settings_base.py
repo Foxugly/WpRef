@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "core.apps.CoreConfig",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "schema_viewer",
     "corsheaders",
     "drf_spectacular",
@@ -145,6 +146,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "token_obtain": "5/min",
         "password_reset": "3/hour",
+        "password_reset_confirm": "10/hour",
+        "email_confirm": "10/hour",
         "quiz_answer": "60/min",
     },
 }

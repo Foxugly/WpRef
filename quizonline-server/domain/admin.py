@@ -44,12 +44,12 @@ class DomainAdmin(ImportExportMixin, TranslatableAdmin):
     )
 
     # Widgets M2M plus confortables
-    filter_horizontal = ("allowed_languages", "staff", "members")
+    filter_horizontal = ("allowed_languages", "managers", "members")
 
     # Form (TranslatableAdmin utilise fieldsets par langue automatiquement)
     fieldsets = (
         (None, {"fields": ("active", "owner")}),
-        (_("Languages & access"), {"fields": ("allowed_languages", "staff", "members")}),
+        (_("Languages & access"), {"fields": ("allowed_languages", "managers", "members")}),
         (_("Dates"), {"fields": ("created_at", "updated_at")}),
     )
     readonly_fields = ("created_at", "updated_at")
@@ -59,9 +59,9 @@ class DomainAdmin(ImportExportMixin, TranslatableAdmin):
         # Parler: prefetch translations + éviter N+1 owner + counts M2M
         return (
             qs.select_related("owner")
-            .prefetch_related("translations", "allowed_languages", "staff", "members")
+            .prefetch_related("translations", "allowed_languages", "managers", "members")
             .annotate(_allowed_lang_count=Count("allowed_languages", distinct=True))
-            .annotate(_staff_count=Count("staff", distinct=True))
+            .annotate(_staff_count=Count("managers", distinct=True))
             .annotate(_members_count=Count("members", distinct=True))
         )
 

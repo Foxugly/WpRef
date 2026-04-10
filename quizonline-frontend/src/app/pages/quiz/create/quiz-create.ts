@@ -265,7 +265,7 @@ export class QuizCreate implements OnInit {
     if (me.is_superuser) {
       return true;
     }
-    return domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id);
+    return domain.owner?.id === me.id || (domain.managers ?? []).some((user) => user.id === me.id);
   });
 
   readonly canManageAnyDomain = computed(() => {
@@ -277,7 +277,7 @@ export class QuizCreate implements OnInit {
       return true;
     }
     return this.domains().some((domain) =>
-      domain.owner?.id === me.id || (domain.staff ?? []).some((user) => user.id === me.id),
+      domain.owner?.id === me.id || (domain.managers ?? []).some((user) => user.id === me.id),
     );
   });
 
