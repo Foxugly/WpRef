@@ -1,0 +1,108 @@
+<section class="page">
+  <div class="page__header">
+    <div class="page__header-copy">
+      <p-button
+        (onClick)="goBack()"
+        icon="pi pi-arrow-left"
+        label="Retour"
+        severity="secondary"
+        text
+      ></p-button>
+      <h1>Resultats des quiz envoyes</h1>
+      <p>
+        @if (template(); as selectedTemplate) {
+          Sessions liees au template <strong>{{ selectedTemplate.title }}</strong>.
+        } @else {
+          Sessions liees a ce template.
+        }
+      </p>
+    </div>
+
+    <div class="page__tools">
+      <input
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        pInputText
+        placeholder="Rechercher dans les quiz envoyes..."
+      >
+      <p-button (onClick)="load()" icon="pi pi-refresh" label="Actualiser" severity="secondary"></p-button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="state-card state-card--error">{{ error() }}</div>
+  }
+
+  <div class="table-card">
+    <p-table
+      [value]="filteredSessions()"
+      [paginator]="filteredSessions().length > 10"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 20, 50]"
+      sortField="created_at"
+      [sortOrder]="-1"
+      showGridlines
+      size="small"
+      stripedRows
+    >
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="user_summary.username">Utilisateur <p-sortIcon field="user_summary.username"></p-sortIcon></th>
+          <th pSortableColumn="status">Statut <p-sortIcon field="status"></p-sortIcon></th>
+          <th pSortableColumn="created_at">Cree le <p-sortIcon field="created_at"></p-sortIcon></th>
+          <th pSortableColumn="started_at">Demarre le <p-sortIcon field="started_at"></p-sortIcon></th>
+          <th pSortableColumn="ended_at">Termine le <p-sortIcon field="ended_at"></p-sortIcon></th>
+          <th pSortableColumn="total_answers">Reponses <p-sortIcon field="total_answers"></p-sortIcon></th>
+          <th pSortableColumn="earned_score">Score <p-sortIcon field="earned_score"></p-sortIcon></th>
+          <th style="width: 160px;">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-quiz>
+        <tr>
+          <td>{{ quiz.user_summary?.username || '-' }}</td>
+          <td class="center-cell">{{ statusLabel(quiz) }}</td>
+          <td>{{ formatDateTime(quiz.created_at) }}</td>
+          <td>{{ formatDateTime(quiz.started_at) }}</td>
+          <td>{{ formatDateTime(quiz.ended_at) }}</td>
+          <td class="center-cell">{{ quiz.total_answers ?? 0 }} / {{ quiz.max_questions }}</td>
+          <td class="center-cell">
+            @if (quiz.earned_score !== null && quiz.max_score !== null) {
+              {{ quiz.earned_score }} / {{ quiz.max_score }}
+            } @else {
+              -
+            }
+          </td>
+          <td class="row-actions">
+            <p-button
+              (onClick)="goView(quiz.id)"
+              icon="pi pi-eye"
+              severity="secondary"
+              size="small"
+              text
+            ></p-button>
+            <p-button
+              (onClick)="goDelete(quiz.id)"
+              icon="pi pi-trash"
+              severity="danger"
+              size="small"
+              text
+            ></p-button>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td class="empty-cell" colspan="8">
+            @if (loading()) {
+              Chargement...
+            } @else {
+              Aucun quiz envoye ne correspond au filtre.
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</section>

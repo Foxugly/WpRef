@@ -5,6 +5,7 @@ import {map, Observable, of, switchMap} from 'rxjs';
 import {
   CreateQuizInputRequestDto,
   GenerateFromSubjectsInputRequestDto,
+  PaginatedQuizAssignmentListListDto,
   QuestionApi,
   QuizAnswerApi,
   QuizAssignmentListDto,
@@ -132,7 +133,18 @@ export class QuizService {
 
   listTemplateSessions(quizTemplateId: number): Observable<QuizAssignmentListDto[]> {
     return this.qtApi.quizTemplateSessionsList({qtId: quizTemplateId}).pipe(
-      map((response) => response.results ?? []),
+      map((response: QuizAssignmentListDto[] | PaginatedQuizAssignmentListListDto) => {
+        if (Array.isArray(response)) {
+          return response;
+        }
+        return response.results ?? [];
+      }),
+    );
+  }
+
+  deleteQuiz(id: number): Observable<void> {
+    return this.quizApi.quizDestroy({quizId: id}).pipe(
+      map(() => void 0),
     );
   }
 

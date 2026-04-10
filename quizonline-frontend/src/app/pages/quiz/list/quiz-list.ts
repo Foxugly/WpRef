@@ -11,8 +11,7 @@ import {LanguageEnumDto, QuizListDto} from '../../../api/generated';
 import {QuizSessionTableComponent} from '../../../components/quiz-session-table/quiz-session-table';
 import {QuizTemplateTableComponent} from '../../../components/quiz-template-table/quiz-template-table';
 import {QuizTemplateAssignDialogComponent} from '../../../components/quiz-template-assign-dialog/quiz-template-assign-dialog';
-import {QuizTemplateResultsDialogComponent} from '../../../components/quiz-template-results-dialog/quiz-template-results-dialog';
-import {QuizService, QuizTemplateAssignmentSessionDto} from '../../../services/quiz/quiz';
+import {QuizService} from '../../../services/quiz/quiz';
 import {UserService} from '../../../services/user/user';
 import {logApiError, userFacingApiMessage} from '../../../shared/api/api-errors';
 import {AssignableRecipient, QuizTemplateListItem, UserQuizListItem} from './quiz-list.models';
@@ -36,7 +35,6 @@ type DomainReadWithMembers = DomainReadDto & {
     QuizTemplateTableComponent,
     QuizSessionTableComponent,
     QuizTemplateAssignDialogComponent,
-    QuizTemplateResultsDialogComponent,
   ],
   templateUrl: './quiz-list.html',
   styleUrl: './quiz-list.scss',
@@ -46,7 +44,6 @@ export class QuizListPage implements OnInit {
   domains = signal<DomainReadDto[]>([]);
   myQuizzes = signal<UserQuizListItem[]>([]);
   assignableUsers = signal<AssignableRecipient[]>([]);
-  templateSessions = signal<QuizTemplateAssignmentSessionDto[]>([]);
   activeTab = signal<'templates' | 'sessions'>('templates');
   currentUserId = signal<number | null>(null);
   q = signal('');
@@ -54,11 +51,9 @@ export class QuizListPage implements OnInit {
   success = signal<string | null>(null);
   creatingTemplateId = signal<number | null>(null);
   assignDialogVisible = signal(false);
-  resultsDialogVisible = signal(false);
   selectedTemplate = signal<QuizTemplateListItem | null>(null);
   selectedRecipientIds = signal<number[]>([]);
   assigning = signal(false);
-  resultsLoading = signal(false);
 
   private readonly quizService = inject(QuizService);
   private readonly userService = inject(UserService);
@@ -169,7 +164,6 @@ export class QuizListPage implements OnInit {
         next: (created) => {
           this.success.set(this.uiText().messages.assignSuccess(created.length));
           this.closeAssignDialog();
-          this.closeResultsDialog();
           void this.router.navigate(ROUTES.quiz.list());
         },
         error: (err: unknown) => {
@@ -179,28 +173,8 @@ export class QuizListPage implements OnInit {
       });
   }
 
-  openResultsDialog(template: QuizTemplateListItem): void {
-    this.selectedTemplate.set(template);
-    this.resultsDialogVisible.set(true);
-    this.resultsLoading.set(true);
-    this.templateSessions.set([]);
-    this.quizService.listTemplateSessions(template.id)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.resultsLoading.set(false)),
-      )
-      .subscribe({
-        next: (sessions) => this.templateSessions.set(sessions),
-        error: (err: unknown) => {
-          logApiError('quiz.list.template-results', err);
-          this.success.set(userFacingApiMessage(err, this.uiText().messages.resultsError));
-        },
-      });
-  }
-
-  closeResultsDialog(): void {
-    this.resultsDialogVisible.set(false);
-    this.templateSessions.set([]);
+  goResults(templateId: number): void {
+    void this.router.navigate(ROUTES.quiz.templateResults(templateId));
   }
 
   createFromTemplate(templateId: number): void {
@@ -246,13 +220,12 @@ export class QuizListPage implements OnInit {
           .map((template) => this.decorateTemplate(template, domains, me))
           .sort((left, right) => left.title.localeCompare(right.title));
         const myQuizSessions = me ? quizzes.filter((quiz) => quiz.user === me.id) : [];
-        const visibleMyQuizzes = myQuizSessions.filter((quiz) => quiz.started_at || quiz.ended_at);
 
         return {
           currentUserId,
           domains,
           templates: normalizedTemplates,
-          myQuizzes: visibleMyQuizzes.map((quiz) => this.toUserQuizListItem(quiz)),
+          myQuizzes: myQuizSessions.map((quiz) => this.toUserQuizListItem(quiz)),
         };
       }),
     );
@@ -261,7 +234,7 @@ export class QuizListPage implements OnInit {
   private toUserQuizListItem(quiz: QuizListDto): UserQuizListItem {
     return {
       ...quiz,
-      status: quiz.ended_at ? 'answered' : 'in_progress',
+      status: quiz.ended_at ? 'answered' : (quiz.started_at ? 'in_progress' : 'not_started'),
     };
   }
 

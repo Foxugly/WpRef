@@ -4,6 +4,8 @@
     [rows]="10"
     [rowsPerPageOptions]="[10, 20, 50]"
     [value]="quizzes()"
+    sortField="created_at"
+    [sortOrder]="-1"
     showGridlines
     size="small"
     sortMode="single"
@@ -14,6 +16,7 @@
         <th pSortableColumn="status">Statut <p-sortIcon field="status"></p-sortIcon></th>
         <th pSortableColumn="mode">Mode <p-sortIcon field="mode"></p-sortIcon></th>
         <th pSortableColumn="max_questions">Questions <p-sortIcon field="max_questions"></p-sortIcon></th>
+        <th pSortableColumn="created_at">Cree le <p-sortIcon field="created_at"></p-sortIcon></th>
         <th pSortableColumn="started_at">Demarre le <p-sortIcon field="started_at"></p-sortIcon></th>
         <th pSortableColumn="ended_at">Termine le <p-sortIcon field="ended_at"></p-sortIcon></th>
         <th pSortableColumn="earned_score">Note <p-sortIcon field="earned_score"></p-sortIcon></th>
@@ -26,8 +29,9 @@
         <td class="center-cell">{{ statusLabel(quiz.status) }}</td>
         <td class="center-cell">{{ quiz.mode }}</td>
         <td class="center-cell">{{ quiz.max_questions }}</td>
-        <td class="center-cell">{{ quiz.started_at | date : 'short' }}</td>
-        <td class="center-cell">{{ quiz.ended_at | date : 'short' }}</td>
+        <td class="center-cell">{{ formatDateTime(quiz.created_at) }}</td>
+        <td class="center-cell">{{ formatDateTime(quiz.started_at) }}</td>
+        <td class="center-cell">{{ formatDateTime(quiz.ended_at) }}</td>
         <td class="center-cell">
           @if (quiz.status === 'answered' && quiz.earned_score !== null && quiz.max_score !== null) {
             {{ quiz.earned_score }} / {{ quiz.max_score }}
@@ -39,7 +43,7 @@
           <p-button
             (onClick)="viewQuiz.emit(quiz.id)"
             [icon]="quiz.status === 'answered' ? 'pi pi-eye' : 'pi pi-play'"
-            [label]="quiz.status === 'answered' ? 'Voir' : 'Continuer'"
+            [label]="quiz.status === 'answered' ? 'Voir' : (quiz.status === 'in_progress' ? 'Continuer' : 'Commencer')"
             [severity]="quiz.status === 'answered' ? 'secondary' : 'primary'"
             size="small"
           ></p-button>
@@ -48,11 +52,11 @@
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td class="empty-cell" colspan="8">
+        <td class="empty-cell" colspan="9">
           @if (loading()) {
             Chargement...
           } @else {
-            Aucun quiz en cours ou repondu.
+            Aucun quiz.
           }
         </td>
       </tr>

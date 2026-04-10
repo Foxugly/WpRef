@@ -3,7 +3,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 from config.permissions import is_authenticated_user, is_staff_user
 
 from .models import Quiz, QuizAlertThread, QuizQuestion, QuizQuestionAnswer
-from .access import user_can_delete_template, user_can_edit_template
+from .access import user_can_delete_template, user_can_edit_template, user_can_manage_template_assignments
 
 
 class IsStaffOrReadOnly(BasePermission):
@@ -29,8 +29,12 @@ class IsOwnerOrStaff(BasePermission):
         if is_staff_user(user):
             return True
         if isinstance(obj, Quiz):
+            if user_can_manage_template_assignments(user, obj.quiz_template):
+                return True
             return obj.user_id == user.id
         if isinstance(obj, QuizQuestionAnswer):
+            if bool(obj.quiz_id) and user_can_manage_template_assignments(user, obj.quiz.quiz_template):
+                return True
             return bool(obj.quiz_id) and obj.quiz.user_id == user.id
         owner = getattr(obj, "user", None)
         return owner is not None and owner.id == user.id

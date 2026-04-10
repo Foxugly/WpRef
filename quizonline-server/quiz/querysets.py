@@ -63,7 +63,7 @@ def accessible_quiz_template_queryset(user):
     )
 
 
-def quiz_queryset_for_user(user, *, include_details: bool):
+def quiz_queryset_for_user(user, *, include_details: bool, include_manageable_templates: bool = False):
     queryset = (
         Quiz.objects
         .select_related("quiz_template", "user")
@@ -89,6 +89,12 @@ def quiz_queryset_for_user(user, *, include_details: bool):
         )
     if user.is_staff or user.is_superuser:
         return queryset
+    if include_manageable_templates:
+        manageable_ids = manageable_domain_ids(user)
+        if manageable_ids:
+            return queryset.filter(
+                Q(user=user) | Q(quiz_template__domain_id__in=manageable_ids)
+            ).distinct()
     return queryset.filter(user=user)
 
 

@@ -708,7 +708,11 @@ class QuizViewSet(MyModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Quiz.objects.none()
-        return quiz_queryset_for_user(self.request.user, include_details=self.action != "list")
+        return quiz_queryset_for_user(
+            self.request.user,
+            include_details=self.action != "list",
+            include_manageable_templates=self.action != "list",
+        )
 
     def get_permissions(self):
         """

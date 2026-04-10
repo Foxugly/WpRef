@@ -1,0 +1,25 @@
+.delete-page {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem auto 0;
+  max-width: 40rem;
+}
+
+.delete-page h1,
+.intro,
+.error {
+  margin: 0;
+}
+
+.intro {
+  color: #334155;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.actions {
+  display: grid;
+  gap: 0.75rem;
+}

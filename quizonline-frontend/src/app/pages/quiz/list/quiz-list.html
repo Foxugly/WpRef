@@ -59,7 +59,7 @@
             [uiText]="uiText()"
             (createFromTemplate)="createFromTemplate($event)"
             (openAssign)="openAssignDialog($event)"
-            (openResults)="openResultsDialog($event)"
+            (openResults)="goResults($event.id)"
             (edit)="goEditTemplate($event)"
             (remove)="goDeleteTemplate($event)"
           ></app-quiz-template-table>
@@ -89,13 +89,3 @@
   (cancel)="closeAssignDialog()"
   (submitted)="submitAssignments()"
 ></app-quiz-template-assign-dialog>
-
-<app-quiz-template-results-dialog
-  [visible]="resultsDialogVisible()"
-  [template]="selectedTemplate()"
-  [sessions]="templateSessions()"
-  [loading]="resultsLoading()"
-  (visibleChange)="resultsDialogVisible.set($event)"
-  (close)="closeResultsDialog()"
-  (viewQuiz)="goView($event)"
-></app-quiz-template-results-dialog>

@@ -118,6 +118,21 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'quiz/template/:templateId/results',
+    loadComponent: () => import('./pages/quiz/template-results/quiz-template-results').then((m) => m.QuizTemplateResultsPage),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'quiz/:quizId/delete/:templateId',
+    loadComponent: () => import('./pages/quiz/delete/quiz-session-delete').then((m) => m.QuizSessionDeletePage),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'quiz/:quizId/delete',
+    loadComponent: () => import('./pages/quiz/delete/quiz-session-delete').then((m) => m.QuizSessionDeletePage),
+    canActivate: [authGuard],
+  },
+  {
     path: 'quiz/list',
     loadComponent: () => import('./pages/quiz/list/quiz-list').then((m) => m.QuizListPage),
     canActivate: [authGuard],

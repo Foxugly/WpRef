@@ -2,7 +2,7 @@ import {QuizListDto, QuizTemplateDto} from '../../../api/generated';
 import {QuizTemplateAssignmentSessionDto} from '../../../services/quiz/quiz';
 
 export interface UserQuizListItem extends QuizListDto {
-  status: 'in_progress' | 'answered';
+  status: 'not_started' | 'in_progress' | 'answered';
 }
 
 export type QuizTemplateListItem = QuizTemplateDto & {

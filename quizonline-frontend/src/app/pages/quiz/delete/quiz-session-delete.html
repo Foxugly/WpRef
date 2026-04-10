@@ -1,0 +1,36 @@
+<section class="delete-page">
+  <h1>Supprimer le quiz</h1>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (quiz(); as currentQuiz) {
+    <p class="intro">
+      Vous allez supprimer le quiz <strong>{{ currentQuiz.quiz_template_title }}</strong>
+      pour <strong>{{ currentQuiz.user_summary?.username || ('User #' + currentQuiz.user) }}</strong>.
+    </p>
+  } @else if (!error()) {
+    <p class="intro">Chargement du quiz...</p>
+  }
+
+  <div class="actions">
+    <p-button
+      icon="pi pi-arrow-left"
+      label="Retour"
+      severity="secondary"
+      styleClass="w-full"
+      (onClick)="goBack()"
+    ></p-button>
+    <p-button
+      id="btn_delete"
+      icon="pi pi-trash"
+      label="Supprimer"
+      severity="danger"
+      styleClass="w-full"
+      [loading]="loading()"
+      [disabled]="!quiz()"
+      (onClick)="confirm()"
+    ></p-button>
+  </div>
+</section>

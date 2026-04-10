@@ -1552,6 +1552,38 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Quiz.objects.filter(pk=quiz.id).exists())
 
+    def test_quiz_destroy_allowed_for_template_domain_staff(self):
+        quiz = self._create_quiz(self.qt_ok, self.u1)
+        url = self._rev(
+            "api:quiz-api:quiz-detail",
+            "quiz-api:quiz-detail",
+            quiz_id=quiz.id,
+        )
+
+        self.domain.staff.add(self.staff)
+        self.domain.members.add(self.staff)
+        self._auth(self.staff)
+
+        res = self.client.delete(url)
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Quiz.objects.filter(pk=quiz.id).exists())
+
+    def test_quiz_retrieve_allowed_for_template_domain_staff(self):
+        quiz = self._create_quiz(self.qt_ok, self.u1)
+        url = self._rev(
+            "api:quiz-api:quiz-detail",
+            "quiz-api:quiz-detail",
+            quiz_id=quiz.id,
+        )
+
+        self.domain.staff.add(self.staff)
+        self.domain.members.add(self.staff)
+        self._auth(self.staff)
+
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["id"], quiz.id)
+
     # ---------------------------------------------------------------------
     # QuizQuestionAnswerViewSet (nested)
     # ---------------------------------------------------------------------
