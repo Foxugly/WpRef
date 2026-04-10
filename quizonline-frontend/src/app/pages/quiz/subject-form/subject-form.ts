@@ -66,6 +66,7 @@ export class QuizSubjectForm implements OnInit {
 
   currentLang = computed(() => this.userService.currentLang);
   readonly availableQuestionCount = signal(0);
+  readonly hasAvailableQuestions = computed(() => this.availableQuestionCount() > 0);
   readonly questionCountLimit = computed(() => this.availableQuestionCount());
   readonly questionCountMin = computed(() => (this.availableQuestionCount() > 0 ? 1 : 0));
   form = this.fb.group({
@@ -201,7 +202,7 @@ export class QuizSubjectForm implements OnInit {
     });
   }
 
-  onChangeSubjects(): void {
+  onSubjectsPanelHide(): void {
     this.error.set(null);
     this.subjectsChange.emit(this.form.controls.subject_ids.getRawValue());
   }

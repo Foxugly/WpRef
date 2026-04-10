@@ -260,6 +260,18 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertIn(self.qt_ok.id, ids)
         self.assertIn(self.qt_no.id, ids)
 
+    def test_quiztemplate_list_hides_inactive_template_for_simple_creator(self):
+        self.qt_no.created_by = self.u1
+        self.qt_no.updated_by = self.u1
+        self.qt_no.save(update_fields=["created_by", "updated_by"])
+
+        self._auth(self.u1)
+        res = self.client.get(self.qt_list_url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.data.get("results") if isinstance(res.data, dict) else res.data
+        ids = [x["id"] for x in data]
+        self.assertNotIn(self.qt_no.id, ids)
+
     def test_quiztemplate_create_rejects_unlinked_user(self):
         payload = {
             "domain": self.domain.id,
@@ -344,6 +356,20 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.qt_ok.refresh_from_db()
         self.assertEqual(self.qt_ok.updated_by_id, self.admin.id)
 
+    def test_quiztemplate_creator_cannot_update_without_role(self):
+        self.qt_ok.created_by = self.u1
+        self.qt_ok.updated_by = self.u1
+        self.qt_ok.save(update_fields=["created_by", "updated_by"])
+        detail_url = self._rev(
+            "api:quiz-api:quiz-template-detail",
+            "quiz-api:quiz-template-detail",
+            qt_id=self.qt_ok.id,
+        )
+
+        self._auth(self.u1)
+        res = self.client.patch(detail_url, {"description": "creator edit denied"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_quiztemplate_destroy_requires_admin(self):
         qt = QuizTemplate.objects.create(
             domain=self.domain,
@@ -375,6 +401,37 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self._auth(self.admin)
         res2 = self.client.delete(detail_url)
         self.assertEqual(res2.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_quiztemplate_creator_can_delete_own_template_without_role(self):
+        qt = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_DEL_CREATOR",
+            mode=QuizTemplate.MODE_PRACTICE,
+            description="",
+            max_questions=1,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+            created_by=self.u1,
+            updated_by=self.u1,
+        )
+        detail_url = self._rev(
+            "api:quiz-api:quiz-template-detail",
+            "quiz-api:quiz-template-detail",
+            qt_id=qt.id,
+        )
+
+        self._auth(self.u1)
+        res = self.client.delete(detail_url)
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(QuizTemplate.objects.filter(pk=qt.id).exists())
 
     # ---------------------------------------------------------------------
     # QuizTemplateViewSet: generate_from_subjects
@@ -791,7 +848,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         self.assertEqual(len(res2.data), 2)
 
     @patch("quiz.services.notify_quiz_assigned")
-    def test_bulk_create_from_template_template_creator_allowed(self, notify_quiz_assigned):
+    def test_bulk_create_from_template_template_creator_forbidden_without_management_role(self, notify_quiz_assigned):
         creator = User.objects.create_user(username="creator", password="pass", is_staff=False)
         self.domain.members.add(creator, self.u1)
         template = QuizTemplate.objects.create(
@@ -822,9 +879,104 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
 
         self._auth(creator)
         res = self.client.post(url, payload, format="json")
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(len(res.data), 1)
-        self.assertEqual(notify_quiz_assigned.call_count, 1)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(notify_quiz_assigned.call_count, 0)
+
+    def test_quiztemplate_update_creator_without_role_forbidden(self):
+        creator = User.objects.create_user(username="creator-edit", password="pass", is_staff=False)
+        self.domain.members.add(creator)
+        template = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_CREATOR_EDIT",
+            mode=QuizTemplate.MODE_PRACTICE,
+            description="",
+            max_questions=10,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=False,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+            created_by=creator,
+        )
+        detail_url = self._rev(
+            "api:quiz-api:quiz-template-detail",
+            "quiz-api:quiz-template-detail",
+            qt_id=template.id,
+        )
+
+        self._auth(creator)
+        res = self.client.patch(detail_url, {"description": "hello"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_quiztemplate_sessions_creator_without_role_forbidden(self):
+        creator = User.objects.create_user(username="creator-stats", password="pass", is_staff=False)
+        self.domain.members.add(creator)
+        template = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_CREATOR_STATS",
+            mode=QuizTemplate.MODE_PRACTICE,
+            description="",
+            max_questions=10,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=False,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+            created_by=creator,
+        )
+        url = self._rev(
+            "api:quiz-api:quiz-template-sessions",
+            "quiz-api:quiz-template-sessions",
+            qt_id=template.id,
+        )
+
+        self._auth(creator)
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_quiztemplate_destroy_creator_without_role_allowed(self):
+        creator = User.objects.create_user(username="creator-delete", password="pass", is_staff=False)
+        self.domain.members.add(creator)
+        template = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_CREATOR_DELETE",
+            mode=QuizTemplate.MODE_PRACTICE,
+            description="",
+            max_questions=10,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=False,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+            created_by=creator,
+        )
+        detail_url = self._rev(
+            "api:quiz-api:quiz-template-detail",
+            "quiz-api:quiz-template-detail",
+            qt_id=template.id,
+        )
+
+        self._auth(creator)
+        res = self.client.delete(detail_url)
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_bulk_create_from_template_invalid_input_400(self):
         url = self._rev(
@@ -870,7 +1022,7 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         )
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_quiztemplate_sessions_visible_for_template_creator(self):
+    def test_quiztemplate_sessions_creator_without_role_gets_not_found(self):
         creator = User.objects.create_user(username="creator-2", password="pass")
         template = QuizTemplate.objects.create(
             domain=self.domain,
@@ -896,9 +1048,45 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
 
         self._auth(creator)
         res = self.client.get(url)
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 1)
-        self.assertEqual(res.data[0]["user_summary"]["id"], self.u1.id)
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_quiztemplate_destroy_creator_without_role_deactivates_when_sessions_exist(self):
+        creator = User.objects.create_user(username="creator-delete-existing", password="pass", is_staff=False)
+        self.domain.members.add(creator, self.u1)
+        template = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_CREATOR_DELETE_EXISTING",
+            mode=QuizTemplate.MODE_PRACTICE,
+            description="",
+            max_questions=10,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=False,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+            created_by=creator,
+        )
+        quiz = Quiz.objects.create(domain=self.domain, quiz_template=template, user=self.u1, active=False)
+        detail_url = self._rev(
+            "api:quiz-api:quiz-template-detail",
+            "quiz-api:quiz-template-detail",
+            qt_id=template.id,
+        )
+
+        self._auth(creator)
+        res = self.client.delete(detail_url)
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+
+        template.refresh_from_db()
+        self.assertFalse(template.active)
+        self.assertTrue(QuizTemplate.objects.filter(pk=template.id).exists())
+        self.assertTrue(Quiz.objects.filter(pk=quiz.id).exists())
 
     # ---------------------------------------------------------------------
     # QuizViewSet: start / close

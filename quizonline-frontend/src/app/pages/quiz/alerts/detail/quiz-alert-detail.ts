@@ -57,7 +57,7 @@ export class QuizAlertDetail implements OnInit {
   load(): void {
     const alertId = Number(this.route.snapshot.paramMap.get('alertId'));
     if (!alertId || Number.isNaN(alertId)) {
-      this.error.set('Identifiant d’alerte invalide.');
+      this.error.set('Identifiant de message invalide.');
       this.loading.set(false);
       return;
     }
@@ -76,7 +76,7 @@ export class QuizAlertDetail implements OnInit {
         },
         error: (err: unknown) => {
           logApiError('quiz.alerts.detail', err);
-          this.error.set(userFacingApiMessage(err, 'Impossible de charger cette alerte.'));
+          this.error.set(userFacingApiMessage(err, 'Impossible de charger ce message.'));
           this.thread.set(null);
         },
       });
@@ -92,7 +92,7 @@ export class QuizAlertDetail implements OnInit {
     this.runThreadRequest(
       this.quizAlertService.postMessage(thread.id, body),
       'quiz.alerts.reply',
-      'Impossible d’envoyer ce message.',
+      'Impossible d\'envoyer ce message.',
       () => {
         this.replyBody.set('');
         this.load();
@@ -167,6 +167,42 @@ export class QuizAlertDetail implements OnInit {
 
   canSendReply(thread: QuizAlertThreadDetailDto | null): boolean {
     return canSendReply(thread);
+  }
+
+  counterpartUsername(thread: QuizAlertThreadDetailDto): string {
+    const me = this.userService.currentUser();
+    if (!me) {
+      return '';
+    }
+    if (thread.owner === me.id) {
+      return thread.reporter_summary?.username || '';
+    }
+    return thread.owner_summary?.username || '';
+  }
+
+  isAssignmentIntroMessage(thread: QuizAlertThreadDetailDto, messageId: number): boolean {
+    return thread.kind === 'assignment' && thread.messages[0]?.id === messageId;
+  }
+
+  assignmentIntroText(body: string): string {
+    const sanitized = body
+      .replace(/https?:\/\/\S+/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!sanitized) {
+      return 'Un nouveau quiz vous a été assigné :';
+    }
+
+    if (sanitized.endsWith(':')) {
+      return sanitized;
+    }
+
+    if (sanitized.endsWith('.')) {
+      return `${sanitized.slice(0, -1)} :`;
+    }
+
+    return `${sanitized} :`;
   }
 
   private currentLang(): LanguageEnumDto {

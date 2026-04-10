@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from django.db import transaction
 
 from core.mailers import send_quiz_assignment_email, send_quiz_completed_email
-from core.mailers._common import frontend_url
 
 from .alerting import create_assignment_alert_thread
 
@@ -19,7 +18,6 @@ def notify_quiz_assigned(quiz, *, assigned_by=None) -> None:
         reporter=user,
         quiz=quiz,
         owner=owner,
-        link=frontend_url(f"/quiz/{quiz.id}"),
     )
 
 

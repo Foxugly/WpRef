@@ -66,6 +66,10 @@ export class QuizTemplateTableComponent {
     return this.uiText().templates.permanent;
   }
 
+  createdAtLabel(template: QuizTemplateListItem): string {
+    return this.formatDateTime(template.created_at);
+  }
+
   private formatDateTime(value: string | null | undefined): string {
     if (!value) {
       return '';

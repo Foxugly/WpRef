@@ -21,6 +21,7 @@ export class QuizSummaryHeroComponent {
   readonly session = input.required<QuizDto>();
   readonly statusLabel = input.required<string>();
   readonly statusSeverity = input<'secondary' | 'success' | 'warn' | 'danger' | 'contrast' | 'info'>('secondary');
+  readonly showScore = input(true);
   readonly scoreLabel = input.required<string>();
   readonly scoreMetaLabel = input.required<string>();
   readonly facts = input<QuizSummaryFact[]>([]);

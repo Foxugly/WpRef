@@ -1,6 +1,6 @@
 <section class="page">
   <div class="page__header">
-    <a [routerLink]="routes.quiz.alerts()" class="page__back">← Retour aux alertes</a>
+    <a [routerLink]="routes.quiz.alerts()" class="page__back">← Retour aux messages</a>
   </div>
 
   @if (error()) {
@@ -11,7 +11,7 @@
 
   @if (loading()) {
     <p-card styleClass="panel">
-      <p>Chargement de la conversation…</p>
+      <p>Chargement de la conversation...</p>
     </p-card>
   } @else if (thread(); as currentThread) {
     <p-card styleClass="panel">
@@ -23,16 +23,16 @@
             <span class="thread-banner__topic">Quiz</span>
           }
           <strong class="thread-banner__title">{{ currentThread.question_title }}</strong>
-          <span class="thread-banner__template">{{ currentThread.quiz_template_title }}</span>
+          @if (counterpartUsername(currentThread)) {
+            <span class="thread-banner__template">{{ counterpartUsername(currentThread) }}</span>
+          }
         </div>
 
         <div class="thread-banner__meta">
           @if (currentThread.unread_count > 0) {
             <span class="thread-head__badge">{{ currentThread.unread_count }}</span>
           }
-          <p-tag [severity]="statusSeverity(currentThread)" [value]="currentThread.status === 'open' ? 'Ouverte' : 'Clôturée'"></p-tag>
-          <span class="thread-banner__pill">Langue {{ currentThread.reported_language || '-' }}</span>
-          <a [routerLink]="routes.quiz.view(currentThread.quiz)" class="thread-banner__pill">Quiz #{{ currentThread.quiz }}</a>
+          <p-tag [severity]="statusSeverity(currentThread)" [value]="currentThread.status === 'open' ? 'Ouverte' : 'Fermée'"></p-tag>
           @if (currentThread.kind === 'question' && currentThread.can_manage && currentThread.question_id !== null) {
             <a [routerLink]="routes.question.view(currentThread.question_id)" class="thread-banner__pill">Question #{{ currentThread.question_id }}</a>
           }
@@ -52,7 +52,14 @@
               }
             </div>
           </header>
-          <p>{{ message.body }}</p>
+          @if (isAssignmentIntroMessage(currentThread, message.id)) {
+            <p>
+              {{ assignmentIntroText(message.body) }}
+              <a [routerLink]="routes.quiz.view(currentThread.quiz)">{{ currentThread.quiz_template_title }}</a>
+            </p>
+          } @else {
+            <p>{{ message.body }}</p>
+          }
         </article>
       }
     </div>
@@ -66,10 +73,10 @@
               (ngModelChange)="replyBody.set($event)"
               pInputTextarea
               rows="3"
-              placeholder="Écrire votre réponse…"
+              placeholder="Écrire votre réponse..."
             ></textarea>
           } @else if (currentThread.can_manage) {
-            <p class="reply-box__closed-note">Conversation clôturée. Rouvrez-la pour répondre ou réautoriser les réponses.</p>
+            <p class="reply-box__closed-note">Conversation fermée. Rouvrez-la pour répondre ou réautoriser les réponses.</p>
           }
 
           <div class="reply-box__actions">

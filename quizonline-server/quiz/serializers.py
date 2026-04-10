@@ -826,10 +826,11 @@ class QuizAlertThreadListSerializer(RequestUserMixin, serializers.ModelSerialize
     unread = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     last_message_preview = serializers.SerializerMethodField()
+    counterpart_username = serializers.SerializerMethodField()
     question_id = serializers.IntegerField(read_only=True, allow_null=True)
     question_order = serializers.IntegerField(read_only=True, allow_null=True)
     question_title = serializers.CharField(read_only=True, allow_blank=True)
-    quiz_template_title = serializers.CharField(read_only=True)
+    quiz_template_title = serializers.SerializerMethodField()
 
     class Meta:
         model = QuizAlertThread
@@ -849,6 +850,7 @@ class QuizAlertThreadListSerializer(RequestUserMixin, serializers.ModelSerialize
             "unread",
             "unread_count",
             "last_message_preview",
+            "counterpart_username",
         ]
         read_only_fields = fields
 
@@ -862,6 +864,18 @@ class QuizAlertThreadListSerializer(RequestUserMixin, serializers.ModelSerialize
 
     def get_last_message_preview(self, obj) -> str:
         return alert_last_message_preview(obj)
+
+    def get_counterpart_username(self, obj) -> str:
+        user = self.request_user()
+        if not user or not user.is_authenticated:
+            return ""
+        if obj.owner_id == user.id:
+            return getattr(obj.reporter, "username", "") or ""
+        return getattr(obj.owner, "username", "") or ""
+
+    def get_quiz_template_title(self, obj) -> str:
+        language = obj.reported_language or self.preferred_language()
+        return obj.quiz.quiz_template.get_localized_content(language).get("title", "") or obj.quiz.quiz_template.title
 
 
 class QuizAlertThreadDetailSerializer(QuizAlertThreadListSerializer):

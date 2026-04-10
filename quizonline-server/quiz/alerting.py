@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
@@ -26,6 +27,18 @@ def assignment_alert_copy(language: str | None) -> dict[str, str]:
         "title": "New assigned quiz",
         "body": "A new quiz has been assigned to you.",
     }
+
+
+def assignment_alert_initial_status() -> str:
+    from .models import QuizAlertThread
+
+    if settings.QUIZ_ASSIGNMENT_ALERT_CLOSE_IMMEDIATELY:
+        return QuizAlertThread.STATUS_CLOSED
+    return QuizAlertThread.STATUS_OPEN
+
+
+def assignment_alert_reporter_reply_allowed() -> bool:
+    return bool(settings.QUIZ_ASSIGNMENT_ALERT_REPORTER_REPLY_ALLOWED)
 
 
 def is_alert_participant(thread: "QuizAlertThread", user) -> bool:
@@ -187,13 +200,16 @@ def create_alert_thread(*, reporter, quiz: "Quiz", quizquestion: "QuizQuestion",
     return thread
 
 
-def create_assignment_alert_thread(*, reporter, quiz: "Quiz", owner, link: str, now=None):
+def create_assignment_alert_thread(*, reporter, quiz: "Quiz", owner, now=None):
     from .models import QuizAlertMessage, QuizAlertThread
 
     now = now or timezone.now()
     language = getattr(reporter, "language", None)
     copy = assignment_alert_copy(language)
-    body = f"{copy['body']}\n{link}".strip()
+    status = assignment_alert_initial_status()
+    reporter_reply_allowed = assignment_alert_reporter_reply_allowed()
+    closed_at = now if status == QuizAlertThread.STATUS_CLOSED else None
+    closed_by = owner if status == QuizAlertThread.STATUS_CLOSED else None
     thread = QuizAlertThread.objects.create(
         quiz=quiz,
         kind=QuizAlertThread.KIND_ASSIGNMENT,
@@ -201,13 +217,17 @@ def create_assignment_alert_thread(*, reporter, quiz: "Quiz", owner, link: str, 
         reporter=reporter,
         owner=owner,
         reported_language=str(language or "en"),
+        status=status,
+        reporter_reply_allowed=reporter_reply_allowed,
         last_message_at=now,
         owner_last_read_at=now,
+        closed_at=closed_at,
+        closed_by=closed_by,
     )
     QuizAlertMessage.objects.create(
         thread=thread,
         author=owner,
-        body=body,
+        body=copy["body"].strip(),
     )
     return thread
 

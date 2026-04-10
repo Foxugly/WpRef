@@ -38,7 +38,7 @@
           id="subjects"
           optionLabel="name"
           optionValue="code"
-          (onChange)="onChangeSubjects()"
+          (onPanelHide)="onSubjectsPanelHide()"
           [panelStyle]="{ 'max-height': '250px', 'overflow-y': 'auto' }"
           placeholder="Choisir un ou plusieurs sujets">
         </p-multiSelect>
@@ -56,6 +56,7 @@
         </label>
         <p-inputNumber
           formControlName="max_questions"
+          [disabled]="!hasAvailableQuestions()"
           [max]="availableQuestionCount()"
           [min]="questionCountMin()"
           [showButtons]="true"

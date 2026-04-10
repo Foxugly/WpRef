@@ -3,7 +3,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 from config.permissions import is_authenticated_user, is_staff_user
 
 from .models import Quiz, QuizAlertThread, QuizQuestion, QuizQuestionAnswer
-from .access import user_can_edit_template
+from .access import user_can_delete_template, user_can_edit_template
 
 
 class IsStaffOrReadOnly(BasePermission):
@@ -62,4 +62,6 @@ class CanManageQuizTemplate(BasePermission):
         quiz_template = obj
         if isinstance(obj, QuizQuestion):
             quiz_template = obj.quiz
+        if request.method == "DELETE":
+            return user_can_delete_template(request.user, quiz_template)
         return user_can_edit_template(request.user, quiz_template)

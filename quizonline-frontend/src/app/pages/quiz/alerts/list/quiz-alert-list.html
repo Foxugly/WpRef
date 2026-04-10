@@ -1,7 +1,7 @@
 <section class="page">
   <div class="page__header">
     <div>
-      <h1>Alertes quiz</h1>
+      <h1>Messages quiz</h1>
       <p>Suivi des messages entre utilisateur et créateur du quiz.</p>
     </div>
     <div class="page__tools">
@@ -9,7 +9,7 @@
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
         pInputText
-        placeholder="Rechercher dans les alertes..."
+        placeholder="Rechercher dans les messages..."
       >
       <p-select
         [ngModel]="statusFilter()"
@@ -39,11 +39,11 @@
 
   @if (loading()) {
     <p-card styleClass="alert-card">
-      <p>Chargement des alertes…</p>
+      <p>Chargement des messages...</p>
     </p-card>
   } @else if (!filteredThreads().length) {
     <p-card styleClass="alert-card">
-      <p>Aucune alerte ne correspond au filtre.</p>
+      <p>Aucun message ne correspond au filtre.</p>
     </p-card>
   } @else {
     <div class="alert-list">
@@ -64,12 +64,13 @@
                 <span class="alert-card__topic">Quiz</span>
               }
               <strong class="alert-card__title">{{ thread.question_title }}</strong>
-              <span class="alert-card__pill">{{ thread.quiz_template_title }}</span>
-              <span class="alert-card__pill">Langue {{ thread.reported_language || '-' }}</span>
+              @if (thread.counterpart_username) {
+                <span class="alert-card__pill">{{ thread.counterpart_username }}</span>
+              }
               @if (thread.kind === 'question' && thread.question_id !== null) {
                 <span class="alert-card__pill">Question #{{ thread.question_id }}</span>
               }
-              <span class="alert-card__time">{{ thread.last_message_at | date : 'short' }}</span>
+              <span class="alert-card__time">{{ formatThreadDate(thread.last_message_at) }}</span>
             </div>
 
             <div class="alert-card__status">
@@ -80,7 +81,7 @@
             </div>
           </div>
 
-          <p class="alert-card__preview">{{ thread.last_message_preview || 'Aucun message.' }}</p>
+          <p class="alert-card__preview">{{ previewText(thread) }}</p>
         </a>
       }
     </div>

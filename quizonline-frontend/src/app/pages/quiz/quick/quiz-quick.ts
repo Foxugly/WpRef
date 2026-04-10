@@ -1,6 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {Component, computed, DestroyRef, inject, signal, ViewChild} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {Subject, switchMap} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
 import {QuizSubjectCreatePayload, QuizService} from '../../../services/quiz/quiz';
 import {QuizSubjectForm} from '../subject-form/subject-form';
@@ -26,6 +27,22 @@ export class QuizQuickPage {
   private readonly quizService = inject(QuizService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly userService = inject(UserService);
+  private readonly subjectSelection$ = new Subject<number[]>();
+
+  constructor() {
+    this.subjectSelection$
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        switchMap((ids) => this.quizService.getQuestionCountBySubjects(ids)),
+      )
+      .subscribe({
+        next: (data) => this.maxQuestions.set(data.count),
+        error: (err: unknown) => {
+          logApiError('quiz.quick.questions-count', err);
+          this.maxQuestions.set(null);
+        },
+      });
+  }
 
   onGenerate(payload: QuizSubjectCreatePayload): void {
     this.saving.set(true);
@@ -48,16 +65,7 @@ export class QuizQuickPage {
   }
 
   onSubjectsChange(ids: number[]): void {
-    this.quizService
-      .getQuestionCountBySubjects(ids)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data) => this.maxQuestions.set(data.count),
-        error: (err: unknown) => {
-          logApiError('quiz.quick.questions-count', err);
-          this.maxQuestions.set(null);
-        },
-      });
+    this.subjectSelection$.next(ids);
   }
 
   goBack(): void {

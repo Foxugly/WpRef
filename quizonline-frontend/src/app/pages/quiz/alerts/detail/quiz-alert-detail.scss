@@ -186,6 +186,10 @@
   justify-content: space-between;
 }
 
+.reply-box__actions > p-button:last-child {
+  margin-left: auto;
+}
+
 .reply-box__owner-actions {
   align-items: center;
   display: inline-flex;
@@ -217,6 +221,10 @@
   .reply-box__actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .reply-box__actions > p-button:last-child {
+    margin-left: 0;
   }
 
   .reply-box__owner-actions {

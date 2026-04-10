@@ -24,7 +24,13 @@
 
     <div class="topbar__actions">
       @if (currentUser) {
-        <button pButton (click)="goAlerts()" [attr.aria-label]="ui.topmenu.alertsAria" class="alert-link" type="button">
+        <button
+          pButton
+          (click)="goAlerts()"
+          [attr.aria-label]="ui.topmenu.alertsAria"
+          class="alert-link"
+          type="button"
+        >
           <i class="pi pi-envelope"></i>
           @if (unreadAlertCount > 0) {
             <span class="alert-link__badge">{{ unreadAlertCount }}</span>

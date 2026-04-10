@@ -334,11 +334,11 @@ class QuestionViewSet(MyModelViewSet):
         )
         qs = self.filter_queryset(self.get_queryset())
         search = (request.query_params.get("search") or "")[:200]
-        subject_ids_raw = [
-            value.strip()
-            for value in request.query_params.getlist("subject_ids")
-            if str(value).strip()
-        ]
+        subject_ids_raw: list[str] = []
+        for value in request.query_params.getlist("subject_ids"):
+            if not str(value).strip():
+                continue
+            subject_ids_raw.extend(part.strip() for part in str(value).split(",") if part.strip())
         if not subject_ids_raw:
             csv_subjects = request.query_params.get("subject_ids")
             if csv_subjects:

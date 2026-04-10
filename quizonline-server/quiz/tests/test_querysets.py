@@ -93,6 +93,34 @@ class QuizQuerysetsTests(TestCase):
             [self.public_same_domain.id, private_same_domain.id],
         )
 
+    def test_simple_creator_does_not_see_inactive_template(self):
+        own_inactive = QuizTemplate.objects.create(
+            domain=self.other_domain,
+            title="Own inactive",
+            is_public=False,
+            active=False,
+            permanent=True,
+            created_by=self.user,
+        )
+
+        queryset = accessible_quiz_template_queryset(self.user)
+
+        self.assertNotIn(own_inactive.id, list(queryset.values_list("id", flat=True)))
+
+    def test_domain_staff_still_sees_inactive_template_of_managed_domain(self):
+        inactive_same_domain = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="Inactive same domain",
+            is_public=False,
+            active=False,
+            permanent=True,
+            created_by=self.other_user,
+        )
+
+        queryset = accessible_quiz_template_queryset(self.domain_staff)
+
+        self.assertIn(inactive_same_domain.id, list(queryset.values_list("id", flat=True)))
+
     def test_stale_current_domain_does_not_grant_template_access(self):
         self.other_user.current_domain = self.domain
         self.other_user.save(update_fields=["current_domain"])

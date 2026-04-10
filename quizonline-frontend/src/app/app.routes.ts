@@ -115,7 +115,7 @@ export const routes: Routes = [
   {
     path: 'quiz/template/:templateId/delete',
     loadComponent: () => import('./pages/quiz/delete/quiz-template-delete').then((m) => m.QuizTemplateDelete),
-    canActivate: [authGuard, staffGuard],
+    canActivate: [authGuard],
   },
   {
     path: 'quiz/list',
@@ -128,12 +128,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'quiz/alerts',
+    path: 'messages',
     loadComponent: () => import('./pages/quiz/alerts/list/quiz-alert-list').then((m) => m.QuizAlertList),
     canActivate: [authGuard],
   },
   {
-    path: 'quiz/alerts/:alertId',
+    path: 'messages/:alertId',
     loadComponent: () => import('./pages/quiz/alerts/detail/quiz-alert-detail').then((m) => m.QuizAlertDetail),
     canActivate: [authGuard],
   },

@@ -9,9 +9,12 @@ import {CardModule} from 'primeng/card';
 import {InputTextModule} from 'primeng/inputtext';
 import {SelectModule} from 'primeng/select';
 import {TagModule} from 'primeng/tag';
+import {LanguageEnumDto} from '../../../../api/generated';
 import {QuizAlertService, QuizAlertThreadListDto} from '../../../../services/quiz-alert/quiz-alert';
+import {UserService} from '../../../../services/user/user';
 import {ROUTES} from '../../../../app.routes-paths';
 import {logApiError, userFacingApiMessage} from '../../../../shared/api/api-errors';
+import {formatLocalizedDateTime} from '../../../../shared/i18n/date-time';
 
 type AlertStatusFilter = 'all' | 'open' | 'closed';
 type AlertReadFilter = 'all' | 'unread' | 'read';
@@ -43,6 +46,7 @@ export class QuizAlertList implements OnInit {
     {label: 'Lus', value: 'read'},
   ];
   private readonly quizAlertService = inject(QuizAlertService);
+  private readonly userService = inject(UserService);
   private readonly destroyRef = inject(DestroyRef);
   readonly filteredThreads = computed(() => {
     const search = this.normalize(this.search());
@@ -69,6 +73,7 @@ export class QuizAlertList implements OnInit {
       return this.normalize([
         thread.kind,
         thread.question_title,
+        thread.counterpart_username,
         thread.quiz_template_title,
         thread.last_message_preview,
         thread.reported_language,
@@ -97,7 +102,7 @@ export class QuizAlertList implements OnInit {
         },
         error: (err: unknown) => {
           logApiError('quiz.alerts.list', err);
-          this.error.set(userFacingApiMessage(err, 'Impossible de charger les alertes.'));
+          this.error.set(userFacingApiMessage(err, 'Impossible de charger les messages.'));
           this.threads.set([]);
         },
       });
@@ -114,7 +119,36 @@ export class QuizAlertList implements OnInit {
     if (thread.unread_count > 0) {
       return 'Non lu';
     }
-    return thread.status === 'open' ? 'Ouverte' : 'Clôturée';
+    return thread.status === 'open' ? 'Ouverte' : 'Fermée';
+  }
+
+  previewText(thread: QuizAlertThreadListDto): string {
+    if (thread.kind !== 'assignment') {
+      return thread.last_message_preview || 'Aucun message.';
+    }
+
+    const sanitized = (thread.last_message_preview || '')
+      .replace(/https?:\/\/\S+/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!sanitized) {
+      return `Un nouveau quiz vous a été assigné : ${thread.quiz_template_title}`;
+    }
+
+    const prefix = sanitized.endsWith('.') ? sanitized.slice(0, -1) : sanitized;
+    return `${prefix} : ${thread.quiz_template_title}`;
+  }
+
+  formatThreadDate(value: string): string {
+    return formatLocalizedDateTime(value, this.currentLang(), {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }) ?? value;
+  }
+
+  private currentLang(): LanguageEnumDto {
+    return this.userService.currentLang ?? LanguageEnumDto.En;
   }
 
   private normalize(value: string): string {

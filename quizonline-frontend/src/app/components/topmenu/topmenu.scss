@@ -141,6 +141,7 @@
   min-width: 2.5rem;
   padding: 0 0.85rem;
   position: relative;
+  overflow: visible;
 }
 
 .alert-link:hover {
@@ -195,6 +196,7 @@
   position: absolute;
   right: -0.2rem;
   top: -0.2rem;
+  z-index: 1;
 }
 
 @media (max-width: 1080px) {

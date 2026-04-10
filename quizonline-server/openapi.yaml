@@ -4667,6 +4667,9 @@ components:
         last_message_preview:
           type: string
           readOnly: true
+        counterpart_username:
+          type: string
+          readOnly: true
         reporter:
           type: integer
           readOnly: true
@@ -4708,6 +4711,7 @@ components:
       - can_reply
       - closed_at
       - closed_by
+      - counterpart_username
       - created_at
       - id
       - kind
@@ -4781,7 +4785,11 @@ components:
         last_message_preview:
           type: string
           readOnly: true
+        counterpart_username:
+          type: string
+          readOnly: true
       required:
+      - counterpart_username
       - created_at
       - id
       - kind

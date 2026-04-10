@@ -57,7 +57,6 @@ def user_can_manage_template_assignments(user, quiz_template) -> bool:
         user
         and (
             user.is_superuser
-            or quiz_template.created_by_id == user.id
             or user_manages_template_domain(user, quiz_template)
         )
     )
@@ -80,13 +79,17 @@ def user_can_edit_template(user, quiz_template) -> bool:
         return False
     if getattr(user, "is_superuser", False):
         return True
+    return user_manages_template_domain(user, quiz_template)
+
+
+def user_can_delete_template(user, quiz_template) -> bool:
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
     if user_manages_template_domain(user, quiz_template):
         return True
-    return (
-        quiz_template.mode == quiz_template.MODE_PRACTICE
-        and quiz_template.created_by_id == user.id
-        and user_matches_template_domain(user, quiz_template)
-    )
+    return quiz_template.created_by_id == getattr(user, "id", None)
 
 
 def validate_target_user_domain(quiz_template, target_user) -> None:

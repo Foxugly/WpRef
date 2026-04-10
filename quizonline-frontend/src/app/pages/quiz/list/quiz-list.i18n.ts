@@ -18,6 +18,7 @@ export type QuizListUiText = {
       title: string;
       mode: string;
       questions: string;
+      createdAt: string;
       owner: string;
       public: string;
       active: string;
@@ -76,6 +77,7 @@ const FR: QuizListUiText = {
       title: 'Titre',
       mode: 'Mode',
       questions: 'Questions',
+      createdAt: 'Créé le',
       owner: 'Owner',
       public: 'Public',
       active: 'Actif',
@@ -134,6 +136,7 @@ const EN: QuizListUiText = {
       title: 'Title',
       mode: 'Mode',
       questions: 'Questions',
+      createdAt: 'Created at',
       owner: 'Owner',
       public: 'Public',
       active: 'Active',
@@ -192,6 +195,7 @@ const NL: QuizListUiText = {
       title: 'Titel',
       mode: 'Modus',
       questions: 'Vragen',
+      createdAt: 'Aangemaakt op',
       owner: 'Owner',
       public: 'Publiek',
       active: 'Actief',
@@ -250,6 +254,7 @@ const IT: QuizListUiText = {
       title: 'Titolo',
       mode: 'Modalita',
       questions: 'Domande',
+      createdAt: 'Creato il',
       owner: 'Owner',
       public: 'Pubblico',
       active: 'Attivo',
@@ -308,6 +313,7 @@ const ES: QuizListUiText = {
       title: 'Titulo',
       mode: 'Modo',
       questions: 'Preguntas',
+      createdAt: 'Creado el',
       owner: 'Owner',
       public: 'Publico',
       active: 'Activo',

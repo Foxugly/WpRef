@@ -190,7 +190,7 @@ const FR: UiText = {
     subjects: 'Sujets',
     questions: 'Questions',
     about: 'À propos',
-    alertsAria: 'Alertes',
+    alertsAria: 'Messages',
     currentDomain: 'Domaine courant',
     ownedDomains: 'Mes domaines',
     staffDomains: 'Domaines où je suis staff',
@@ -221,11 +221,11 @@ const FR: UiText = {
     modeVisitor: 'Visiteur',
     languages: 'Langues',
     features: 'Fonctions',
-    featuresValue: 'Quiz, alertes, affectations, correction',
+    featuresValue: 'Quiz, messages, affectations, correction',
     highlights: [
       {title: 'Passage fluide', description: 'Quiz pratiques ou examens avec timer, reprise et correction localisee.'},
       {title: 'Edition staff', description: 'Questions multimedia, sujets, domaines et templates dans une interface unifiee.'},
-      {title: 'Suivi réel', description: 'Affectations, résultats, alertes et corrections disponibles selon les règles métier.'},
+      {title: 'Suivi réel', description: 'Affectations, résultats, messages et corrections disponibles selon les règles métier.'},
     ],
     capabilitiesTitle: 'Ce que vous pouvez faire',
     capabilities: [
@@ -376,7 +376,7 @@ const FR: UiText = {
 };
 
 const EN: UiText = {
-  topmenu: {quiz: 'Quizzes', domains: 'Domains', subjects: 'Subjects', questions: 'Questions', about: 'About', alertsAria: 'Alerts', currentDomain: 'Current domain', ownedDomains: 'My domains', staffDomains: 'Domains where I am staff', linkedDomains: 'Linked domains', noDomains: 'No domain', preferences: 'Preferences'},
+  topmenu: {quiz: 'Quizzes', domains: 'Domains', subjects: 'Subjects', questions: 'Questions', about: 'About', alertsAria: 'Messages', currentDomain: 'Current domain', ownedDomains: 'My domains', staffDomains: 'Domains where I am staff', linkedDomains: 'Linked domains', noDomains: 'No domain', preferences: 'Preferences'},
   userMenu: {preferences: 'Preferences', changePassword: 'Change password', logout: 'Logout', login: 'Login'},
   footer: {baseline: 'Quiz and domain content management platform.', version: 'Version'},
   home: {
@@ -392,11 +392,11 @@ const EN: UiText = {
     modeVisitor: 'Visitor',
     languages: 'Languages',
     features: 'Features',
-    featuresValue: 'Quizzes, alerts, assignments, review',
+    featuresValue: 'Quizzes, messages, assignments, review',
     highlights: [
       {title: 'Smooth delivery', description: 'Practice and exam flows with timer, resume support and localized review.'},
       {title: 'Staff editing', description: 'Multimedia questions, subjects, domains and templates in one workspace.'},
-      {title: 'Live follow-up', description: 'Assignments, results, alerts and review rules in the same product.'},
+      {title: 'Live follow-up', description: 'Assignments, results, messages and review rules in the same product.'},
     ],
     capabilitiesTitle: 'What you can do',
     capabilities: [
@@ -454,7 +454,7 @@ const EN: UiText = {
 };
 
 const NL: UiText = {
-  topmenu: {quiz: 'Quizzen', domains: 'Domeinen', subjects: 'Onderwerpen', questions: 'Vragen', about: 'Over', alertsAria: 'Meldingen', currentDomain: 'Huidig domein', ownedDomains: 'Mijn domeinen', staffDomains: 'Domeinen waar ik staff ben', linkedDomains: 'Gekoppelde domeinen', noDomains: 'Geen domein', preferences: 'Voorkeuren'},
+  topmenu: {quiz: 'Quizzen', domains: 'Domeinen', subjects: 'Onderwerpen', questions: 'Vragen', about: 'Over', alertsAria: 'Berichten', currentDomain: 'Huidig domein', ownedDomains: 'Mijn domeinen', staffDomains: 'Domeinen waar ik staff ben', linkedDomains: 'Gekoppelde domeinen', noDomains: 'Geen domein', preferences: 'Voorkeuren'},
   userMenu: {preferences: 'Voorkeuren', changePassword: 'Wachtwoord wijzigen', logout: 'Afmelden', login: 'Aanmelden'},
   footer: {baseline: 'Platform voor quizzen en domeingebaseerd contentbeheer.', version: 'Versie'},
   home: {
@@ -531,7 +531,7 @@ const NL: UiText = {
 };
 
 const IT: UiText = {
-  topmenu: {quiz: 'Quiz', domains: 'Domini', subjects: 'Argomenti', questions: 'Domande', about: 'Informazioni', alertsAria: 'Avvisi', currentDomain: 'Dominio corrente', ownedDomains: 'I miei domini', staffDomains: 'Domini dove sono staff', linkedDomains: 'Domini collegati', noDomains: 'Nessun dominio', preferences: 'Preferenze'},
+  topmenu: {quiz: 'Quiz', domains: 'Domini', subjects: 'Argomenti', questions: 'Domande', about: 'Informazioni', alertsAria: 'Messaggi', currentDomain: 'Dominio corrente', ownedDomains: 'I miei domini', staffDomains: 'Domini dove sono staff', linkedDomains: 'Domini collegati', noDomains: 'Nessun dominio', preferences: 'Preferenze'},
   userMenu: {preferences: 'Preferenze', changePassword: 'Cambia password', logout: 'Disconnetti', login: 'Accedi'},
   footer: {baseline: 'Piattaforma per quiz e gestione contenuti per dominio.', version: 'Versione'},
   home: {
@@ -547,11 +547,11 @@ const IT: UiText = {
     modeVisitor: 'Visitatore',
     languages: 'Lingue',
     features: 'Funzionalita',
-    featuresValue: 'Quiz, avvisi, assegnazioni, revisione',
+    featuresValue: 'Quiz, messaggi, assegnazioni, revisione',
     highlights: [
       {title: 'Esecuzione fluida', description: 'Quiz di pratica o esame con timer, ripresa e revisione localizzata.'},
       {title: 'Editing staff', description: 'Domande multimediali, argomenti, domini e template in un’unica interfaccia.'},
-      {title: 'Monitoraggio live', description: 'Assegnazioni, risultati, avvisi e regole di revisione nello stesso prodotto.'},
+      {title: 'Monitoraggio live', description: 'Assegnazioni, risultati, messaggi e regole di revisione nello stesso prodotto.'},
     ],
     capabilitiesTitle: 'Cosa puoi fare',
     capabilities: [
@@ -609,7 +609,7 @@ const IT: UiText = {
 };
 
 const ES: UiText = {
-  topmenu: {quiz: 'Cuestionarios', domains: 'Dominios', subjects: 'Temas', questions: 'Preguntas', about: 'Acerca de', alertsAria: 'Alertas', currentDomain: 'Dominio actual', ownedDomains: 'Mis dominios', staffDomains: 'Dominios donde soy staff', linkedDomains: 'Dominios vinculados', noDomains: 'Ningun dominio', preferences: 'Preferencias'},
+  topmenu: {quiz: 'Cuestionarios', domains: 'Dominios', subjects: 'Temas', questions: 'Preguntas', about: 'Acerca de', alertsAria: 'Mensajes', currentDomain: 'Dominio actual', ownedDomains: 'Mis dominios', staffDomains: 'Dominios donde soy staff', linkedDomains: 'Dominios vinculados', noDomains: 'Ningun dominio', preferences: 'Preferencias'},
   userMenu: {preferences: 'Preferencias', changePassword: 'Cambiar contrasena', logout: 'Cerrar sesion', login: 'Iniciar sesion'},
   footer: {baseline: 'Plataforma de cuestionarios y gestion de contenido por dominio.', version: 'Version'},
   home: {
@@ -625,11 +625,11 @@ const ES: UiText = {
     modeVisitor: 'Visitante',
     languages: 'Idiomas',
     features: 'Funciones',
-    featuresValue: 'Cuestionarios, alertas, asignaciones, revision',
+    featuresValue: 'Cuestionarios, mensajes, asignaciones, revision',
     highlights: [
       {title: 'Uso fluido', description: 'Cuestionarios de practica o examen con temporizador, reanudacion y revision localizada.'},
       {title: 'Edicion staff', description: 'Preguntas multimedia, temas, dominios y plantillas en una sola interfaz.'},
-      {title: 'Seguimiento en vivo', description: 'Asignaciones, resultados, alertas y reglas de revision en el mismo producto.'},
+      {title: 'Seguimiento en vivo', description: 'Asignaciones, resultados, mensajes y reglas de revision en el mismo producto.'},
     ],
     capabilitiesTitle: 'Lo que puedes hacer',
     capabilities: [

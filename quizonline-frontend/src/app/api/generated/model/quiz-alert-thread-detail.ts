@@ -28,6 +28,7 @@ export interface QuizAlertThreadDetailDto {
     readonly unread: boolean;
     readonly unread_count: number;
     readonly last_message_preview: string;
+    readonly counterpart_username: string;
     readonly reporter: number;
     readonly reporter_summary: UserSummaryDto | null;
     readonly owner: number;

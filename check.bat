@@ -8,6 +8,7 @@ if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 set "BACKEND=%ROOT%\quizonline-server"
 set "FRONTEND=%ROOT%\quizonline-frontend"
 set "SYNC_OPENAPI=%ROOT%\scripts\sync-openapi.ps1"
+set "PYTHON=%ROOT%\.venv\Scripts\python.exe"
 set "ERRORS=0"
 
 echo ============================================================
@@ -27,9 +28,15 @@ if not exist "%FRONTEND%\package.json" (
     goto :summary
 )
 
+if not exist "%PYTHON%" (
+    echo [FAIL] Python du virtualenv introuvable: "%PYTHON%"
+    set /a ERRORS+=1
+    goto :summary
+)
+
 echo [1/5] Tests Django...
 pushd "%BACKEND%" >nul
-python manage.py test --verbosity=1
+"%PYTHON%" manage.py test --verbosity=1
 
 if errorlevel 1 (
     echo [FAIL] Tests Django
@@ -40,7 +47,7 @@ if errorlevel 1 (
 echo.
 
 echo [2/5] Django system check...
-python manage.py check
+"%PYTHON%" manage.py check
 if errorlevel 1 (
     echo [FAIL] System check
     set /a ERRORS+=1

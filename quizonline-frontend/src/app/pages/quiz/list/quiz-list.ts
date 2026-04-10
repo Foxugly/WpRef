@@ -19,6 +19,7 @@ import {AssignableRecipient, QuizTemplateListItem, UserQuizListItem} from './qui
 import {DomainService} from '../../../services/domain/domain';
 import {DomainReadDto, UserSummaryDto} from '../../../api/generated';
 import {getQuizListUiText} from './quiz-list.i18n';
+import {ROUTES} from '../../../app.routes-paths';
 
 type DomainReadWithMembers = DomainReadDto & {
   members?: UserSummaryDto[];
@@ -168,7 +169,8 @@ export class QuizListPage implements OnInit {
         next: (created) => {
           this.success.set(this.uiText().messages.assignSuccess(created.length));
           this.closeAssignDialog();
-          this.openResultsDialog(template);
+          this.closeResultsDialog();
+          void this.router.navigate(ROUTES.quiz.list());
         },
         error: (err: unknown) => {
           logApiError('quiz.list.assign-template', err);
@@ -274,19 +276,16 @@ export class QuizListPage implements OnInit {
   ): QuizTemplateListItem {
     const domain = domains.find((item) => item.id === template.domain);
     const managesDomain = !!me && !!domain && this.canManageDomain(domain);
-    const canManage = !!me && (
-      template.created_by === me.id
-      || managesDomain
-    );
+    const isCreator = !!me && template.created_by === me.id;
 
     return {
       ...template,
       ownerLabel: template.created_by_username || (template.created_by ? `User #${template.created_by}` : '-'),
-      canManage,
-      canAssign: canManage,
-      canEdit: canManage,
-      canDelete: canManage,
-      canViewResults: canManage,
+      canManage: managesDomain,
+      canAssign: managesDomain,
+      canEdit: managesDomain,
+      canDelete: managesDomain || isCreator,
+      canViewResults: managesDomain,
     };
   }
 

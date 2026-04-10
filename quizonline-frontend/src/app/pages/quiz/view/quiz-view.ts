@@ -45,7 +45,7 @@ export class QuizView implements OnInit {
   });
   readonly scoreLabel = computed(() => {
     const session = this.quizSession();
-    if (!session || session.earned_score == null || session.max_score == null) {
+    if (!session || !session.started_at || session.earned_score == null || session.max_score == null) {
       return QuizView.FALLBACK_LABEL;
     }
     return `${session.earned_score} / ${session.max_score}`;
@@ -59,12 +59,13 @@ export class QuizView implements OnInit {
   });
   readonly scoreMetaLabel = computed(() => {
     const session = this.quizSession();
-    if (!session || session.correct_answers == null || session.total_answers == null) {
+    if (!session || !session.started_at || session.correct_answers == null || session.total_answers == null) {
       return QuizView.FALLBACK_LABEL;
     }
 
     return `${session.correct_answers} bonnes reponses sur ${session.total_answers}`;
   });
+  readonly showScore = computed(() => Boolean(this.quizSession()?.started_at));
   readonly summaryFacts = computed(() => {
     const session = this.quizSession();
     if (!session) {
@@ -73,6 +74,7 @@ export class QuizView implements OnInit {
 
     const facts: QuizSummaryFact[] = [
       {label: 'Timer', value: this.timerLabel()},
+      {label: 'Questions', value: String(session.max_questions ?? QuizView.FALLBACK_LABEL)},
     ];
 
     if (session.created_at) {

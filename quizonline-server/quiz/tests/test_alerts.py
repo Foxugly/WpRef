@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone, translation
 from domain.models import Domain
@@ -301,5 +302,27 @@ class QuizAlertsApiTestCase(APITestCase):
         self.assertTrue(thread.unread_for(self.reporter))
         self.assertEqual(thread.unread_count_for(self.reporter), 1)
         self.assertFalse(thread.can_user_reply(self.reporter))
+        self.assertEqual(thread.status, QuizAlertThread.STATUS_CLOSED)
         self.assertEqual(thread.question_title, "Nouveau quiz assigne")
-        self.assertIn("/quiz/", thread.messages.first().body)
+        self.assertEqual(thread.messages.first().body, "Un nouveau quiz vous a ete assigne.")
+
+    @override_settings(
+        QUIZ_ASSIGNMENT_ALERT_CLOSE_IMMEDIATELY=False,
+        QUIZ_ASSIGNMENT_ALERT_REPORTER_REPLY_ALLOWED=True,
+    )
+    def test_assigning_quiz_can_keep_topic_open_and_reply_enabled(self):
+        self.reporter.language = "fr"
+        self.reporter.save(update_fields=["language"])
+
+        with self.captureOnCommitCallbacks(execute=True):
+            created = create_quizzes_from_template(
+                quiz_template=self.template,
+                users=[self.reporter],
+                validate_target_user=lambda _template, _user: None,
+                assigned_by=self.owner,
+            )
+
+        thread = QuizAlertThread.objects.get(quiz=created[0], kind=QuizAlertThread.KIND_ASSIGNMENT)
+        self.assertEqual(thread.status, QuizAlertThread.STATUS_OPEN)
+        self.assertTrue(thread.reporter_reply_allowed)
+        self.assertTrue(thread.can_user_reply(self.reporter))

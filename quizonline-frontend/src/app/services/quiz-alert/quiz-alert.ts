@@ -1,6 +1,6 @@
 import {Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {Observable, tap} from 'rxjs';
+import {map, Observable, tap} from 'rxjs';
 import {resolveApiBaseUrl} from '../../shared/api/runtime-api-base-url';
 
 export interface AlertUserSummary {
@@ -34,6 +34,7 @@ export interface QuizAlertThreadListDto {
   unread: boolean;
   unread_count: number;
   last_message_preview: string;
+  counterpart_username: string;
 }
 
 export interface QuizAlertThreadDetailDto extends QuizAlertThreadListDto {
@@ -62,7 +63,9 @@ export class QuizAlertService {
   constructor(private readonly http: HttpClient) {}
 
   list(): Observable<QuizAlertThreadListDto[]> {
-    return this.http.get<QuizAlertThreadListDto[]>(`${this.baseUrl}/`);
+    return this.http
+      .get<QuizAlertThreadListDto[] | {results?: QuizAlertThreadListDto[]}>(`${this.baseUrl}/`)
+      .pipe(map((response) => Array.isArray(response) ? response : (response.results ?? [])));
   }
 
   retrieve(alertId: number): Observable<QuizAlertThreadDetailDto> {

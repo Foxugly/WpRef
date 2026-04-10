@@ -34,11 +34,13 @@
     </div>
   </div>
 
-  <div class="summary-hero__score">
-    <span class="summary-hero__score-label">Score</span>
-    <span class="summary-hero__score-value">{{ scoreLabel() }}</span>
-    <span class="summary-hero__score-meta">{{ scoreMetaLabel() }}</span>
-  </div>
+  @if (showScore()) {
+    <div class="summary-hero__score">
+      <span class="summary-hero__score-label">Score</span>
+      <span class="summary-hero__score-value">{{ scoreLabel() }}</span>
+      <span class="summary-hero__score-meta">{{ scoreMetaLabel() }}</span>
+    </div>
+  }
 
   <div class="summary-hero__aside">
     @if (!session().started_at) {

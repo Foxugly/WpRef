@@ -252,6 +252,11 @@ class QuizTemplateViewSet(MyModelViewSet):
         )
         instance = self.get_object()
         self.check_object_permissions(request, instance)
+        if instance.quiz.exists():
+            if instance.active:
+                instance.active = False
+                instance.save(update_fields=["active"])
+            return Response(status=status.HTTP_204_NO_CONTENT)
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
