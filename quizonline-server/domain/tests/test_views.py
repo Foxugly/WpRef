@@ -154,9 +154,13 @@ class DomainViewSetTests(TestCase):
         request = self.factory.get("/api/domain/available-for-linking/")
         response = view(request)
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {item["id"] for item in response.data}
+        self.assertIn(self.domain_active.id, ids)
+        self.assertIn(self.domain_other_active.id, ids)
+        self.assertNotIn(self.domain_inactive.id, ids)
 
-    def test_available_for_linking_requires_authentication_but_returns_active_domains(self):
+    def test_available_for_linking_returns_active_domains_for_authenticated_user(self):
         view = DomainViewSet.as_view({"get": "available_for_linking"})
         request = self.factory.get("/api/domain/available-for-linking/")
         force_authenticate(request, user=self.member)

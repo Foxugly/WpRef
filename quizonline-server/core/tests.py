@@ -1,10 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from kombu.exceptions import OperationalError
 
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.test import TestCase
+from django.core import mail
 
 from core.mailers import send_password_reset_email, send_quiz_assignment_email
 from core.models import OutboundEmail
@@ -89,8 +90,9 @@ class CoreMailerTests(TestCase):
         self.assertIn("Bonjour", outbound.body)
         self.assertIn("Lien", outbound.body)
 
+    @patch("core.mailers._common.transaction.on_commit", side_effect=lambda callback: callback())
     @patch("core.tasks.deliver_outbound_emails_task.delay", side_effect=OperationalError("broker down"))
-    def test_send_password_reset_email_tolerates_broker_dispatch_failure(self, _delay):
+    def test_send_password_reset_email_tolerates_broker_dispatch_failure(self, _delay, _on_commit):
         user = CustomUser.objects.create_user(
             username="mail-user-broker",
             password="Pass1234!",
@@ -100,4 +102,26 @@ class CoreMailerTests(TestCase):
         send_password_reset_email(user)
 
         outbound = OutboundEmail.objects.get(recipients=["mail-user-broker@example.com"])
-        self.assertIsNone(outbound.sent_at)
+        self.assertIsNotNone(outbound.sent_at)
+        self.assertEqual(len(mail.outbox), 1)
+
+    @patch("core.mailers._common.transaction.on_commit", side_effect=lambda callback: callback())
+    @patch("core.tasks.deliver_outbound_emails_task.delay", side_effect=OperationalError("broker down"))
+    @patch("core.delivery.logger.warning")
+    def test_send_password_reset_email_logs_and_falls_back_when_broker_is_down(
+        self,
+        logger_warning: MagicMock,
+        _delay,
+        _on_commit,
+    ):
+        user = CustomUser.objects.create_user(
+            username="mail-user-broker-log",
+            password="Pass1234!",
+            email="mail-user-broker-log@example.com",
+        )
+
+        send_password_reset_email(user)
+
+        logger_warning.assert_called()
+        outbound = OutboundEmail.objects.get(recipients=["mail-user-broker-log@example.com"])
+        self.assertIsNotNone(outbound.sent_at)

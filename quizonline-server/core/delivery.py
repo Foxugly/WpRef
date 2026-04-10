@@ -60,3 +60,6 @@ def trigger_outbound_email_delivery() -> None:
         deliver_outbound_emails_task.delay(limit=100)
     except (ConnectionError, OSError, KombuError) as exc:
         logger.warning("email.delivery_dispatch_failed", extra={"error": str(exc)})
+        # Fall back to in-process delivery when the broker is unavailable so
+        # registration and reset emails are still sent in degraded mode.
+        process_pending_outbound_emails(limit=100)

@@ -19,7 +19,6 @@
         <th pSortableColumn="ownerLabel">{{ uiText().templates.headers.owner }} <p-sortIcon field="ownerLabel"></p-sortIcon></th>
         <th pSortableColumn="is_public">{{ uiText().templates.headers.public }} <p-sortIcon field="is_public"></p-sortIcon></th>
         <th pSortableColumn="active">{{ uiText().templates.headers.active }} <p-sortIcon field="active"></p-sortIcon></th>
-        <th pSortableColumn="can_answer">{{ uiText().templates.headers.available }} <p-sortIcon field="can_answer"></p-sortIcon></th>
         <th>{{ uiText().templates.headers.availabilityWindow }}</th>
         <th style="width: 280px;">{{ uiText().templates.headers.actions }}</th>
       </tr>
@@ -34,7 +33,6 @@
         <td>{{ template.ownerLabel || template.created_by_username || ('User #' + template.created_by) }}</td>
         <td class="center-cell">{{ boolLabel(template.is_public) }}</td>
         <td class="center-cell">{{ boolLabel(template.active) }}</td>
-        <td class="center-cell">{{ boolLabel(template.can_answer) }}</td>
         <td>{{ availabilityLabel(template) }}</td>
         <td class="row-actions">
           @if (canStartTemplate(template)) {
@@ -99,7 +97,7 @@
 
     <ng-template #emptymessage>
       <tr>
-        <td class="empty-cell" colspan="10">
+        <td class="empty-cell" colspan="9">
           @if (loading()) {
             Chargement...
           } @else {

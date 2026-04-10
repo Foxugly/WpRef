@@ -48,6 +48,7 @@ export class QuestionList implements OnInit {
   totalRecords = signal(0);
   rows = signal(10);
   first = signal(0);
+  selectingAll = signal(false);
 
   questions = signal<QuestionReadDto[]>([]);
   subjects = signal<SubjectReadDto[]>([]);
@@ -70,19 +71,12 @@ export class QuestionList implements OnInit {
   });
 
   readonly rowsData = computed<QuestionListRow[]>(() => {
-    return this.questions().map((question) => ({
-      id: question.id,
-      question,
-      title: this.getTitle(question),
-      active: !!question.active,
-      modesText: this.getModes(question).join(', '),
-      domainName: this.getDomain(question.domain),
-      subjectsText: (question.subjects ?? []).map((subject) => this.getSubjectTitle(subject)).join(', '),
-      subjectIds: (question.subjects ?? []).map((subject) => subject.id),
-    }));
+    return this.questions().map((question) => this.toRow(question));
   });
 
   readonly selectedCount = computed(() => this.selectedRows().length);
+  readonly allFilteredSelected = computed(() => this.totalRecords() > 0 && this.selectedRows().length === this.totalRecords());
+  readonly someFilteredSelected = computed(() => this.selectedRows().length > 0 && !this.allFilteredSelected());
 
   ngOnInit() {
     this.currentLang.set(this.userService.currentLang ?? LanguageEnumDto.En);
@@ -130,12 +124,14 @@ export class QuestionList implements OnInit {
   onSearchChange(term: string) {
     this.q.set(term);
     this.first.set(0);
+    this.selectedRows.set([]);
     this.loadQuestions(1);
   }
 
   onSubjectsChange(ids: number[] | null | undefined): void {
     this.selectedSubjectIds.set(ids ?? []);
     this.first.set(0);
+    this.selectedRows.set([]);
     this.loadQuestions(1);
   }
 
@@ -143,12 +139,28 @@ export class QuestionList implements OnInit {
     this.selectedRows.set(rows);
   }
 
-  selectAll(): void {
-    this.selectedRows.set([...this.rowsData()]);
-  }
+  toggleSelectAllFiltered(checked: boolean): void {
+    if (!checked) {
+      this.selectedRows.set([]);
+      return;
+    }
 
-  clearSelection(): void {
-    this.selectedRows.set([]);
+    const currentDomainId = this.userService.currentUser()?.current_domain ?? undefined;
+    this.selectingAll.set(true);
+    this.questionService.list({
+      search: this.q() || undefined,
+      subjectIds: this.selectedSubjectIds(),
+      domainId: currentDomainId ?? undefined,
+    }).subscribe({
+      next: (questions) => {
+        this.selectedRows.set((questions ?? []).map((question) => this.toRow(question)));
+      },
+      error: (err: unknown) => {
+        logApiError('question.list.select-all', err);
+        this.selectingAll.set(false);
+      },
+      complete: () => this.selectingAll.set(false),
+    });
   }
 
   goNew(): void {
@@ -243,5 +255,18 @@ export class QuestionList implements OnInit {
       this.currentLang(),
     );
     return t?.name ?? `Subject #${dto.id}`;
+  }
+
+  private toRow(question: QuestionReadDto): QuestionListRow {
+    return {
+      id: question.id,
+      question,
+      title: this.getTitle(question),
+      active: !!question.active,
+      modesText: this.getModes(question).join(', '),
+      domainName: this.getDomain(question.domain),
+      subjectsText: (question.subjects ?? []).map((subject) => this.getSubjectTitle(subject)).join(', '),
+      subjectIds: (question.subjects ?? []).map((subject) => subject.id),
+    };
   }
 }

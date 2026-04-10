@@ -133,6 +133,7 @@ export class QuizCreate implements OnInit {
     translations: inject(NonNullableFormBuilder).group({}),
     mode: [ModeEnumDto.Practice, Validators.required],
     active: [true],
+    is_public: [false],
     permanent: [true],
     started_at: [null as Date | null],
     ended_at: [null as Date | null],
@@ -876,6 +877,7 @@ export class QuizCreate implements OnInit {
         ? Number(this.quizForm.controls.duration.value || 10)
         : 10,
       active: this.quizForm.controls.active.value,
+      is_public: this.quizForm.controls.is_public.value,
       result_visibility: VisibilityEnumDto.Immediate,
       detail_visibility: this.quizForm.controls.detail_visibility.value,
       detail_available_at: this.toIsoDateTime(this.quizForm.controls.detail_available_at.value),
@@ -944,6 +946,7 @@ export class QuizCreate implements OnInit {
       description: template.description ?? '',
       mode: template.mode ?? ModeEnumDto.Practice,
       active: template.active ?? true,
+      is_public: template.is_public ?? false,
       permanent: isPermanent,
       started_at: this.fromIsoDateTime(template.started_at),
       ended_at: this.fromIsoDateTime(template.ended_at),

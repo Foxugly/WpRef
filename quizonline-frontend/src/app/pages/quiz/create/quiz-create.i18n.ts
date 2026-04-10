@@ -28,6 +28,7 @@ export type QuizCreateUiText = {
   timer: string;
   duration: string;
   active: string;
+  public: string;
   permanent: string;
   startedAt: string;
   endedAt: string;
@@ -86,6 +87,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     timer: 'Timer',
     duration: 'Duration',
     active: 'Active',
+    public: 'Public',
     permanent: 'Permanent',
     startedAt: 'Start date',
     endedAt: 'End date',
@@ -95,7 +97,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     quizDescription: 'Description',
     translationsTitle: 'Translations',
     languagesCount: 'languages',
-    translateOthers: 'Translate others',
+    translateOthers: 'Translate to other languages',
     translating: 'Translating...',
     translationHint: 'Edit the localized title and description for each active language.',
     translationRequired: 'At least one translated title is required.',
@@ -142,6 +144,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     timer: 'Timer',
     duration: 'Duur',
     active: 'Actief',
+    public: 'Publiek',
     permanent: 'Permanent',
     startedAt: 'Startdatum',
     endedAt: 'Einddatum',
@@ -151,7 +154,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     quizDescription: 'Beschrijving',
     translationsTitle: 'Vertalingen',
     languagesCount: 'talen',
-    translateOthers: 'Andere vertalen',
+    translateOthers: 'Vertalen naar andere talen',
     translating: 'Vertalen...',
     translationHint: 'Bewerk de gelokaliseerde titel en beschrijving voor elke actieve taal.',
     translationRequired: 'Minstens een vertaalde titel is verplicht.',
@@ -198,6 +201,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     timer: 'Timer',
     duration: 'Durata',
     active: 'Attivo',
+    public: 'Pubblico',
     permanent: 'Permanente',
     startedAt: 'Data inizio',
     endedAt: 'Data fine',
@@ -207,7 +211,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     quizDescription: 'Descrizione',
     translationsTitle: 'Traduzioni',
     languagesCount: 'lingue',
-    translateOthers: 'Traduci le altre',
+    translateOthers: 'Traduci nelle altre lingue',
     translating: 'Traduzione in corso...',
     translationHint: 'Modifica titolo e descrizione localizzati per ogni lingua attiva.',
     translationRequired: 'È richiesto almeno un titolo tradotto.',
@@ -254,6 +258,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     timer: 'Temporizador',
     duration: 'Duración',
     active: 'Activo',
+    public: 'Publico',
     permanent: 'Permanente',
     startedAt: 'Fecha de inicio',
     endedAt: 'Fecha de fin',
@@ -263,7 +268,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     quizDescription: 'Descripción',
     translationsTitle: 'Traducciones',
     languagesCount: 'idiomas',
-    translateOthers: 'Traducir las otras',
+    translateOthers: 'Traducir a los otros idiomas',
     translating: 'Traducción en curso...',
     translationHint: 'Edita el título y la descripción localizados para cada idioma activo.',
     translationRequired: 'Se requiere al menos un título traducido.',
@@ -310,6 +315,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     timer: 'Timer',
     duration: 'Durée',
     active: 'Active',
+    public: 'Public',
     permanent: 'Permanent',
     startedAt: 'Date de début',
     endedAt: 'Date de fin',
@@ -319,7 +325,7 @@ const QUIZ_CREATE_UI_TEXT: Record<LanguageEnumDto, QuizCreateUiText> = {
     quizDescription: 'Description',
     translationsTitle: 'Traductions',
     languagesCount: 'langues',
-    translateOthers: 'Traduire les autres',
+    translateOthers: 'Traduire vers les autres langues',
     translating: 'Traduction en cours...',
     translationHint: 'Édite le titre et la description localisés pour chaque langue active.',
     translationRequired: 'Au moins un titre traduit est requis.',

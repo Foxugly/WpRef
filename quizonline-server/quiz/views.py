@@ -540,7 +540,7 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
         return self.get_serializer_context()["quiz_template"]
 
     def list(self, request, *args, **kwargs):
-        if not user_can_access_template(request.user, self._quiz_template()):
+        if not user_can_edit_template(request.user, self._quiz_template()):
             return not_found_response()
         return super().list(request, *args, **kwargs)
 
@@ -554,7 +554,7 @@ class QuizTemplateQuizQuestionViewSet(MyModelViewSet):
         return Response(out.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs):
-        if not user_can_access_template(request.user, self._quiz_template()):
+        if not user_can_edit_template(request.user, self._quiz_template()):
             return not_found_response()
         instance = self.get_object()
         out = QuizQuestionReadSerializer(instance, context=self.get_serializer_context())
@@ -801,9 +801,28 @@ class QuizViewSet(MyModelViewSet):
         user_id = request.data.get("user_id")
         if user_id is not None:
             if not (request.user.is_staff or request.user.is_superuser):
-                raise PermissionDenied("Seul un admin peut créer un quiz pour un autre utilisateur.")
+                return Response(
+                    {"detail": "QuizTemplate introuvable."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
             target_user = get_object_or_404(get_user_model(), pk=user_id)
             validate_target_user_domain(qt, target_user)
+
+        if qt.mode == QuizTemplate.MODE_EXAM:
+            existing_exam_quiz = (
+                Quiz.objects
+                .filter(quiz_template=qt, user=target_user)
+                .order_by("-created_at", "-id")
+                .first()
+            )
+            if existing_exam_quiz is not None:
+                if existing_exam_quiz.started_at or existing_exam_quiz.ended_at:
+                    return Response(
+                        {"detail": "Ce quiz a deja ete commence."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                serializer = self.get_serializer(existing_exam_quiz)
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
         quiz = Quiz.objects.create(
             domain_id=qt.domain_id,

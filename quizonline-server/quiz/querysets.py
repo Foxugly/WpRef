@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.db.models import Count, FloatField, Prefetch, Q, Sum
 from django.db.models.functions import Coalesce
 from config.domain_access import manageable_domain_ids
+from django.utils import timezone
 
 from .models import Quiz, QuizQuestion, QuizQuestionAnswer, QuizTemplate
 
@@ -17,32 +18,49 @@ def quiz_template_queryset():
     )
 
 
+def available_quiz_template_filter(*, at=None) -> Q:
+    if at is None:
+        at = timezone.now()
+    return Q(active=True) & (
+        Q(permanent=True)
+        | (
+            Q(started_at__lte=at)
+            & (Q(ended_at__isnull=True) | Q(ended_at__gte=at))
+        )
+    )
+
+
 def accessible_quiz_template_queryset(user):
     queryset = quiz_template_queryset()
+    available_filter = available_quiz_template_filter()
     if not user or not getattr(user, "is_authenticated", False):
-        return queryset.filter(is_public=True)
+        return queryset.filter(is_public=True).filter(available_filter)
     if user.is_superuser:
         return queryset
 
-    manages_domains = bool(manageable_domain_ids(user))
+    manageable_ids = manageable_domain_ids(user)
+    if manageable_ids:
+        return queryset.filter(domain_id__in=manageable_ids).distinct().order_by("title", "pk")
 
     # Use a subquery instead of a JOIN on the (potentially large) Quiz table
     assigned_template_ids = (
         Quiz.objects.filter(user=user).values("quiz_template_id").distinct()
     )
-    queryset = queryset.filter(
-        Q(domain__owner=user)
-        | Q(domain__staff=user)
-        | Q(created_by_id=user.id)
-        | Q(pk__in=assigned_template_ids)
-        | Q(is_public=True, domain__isnull=True)
-        | Q(is_public=True, domain__owner=user)
-        | Q(is_public=True, domain__staff=user)
-        | Q(is_public=True, domain__members=user)
-    ).distinct()
-    if not manages_domains:
-        queryset = queryset.filter(active=True)
-    return queryset.order_by("title", "pk")
+    started_exam_template_ids = (
+        Quiz.objects
+        .filter(user=user, quiz_template__mode=QuizTemplate.MODE_EXAM)
+        .exclude(started_at__isnull=True, ended_at__isnull=True)
+        .values("quiz_template_id")
+        .distinct()
+    )
+    return (
+        queryset
+        .filter(available_filter)
+        .filter(Q(is_public=True) | Q(pk__in=assigned_template_ids))
+        .exclude(pk__in=started_exam_template_ids)
+        .distinct()
+        .order_by("title", "pk")
+    )
 
 
 def quiz_queryset_for_user(user, *, include_details: bool):

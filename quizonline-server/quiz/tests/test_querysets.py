@@ -69,12 +69,15 @@ class QuizQuerysetsTests(TestCase):
         self.assertTrue(hasattr(queryset, "filter"))
         with self.assertNumQueries(1):
             ids = list(queryset.values_list("id", flat=True))
-        self.assertCountEqual(ids, [self.public_same_domain.id, self.private_assigned.id])
+        self.assertCountEqual(ids, [self.public_same_domain.id, self.public_other_domain.id, self.private_assigned.id])
 
-    def test_staff_user_without_linked_domain_sees_none_of_public_domain_templates(self):
+    def test_staff_user_without_linked_domain_sees_public_available_templates(self):
         queryset = accessible_quiz_template_queryset(self.staff_user)
 
-        self.assertEqual(list(queryset.values_list("id", flat=True)), [])
+        self.assertCountEqual(
+            list(queryset.values_list("id", flat=True)),
+            [self.public_same_domain.id, self.public_other_domain.id],
+        )
 
     def test_domain_staff_sees_all_templates_of_managed_domain(self):
         private_same_domain = QuizTemplate.objects.create(
@@ -127,7 +130,80 @@ class QuizQuerysetsTests(TestCase):
 
         queryset = accessible_quiz_template_queryset(self.other_user)
 
-        self.assertEqual(list(queryset.values_list("id", flat=True)), [self.private_hidden.id])
+        self.assertCountEqual(
+            list(queryset.values_list("id", flat=True)),
+            [self.public_same_domain.id, self.public_other_domain.id],
+        )
+
+    def test_simple_user_does_not_see_public_template_outside_availability_window(self):
+        unavailable_public = QuizTemplate.objects.create(
+            domain=self.other_domain,
+            title="Public unavailable",
+            is_public=True,
+            active=True,
+            permanent=False,
+            started_at=timezone.now() + timezone.timedelta(days=1),
+            ended_at=timezone.now() + timezone.timedelta(days=2),
+            created_by=self.owner,
+        )
+
+        queryset = accessible_quiz_template_queryset(self.user)
+
+        self.assertNotIn(unavailable_public.id, list(queryset.values_list("id", flat=True)))
+
+    def test_domain_staff_sees_public_template_outside_availability_window(self):
+        unavailable_public = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="Managed public unavailable",
+            is_public=True,
+            active=True,
+            permanent=False,
+            started_at=timezone.now() + timezone.timedelta(days=1),
+            ended_at=timezone.now() + timezone.timedelta(days=2),
+            created_by=self.owner,
+        )
+
+        queryset = accessible_quiz_template_queryset(self.domain_staff)
+
+        self.assertIn(unavailable_public.id, list(queryset.values_list("id", flat=True)))
+
+    def test_simple_user_does_not_see_private_template_outside_availability_window_even_if_assigned(self):
+        unavailable_private = QuizTemplate.objects.create(
+            domain=self.other_domain,
+            title="Private unavailable",
+            is_public=False,
+            active=True,
+            permanent=False,
+            started_at=timezone.now() + timezone.timedelta(days=1),
+            ended_at=timezone.now() + timezone.timedelta(days=2),
+            created_by=self.owner,
+        )
+        Quiz.objects.create(quiz_template=unavailable_private, user=self.user, active=False)
+
+        queryset = accessible_quiz_template_queryset(self.user)
+
+        self.assertNotIn(unavailable_private.id, list(queryset.values_list("id", flat=True)))
+
+    def test_started_exam_template_is_hidden_for_simple_user(self):
+        exam_template = QuizTemplate.objects.create(
+            domain=self.other_domain,
+            title="Exam public",
+            is_public=True,
+            active=True,
+            permanent=True,
+            mode=QuizTemplate.MODE_EXAM,
+            created_by=self.owner,
+        )
+        Quiz.objects.create(
+            quiz_template=exam_template,
+            user=self.user,
+            active=True,
+            started_at=timezone.now(),
+        )
+
+        queryset = accessible_quiz_template_queryset(self.user)
+
+        self.assertNotIn(exam_template.id, list(queryset.values_list("id", flat=True)))
 
     def test_quiz_template_queryset_annotates_questions_count_without_n_plus_one(self):
         question_a = Question.objects.create(

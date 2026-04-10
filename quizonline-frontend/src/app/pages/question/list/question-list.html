@@ -35,22 +35,6 @@
         </p-multiselect>
 
         <p-button
-          (onClick)="selectAll()"
-          icon="pi pi-check-square"
-          [label]="text().selectAll"
-          severity="secondary"
-          type="button">
-        </p-button>
-
-        <p-button
-          (onClick)="clearSelection()"
-          icon="pi pi-square"
-          [label]="text().unselectAll"
-          severity="secondary"
-          type="button">
-        </p-button>
-
-        <p-button
           (onClick)="exportRows()"
           [disabled]="selectedCount() === 0"
           icon="pi pi-download"
@@ -104,7 +88,13 @@
       <ng-template #header>
         <tr>
           <th style="width: 3rem">
-            <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+            <input
+              type="checkbox"
+              [checked]="allFilteredSelected()"
+              [indeterminate]="someFilteredSelected()"
+              [disabled]="selectingAll() || totalRecords() === 0"
+              (change)="toggleSelectAllFiltered($any($event.target).checked)"
+            />
           </th>
           <th pSortableColumn="title">{{ text().titleCol }} <p-sortIcon field="title"></p-sortIcon></th>
           <th class="col-active" pSortableColumn="active">{{ text().activeCol }} <p-sortIcon field="active"></p-sortIcon></th>

@@ -20,14 +20,21 @@ def user_manages_template_domain(user, quiz_template) -> bool:
     return quiz_template.domain_id in manageable_domain_ids(user)
 
 
+def _has_started_exam_attempt(user, quiz_template) -> bool:
+    return bool(
+        user
+        and getattr(user, "is_authenticated", False)
+        and quiz_template.mode == quiz_template.MODE_EXAM
+        and quiz_template.quiz.filter(user=user).exclude(started_at__isnull=True, ended_at__isnull=True).exists()
+    )
+
+
 def _can_access_public_template(user, quiz_template) -> bool:
-    if not quiz_template.is_public:
+    if not quiz_template.is_public or not quiz_template.can_answer:
         return False
-    if getattr(user, "is_superuser", False):
-        return True
-    if quiz_template.domain_id is None:
-        return True
-    return user_can_access_domain(user, quiz_template.domain_id)
+    if _has_started_exam_attempt(user, quiz_template):
+        return False
+    return True
 
 
 def user_can_access_template(user, quiz_template) -> bool:
@@ -37,8 +44,10 @@ def user_can_access_template(user, quiz_template) -> bool:
         return True
     if user_manages_template_domain(user, quiz_template):
         return True
-    if quiz_template.created_by_id == getattr(user, "id", None):
-        return True
+    if not quiz_template.can_answer:
+        return False
+    if _has_started_exam_attempt(user, quiz_template):
+        return False
     if quiz_template.quiz.filter(user=user).exists():
         return True
     return _can_access_public_template(user, quiz_template)
@@ -69,7 +78,11 @@ def user_can_create_quiz_from_template(user, quiz_template) -> bool:
         return True
     if user_manages_template_domain(user, quiz_template):
         return True
-    if quiz_template.created_by_id == user.id:
+    if not quiz_template.can_answer:
+        return False
+    if _has_started_exam_attempt(user, quiz_template):
+        return False
+    if quiz_template.quiz.filter(user=user).exists():
         return True
     return _can_access_public_template(user, quiz_template)
 

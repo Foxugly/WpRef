@@ -798,6 +798,64 @@ class QuizViewsAPITestCase(_ReverseMixin, APITestCase):
         res = self.client.post(self.quiz_list_url, {"quiz_template_id": private_qt.id}, format="json")
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_quiz_create_public_template_allowed_for_simple_user_without_domain_link(self):
+        public_qt = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_PUBLIC_OPEN",
+            mode=QuizTemplate.MODE_PRACTICE,
+            description="",
+            max_questions=10,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=True,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+        )
+
+        self._auth(self.u1)
+        res = self.client.post(self.quiz_list_url, {"quiz_template_id": public_qt.id}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["quiz_template"], public_qt.id)
+        self.assertEqual(res.data["user"], self.u1.id)
+
+    def test_quiz_create_exam_reuses_existing_unstarted_session(self):
+        exam_qt = QuizTemplate.objects.create(
+            domain=self.domain,
+            title="T_EXAM_ONCE",
+            mode=QuizTemplate.MODE_EXAM,
+            description="",
+            max_questions=10,
+            permanent=True,
+            started_at=None,
+            ended_at=None,
+            with_duration=False,
+            duration=10,
+            is_public=True,
+            active=True,
+            result_visibility=VISIBILITY_IMMEDIATE,
+            result_available_at=None,
+            detail_visibility=VISIBILITY_IMMEDIATE,
+            detail_available_at=None,
+        )
+        existing = Quiz.objects.create(
+            domain=self.domain,
+            quiz_template=exam_qt,
+            user=self.u1,
+            active=False,
+        )
+
+        self._auth(self.u1)
+        res = self.client.post(self.quiz_list_url, {"quiz_template_id": exam_qt.id}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["id"], existing.id)
+        self.assertEqual(Quiz.objects.filter(quiz_template=exam_qt, user=self.u1).count(), 1)
+
     def test_quiztemplate_retrieve_private_template_forbidden_if_not_assigned(self):
         private_qt = QuizTemplate.objects.create(
             domain=self.domain,
