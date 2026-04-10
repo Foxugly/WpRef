@@ -34,10 +34,9 @@ test.describe('quiz flows', () => {
       {quiz_template_id: 950, user_ids: [2]},
     ]);
 
-    await expect(page.getByText('Resultats des quiz envoyes')).toBeVisible();
-    await expect(
-      page.getByRole('dialog', {name: 'Resultats des quiz envoyes'}).getByRole('cell', {name: 'apprenant'}),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/quiz\/template\/950\/results$/);
+    await expect(page.getByRole('heading', {name: 'Resultats des quiz envoyes'})).toBeVisible();
+    await expect(page.getByRole('cell', {name: 'apprenant'})).toBeVisible();
   });
 
   test('sauvegarde une reponse puis passe a la question suivante', async ({page}) => {

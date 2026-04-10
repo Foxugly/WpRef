@@ -64,7 +64,10 @@ class Command(BaseCommand):
         admin.email = "admin@example.test"
         admin.is_staff = True
         admin.is_superuser = True
+        admin.is_active = True
         admin.language = "fr"
+        admin.email_confirmed = True
+        admin.must_change_password = False
         admin.set_password("secret123")
         admin.save()
 
@@ -80,11 +83,28 @@ class Command(BaseCommand):
         testuser.email = "testuser@example.test"
         testuser.is_staff = False
         testuser.is_superuser = False
+        testuser.is_active = True
         testuser.language = "fr"
+        testuser.email_confirmed = True
+        testuser.must_change_password = False
         testuser.set_password("secret123")
         testuser.save()
 
-        domain, _ = Domain.objects.get_or_create(owner=admin, active=True)
+        domain = (
+            Domain.objects.filter(
+                owner=admin,
+                translations__language_code="fr",
+                translations__name="Sciences",
+            )
+            .distinct()
+            .first()
+        )
+        if domain is None:
+            domain = Domain.objects.create(owner=admin, active=True)
+        else:
+            domain.owner = admin
+            domain.active = True
+            domain.save(update_fields=["owner", "active"])
         upsert_translation(domain, "fr", name="Sciences", description="Domaine seede pour Playwright.")
         upsert_translation(domain, "nl", name="Wetenschappen", description="Seedomein voor Playwright.")
         upsert_translation(domain, "en", name="Science", description="Playwright seed domain.")
@@ -97,11 +117,37 @@ class Command(BaseCommand):
         testuser.current_domain = domain
         testuser.save(update_fields=["current_domain"])
 
-        subject_physics, _ = Subject.objects.get_or_create(domain=domain, active=True)
+        subject_physics = (
+            Subject.objects.filter(
+                domain=domain,
+                translations__language_code="fr",
+                translations__name="Physique",
+            )
+            .distinct()
+            .first()
+        )
+        if subject_physics is None:
+            subject_physics = Subject.objects.create(domain=domain, active=True)
+        else:
+            subject_physics.active = True
+            subject_physics.save(update_fields=["active"])
         upsert_translation(subject_physics, "fr", name="Physique", description="Sujet seed.")
         upsert_translation(subject_physics, "nl", name="Fysica", description="Seedonderwerp.")
 
-        subject_astronomy, _ = Subject.objects.get_or_create(domain=domain, active=True)
+        subject_astronomy = (
+            Subject.objects.filter(
+                domain=domain,
+                translations__language_code="fr",
+                translations__name="Astronomie",
+            )
+            .distinct()
+            .first()
+        )
+        if subject_astronomy is None:
+            subject_astronomy = Subject.objects.create(domain=domain, active=True)
+        else:
+            subject_astronomy.active = True
+            subject_astronomy.save(update_fields=["active"])
         upsert_translation(subject_astronomy, "fr", name="Astronomie", description="Sujet secondaire.")
         upsert_translation(subject_astronomy, "nl", name="Sterrenkunde", description="Tweede onderwerp.")
 
@@ -189,21 +235,28 @@ class Command(BaseCommand):
             QuestionMedia(question=question, asset=youtube_asset, sort_order=2),
         ])
 
-        quiz_template, _ = QuizTemplate.objects.get_or_create(
-            title="Quiz full-stack",
-            defaults={
-                "domain": domain,
-                "mode": QuizTemplate.MODE_PRACTICE,
-                "description": "Quiz seed pour Playwright.",
-                "max_questions": 2,
-                "permanent": True,
-                "with_duration": True,
-                "duration": 15,
-                "active": True,
-                "result_visibility": VISIBILITY_IMMEDIATE,
-                "detail_visibility": VISIBILITY_IMMEDIATE,
-            },
+        quiz_template = (
+            QuizTemplate.objects.filter(
+                domain=domain,
+                title="Quiz full-stack",
+            )
+            .order_by("id")
+            .first()
         )
+        if quiz_template is None:
+            quiz_template = QuizTemplate.objects.create(
+                domain=domain,
+                title="Quiz full-stack",
+                mode=QuizTemplate.MODE_PRACTICE,
+                description="Quiz seed pour Playwright.",
+                max_questions=2,
+                permanent=True,
+                with_duration=True,
+                duration=15,
+                active=True,
+                result_visibility=VISIBILITY_IMMEDIATE,
+                detail_visibility=VISIBILITY_IMMEDIATE,
+            )
         quiz_template.domain = domain
         quiz_template.mode = QuizTemplate.MODE_PRACTICE
         quiz_template.description = "Quiz seed pour Playwright."
@@ -228,16 +281,20 @@ class Command(BaseCommand):
             defaults={"sort_order": 2, "weight": 1},
         )
 
-        quiz_session, _ = Quiz.objects.get_or_create(
-            quiz_template=quiz_template,
-            user=admin,
-            defaults={
-                "domain": domain,
-                "active": False,
-                "started_at": None,
-                "ended_at": None,
-            },
+        quiz_session = (
+            Quiz.objects.filter(quiz_template=quiz_template, user=admin)
+            .order_by("id")
+            .first()
         )
+        if quiz_session is None:
+            quiz_session = Quiz.objects.create(
+                quiz_template=quiz_template,
+                user=admin,
+                domain=domain,
+                active=False,
+                started_at=None,
+                ended_at=None,
+            )
         quiz_session.domain = domain
         quiz_session.active = False
         quiz_session.started_at = None
@@ -256,6 +313,10 @@ class Command(BaseCommand):
         digest = file_digest(content)
         asset = MediaAsset.objects.filter(kind=kind, sha256=digest).first()
         if asset:
+            file_missing = not asset.file or not asset.file.name or not Path(asset.file.path).exists()
+            if file_missing:
+                asset.file.save(filename, ContentFile(content), save=False)
+                asset.save(update_fields=["file", "updated_at"])
             return asset
 
         asset = MediaAsset(kind=kind, sha256=digest)

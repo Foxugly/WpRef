@@ -14,9 +14,9 @@ async function login(
   password = 'secret123',
 ): Promise<void> {
   await page.goto('/login');
-  await page.getByLabel('Utilisateur').fill(username);
+  await page.locator('#username').fill(username);
   await page.locator('input[type="password"]').fill(password);
-  await page.getByRole('button', {name: 'Se connecter'}).click();
+  await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(/\/home$/);
 }
 
@@ -29,11 +29,9 @@ async function getAccessToken(page: import('@playwright/test').Page): Promise<st
 }
 
 test('admin assigne un QuizTemplate a testuser, testuser voit le quiz dans sa liste', async ({page}) => {
-  // ── 1. Login admin ─────────────────────────────────────────────────────────
   await login(page);
   const adminToken = await getAccessToken(page);
 
-  // ── 2. Récupère l'id de testuser via l'API ──────────────────────────────────
   const usersResp = await page.request.get(`${API}/api/user/?search=testuser`, {
     headers: {Authorization: `Bearer ${adminToken}`},
   });
@@ -45,7 +43,6 @@ test('admin assigne un QuizTemplate a testuser, testuser voit le quiz dans sa li
   expect(testuser).toBeTruthy();
   const testuserId: number = testuser.id;
 
-  // ── 3. Récupère le QuizTemplate "Quiz full-stack" via l'API ────────────────
   const templatesResp = await page.request.get(`${API}/api/quiz/template/`, {
     headers: {Authorization: `Bearer ${adminToken}`},
   });
@@ -56,40 +53,19 @@ test('admin assigne un QuizTemplate a testuser, testuser voit le quiz dans sa li
   expect(template).toBeTruthy();
   const templateId: number = template.id;
 
-  // ── 4. Navigue vers /quiz/list ──────────────────────────────────────────────
   await page.goto('/quiz/list');
-  await expect(page.getByRole('heading', {name: 'Quizz'})).toBeVisible();
-  await expect(page.getByText('Quiz full-stack')).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Quiz'})).toBeVisible();
+  const templatesPanel = page.locator('p-tabpanel').filter({has: page.locator('app-quiz-template-table')}).first();
+  await expect(templatesPanel.getByRole('cell', {name: 'Quiz full-stack', exact: true})).toBeVisible();
 
-  // ── 5. Clique sur le bouton "Envoyer" du template ──────────────────────────
-  const templateRow = page.locator('tr, .template-row, [data-testid="template-row"]').filter({
-    hasText: 'Quiz full-stack',
-  }).first();
-  // Le bouton assign utilise aria-label contenant le titre du template
-  const assignBtn = page.locator(`[aria-label*="Quiz full-stack"]`).first();
-  await assignBtn.click();
+  await templatesPanel.locator(`[aria-label*="Envoyer"][aria-label*="Quiz full-stack"]`).first().click();
 
-  // ── 6. Dialog d'assignation s'ouvre ────────────────────────────────────────
-  await expect(page.locator('p-dialog, .p-dialog')).toBeVisible();
+  const assignDialog = page.getByRole('dialog', {name: 'Envoyer le quiz'});
+  await expect(assignDialog).toBeVisible();
+  await expect(assignDialog.getByText('testuser', {exact: false})).toBeVisible();
+  await assignDialog.getByText('testuser', {exact: false}).click();
+  await assignDialog.getByRole('button', {name: 'Envoyer'}).click();
 
-  // Recherche testuser dans le dialog
-  const dialogSearch = page.locator('p-dialog input[type="text"], .p-dialog input[type="text"]').first();
-  await dialogSearch.fill('testuser');
-
-  // Coche testuser
-  const testuserCheckbox = page.locator(`label[for="assign-user-${testuserId}"]`).first();
-  await testuserCheckbox.click();
-
-  // ── 7. Confirme l'assignation ───────────────────────────────────────────────
-  const submitBtn = page.locator('p-dialog p-button, .p-dialog p-button').filter({
-    hasNot: page.locator('[severity="secondary"]'),
-  }).locator('button').last();
-  await submitBtn.click();
-
-  // Attend la fermeture du dialog
-  await expect(page.locator('p-dialog .p-dialog-content').filter({hasText: 'testuser'})).not.toBeVisible({timeout: 5000});
-
-  // ── 8. Vérifie via API que le quiz a été créé pour testuser ─────────────────
   const quizzesResp = await page.request.get(`${API}/api/quiz/?user=${testuserId}`, {
     headers: {Authorization: `Bearer ${adminToken}`},
   });
@@ -103,24 +79,17 @@ test('admin assigne un QuizTemplate a testuser, testuser voit le quiz dans sa li
   expect(assignedQuiz).toBeTruthy();
   const assignedQuizId: number = assignedQuiz.id;
 
-  // ── 9. Login testuser et vérifie que le quiz apparaît dans sa liste ─────────
-  await page.goto('/login');
-  await page.getByLabel('Utilisateur').fill('testuser');
-  await page.locator('input[type="password"]').fill('secret123');
-  await page.getByRole('button', {name: 'Se connecter'}).click();
-  await expect(page).toHaveURL(/\/home$/);
-
+  await login(page, 'testuser', 'secret123');
   await page.goto('/quiz/list');
-  await expect(page.getByRole('heading', {name: 'Quizz'})).toBeVisible();
+  await expect(page.getByRole('heading', {name: 'Quiz'})).toBeVisible();
 
-  // Le quiz assigné doit apparaître dans l'onglet "Mes sessions"
-  const sessionsTab = page.getByRole('tab', {name: /session/i});
+  const sessionsTab = page.getByRole('tab', {name: /Mes quiz/i});
   if (await sessionsTab.isVisible()) {
     await sessionsTab.click();
   }
-  await expect(page.getByText('Quiz full-stack')).toBeVisible();
+  const sessionsPanel = page.locator('p-tabpanel').filter({has: page.locator('app-quiz-session-table')}).first();
+  await expect(sessionsPanel.getByRole('cell', {name: 'Quiz full-stack', exact: true}).first()).toBeVisible();
 
-  // ── 10. Vérifie via API (token testuser) ────────────────────────────────────
   const testuserToken = await getAccessToken(page);
   const quizResp = await page.request.get(`${API}/api/quiz/${assignedQuizId}/`, {
     headers: {Authorization: `Bearer ${testuserToken}`},
@@ -129,5 +98,5 @@ test('admin assigne un QuizTemplate a testuser, testuser voit le quiz dans sa li
   const quizPayload = await quizResp.json();
   expect(quizPayload.quiz_template).toBe(templateId);
   expect(quizPayload.user).toBe(testuserId);
-  expect(quizPayload.active).toBe(true);
+  expect(quizPayload.started_at).toBeNull();
 });

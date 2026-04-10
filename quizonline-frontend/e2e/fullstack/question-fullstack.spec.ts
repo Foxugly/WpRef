@@ -8,9 +8,9 @@ test.beforeEach(async ({page}) => {
 
 async function login(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/login');
-  await page.getByLabel('Utilisateur').fill('admin');
+  await page.locator('#username').fill('admin');
   await page.locator('input[type="password"]').fill('secret123');
-  await page.getByRole('button', {name: 'Se connecter'}).click();
+  await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(/\/home$/);
 }
 
@@ -40,12 +40,15 @@ test('charge une question seedee avec ses medias reels', async ({page}) => {
 
   await page.locator('tr', {hasText: 'Question de seed'}).locator('#btn_view_question').click();
 
-  await expect(page).toHaveURL(/\/question\/\d+\/view$/);
-  await expect(page.getByRole('heading', {name: /question/i})).toBeVisible();
-  await expect(page.getByText('Bonne reponse')).toBeVisible();
-  await expect(page.locator('img.quiz-question__media-image')).toHaveAttribute('src', /fullstack-e2e-image\.png/);
-  await expect(page.locator('video.quiz-question__media-video')).toHaveAttribute('src', /fullstack-e2e-video\.mp4/);
-  await expect(page.locator('iframe')).toHaveAttribute('src', /youtube\.com\/embed\/dQw4w9WgXcQ/);
+  const previewDialog = page.locator('.p-dialog').filter({hasText: 'Question de seed'}).first();
+  await expect(previewDialog).toBeVisible();
+  await expect(previewDialog.getByText('Bonne reponse')).toBeVisible();
+  await expect(previewDialog.locator('p-image.quiz-question__media-image img')).toHaveAttribute(
+    'src',
+    /fullstack-e2e-image\.png/,
+  );
+  await expect(previewDialog.locator('video.quiz-question__media-video')).toHaveAttribute('src', /fullstack-e2e-video\.mp4/);
+  await expect(previewDialog.locator('iframe')).toHaveAttribute('src', /youtube\.com\/embed\/dQw4w9WgXcQ/);
 });
 
 test('edite une question et persiste les traductions et reponses cote backend', async ({page}) => {

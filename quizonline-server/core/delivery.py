@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import logging
 
+from celery.exceptions import Retry as CeleryRetry
 from kombu.exceptions import KombuError
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db import OperationalError as DjangoOperationalError
 from django.db import close_old_connections, transaction
 from django.utils import timezone
 
@@ -63,3 +65,7 @@ def trigger_outbound_email_delivery() -> None:
         # Fall back to in-process delivery when the broker is unavailable so
         # registration and reset emails are still sent in degraded mode.
         process_pending_outbound_emails(limit=100)
+    except (DjangoOperationalError, CeleryRetry) as exc:
+        logger.warning("email.delivery_deferred", extra={"error": str(exc)})
+        # SQLite can transiently lock during on_commit hooks in local/fullstack
+        # runs. Leave the email queued instead of failing the originating request.

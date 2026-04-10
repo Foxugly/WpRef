@@ -1,9 +1,11 @@
 from unittest.mock import MagicMock, patch
 
+from celery.exceptions import Retry as CeleryRetry
 from kombu.exceptions import OperationalError
 
 from django.core.exceptions import ValidationError
 from django.conf import settings
+from django.db import OperationalError as DjangoOperationalError
 from django.test import TestCase
 from django.core import mail
 
@@ -125,3 +127,33 @@ class CoreMailerTests(TestCase):
         logger_warning.assert_called()
         outbound = OutboundEmail.objects.get(recipients=["mail-user-broker-log@example.com"])
         self.assertIsNotNone(outbound.sent_at)
+
+    @patch("core.mailers._common.transaction.on_commit", side_effect=lambda callback: callback())
+    @patch("core.tasks.deliver_outbound_emails_task.delay", side_effect=DjangoOperationalError("database is locked"))
+    def test_send_password_reset_email_does_not_fail_when_delivery_is_deferred(self, _delay, _on_commit):
+        user = CustomUser.objects.create_user(
+            username="mail-user-sqlite-lock",
+            password="Pass1234!",
+            email="mail-user-sqlite-lock@example.com",
+        )
+
+        send_password_reset_email(user)
+
+        outbound = OutboundEmail.objects.get(recipients=["mail-user-sqlite-lock@example.com"])
+        self.assertIsNone(outbound.sent_at)
+        self.assertEqual(len(mail.outbox), 0)
+
+    @patch("core.mailers._common.transaction.on_commit", side_effect=lambda callback: callback())
+    @patch("core.tasks.deliver_outbound_emails_task.delay", side_effect=CeleryRetry("database is locked"))
+    def test_send_password_reset_email_does_not_fail_when_delivery_retries(self, _delay, _on_commit):
+        user = CustomUser.objects.create_user(
+            username="mail-user-retry-lock",
+            password="Pass1234!",
+            email="mail-user-retry-lock@example.com",
+        )
+
+        send_password_reset_email(user)
+
+        outbound = OutboundEmail.objects.get(recipients=["mail-user-retry-lock@example.com"])
+        self.assertIsNone(outbound.sent_at)
+        self.assertEqual(len(mail.outbox), 0)
