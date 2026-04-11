@@ -164,7 +164,7 @@ export class QuizListPage implements OnInit {
         next: (created) => {
           this.success.set(this.uiText().messages.assignSuccess(created.length));
           this.closeAssignDialog();
-          void this.router.navigate(ROUTES.quiz.list());
+          void this.router.navigate(ROUTES.quiz.templateResults(template.id));
         },
         error: (err: unknown) => {
           logApiError('quiz.list.assign-template', err);

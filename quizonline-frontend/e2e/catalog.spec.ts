@@ -41,6 +41,6 @@ test.describe('catalog pages', () => {
     await expect(page.getByText('Bonne reponse')).toBeVisible();
     await expect(page.locator('p-image.quiz-question__media-image img')).toHaveAttribute('src', /image\.png/);
     await expect(page.locator('video.quiz-question__media-video')).toHaveAttribute('src', /video\.mp4/);
-    await expect(page.locator('iframe')).toHaveAttribute('src', /youtube\.com\/embed\/dQw4w9WgXcQ/);
+    await expect(page.locator('iframe')).toHaveAttribute('src', /youtube(-nocookie)?\.com\/embed\/dQw4w9WgXcQ/);
   });
 });
