@@ -129,6 +129,9 @@ jobs:
         env:
           DJANGO_ENV: prod
           SECRET_KEY: ci-secret-key
+          # settings_prod requires JWT_SIGNING_KEY and refuses to boot if it
+          # matches SECRET_KEY (the runtime guard added in commit 06d148c).
+          JWT_SIGNING_KEY: ci-jwt-signing-key-distinct-from-secret
           ALLOWED_HOSTS: ci.local
           DATABASE_URL: sqlite:///ci.sqlite3
           FRONTEND_BASE_URL: https://ci.local
